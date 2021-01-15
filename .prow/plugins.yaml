@@ -1,0 +1,34 @@
+plugins:
+  feast-dev/feast:
+  - approve      
+  - assign
+  - help
+  - hold
+  - label
+  - lgtm
+  - lifecycle     
+  - size
+  - verify-owners 
+  - wip         
+  - trigger
+  - config-updater
+  - require-matching-label
+  - release-note
+
+config_updater:
+  maps:
+    .prow/config.yaml:
+      name: config
+
+external_plugins:
+  feast-dev/feast:
+  - name: needs-rebase
+    events:
+    - pull_request
+
+require_matching_label:
+- missing_label: needs-kind
+  org: feast-dev
+  repo: feast
+  prs: true
+  regexp: ^kind/
