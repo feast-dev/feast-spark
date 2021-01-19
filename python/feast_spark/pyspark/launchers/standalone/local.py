@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 import requests
 from requests.exceptions import RequestException
 
-from feast.pyspark.abc import (
+from feast_spark.pyspark.abc import (
     BQ_SPARK_PACKAGE,
     BatchIngestionJob,
     BatchIngestionJobParameters,

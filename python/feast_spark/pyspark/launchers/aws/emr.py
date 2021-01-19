@@ -6,7 +6,8 @@ from urllib.parse import urlunparse
 import boto3
 from botocore.config import Config as BotoConfig
 
-from feast.pyspark.abc import (
+from feast.staging.storage_client import get_staging_client
+from feast_spark.pyspark.abc import (
     BatchIngestionJob,
     BatchIngestionJobParameters,
     JobLauncher,
@@ -18,7 +19,6 @@ from feast.pyspark.abc import (
     StreamIngestionJob,
     StreamIngestionJobParameters,
 )
-from feast.staging.storage_client import get_staging_client
 
 from .emr_utils import (
     FAILED_STEP_STATES,

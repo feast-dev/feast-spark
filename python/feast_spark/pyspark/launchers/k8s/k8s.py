@@ -10,7 +10,8 @@ import yaml
 from kubernetes.client.api import CustomObjectsApi
 
 from feast.constants import ConfigOptions as opt
-from feast.pyspark.abc import (
+from feast.staging.storage_client import AbstractStagingClient
+from feast_spark.pyspark.abc import (
     BQ_SPARK_PACKAGE,
     BatchIngestionJob,
     BatchIngestionJobParameters,
@@ -23,7 +24,6 @@ from feast.pyspark.abc import (
     StreamIngestionJob,
     StreamIngestionJobParameters,
 )
-from feast.staging.storage_client import AbstractStagingClient
 
 from .k8s_utils import (
     DEFAULT_JOB_TEMPLATE,

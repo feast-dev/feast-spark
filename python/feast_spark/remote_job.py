@@ -5,7 +5,7 @@ from feast.core.JobService_pb2 import CancelJobRequest, GetJobRequest
 from feast.core.JobService_pb2 import Job as JobProto
 from feast.core.JobService_pb2 import JobStatus, JobType
 from feast.core.JobService_pb2_grpc import JobServiceStub
-from feast.pyspark.abc import (
+from feast_spark.pyspark.abc import (
     BatchIngestionJob,
     RetrievalJob,
     SparkJob,

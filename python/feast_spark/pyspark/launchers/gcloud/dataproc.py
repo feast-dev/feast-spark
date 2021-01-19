@@ -7,7 +7,8 @@ from urllib.parse import urlparse
 
 from google.cloud.dataproc_v1 import Job, JobControllerClient, JobStatus
 
-from feast.pyspark.abc import (
+from feast.staging.storage_client import get_staging_client
+from feast_spark.pyspark.abc import (
     BatchIngestionJob,
     BatchIngestionJobParameters,
     JobLauncher,
@@ -21,7 +22,6 @@ from feast.pyspark.abc import (
     StreamIngestionJob,
     StreamIngestionJobParameters,
 )
-from feast.staging.storage_client import get_staging_client
 
 
 class DataprocJobMixin:

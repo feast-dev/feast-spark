@@ -8,7 +8,7 @@ from urllib.parse import urlparse, urlunparse
 
 import yaml
 
-from feast.pyspark.abc import BQ_SPARK_PACKAGE
+from feast_spark.pyspark.abc import BQ_SPARK_PACKAGE
 
 __all__ = [
     "FAILED_STEP_STATES",

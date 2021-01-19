@@ -1,43 +1,13 @@
-import feast.Client as FeastClient
-from feast_spark.remote_job import (
-    RemoteBatchIngestionJob,
-    RemoteRetrievalJob,
-    RemoteStreamIngestionJob,
-    get_remote_job_from_proto,
-)
-
-from typing import Any, Dict, List, Optional, Union
-import pandas as pd
-from feast.grpc.grpc import create_grpc_channel
-
-from feast_spark.pyspark.abc import RetrievalJob, SparkJob
-from feast_spark.pyspark.launcher import (
-    get_job_by_id,
-    list_jobs,
-    stage_dataframe,
-    start_historical_feature_retrieval_job,
-    start_historical_feature_retrieval_spark_session,
-    start_offline_to_online_ingestion,
-    start_stream_to_online_ingestion,
-)
-from feast.staging.entities import (
-    stage_entities_to_bq,
-    stage_entities_to_fs,
-    table_reference_from_string,
-)
-
-
 import os
 import uuid
-
 from datetime import datetime
+from itertools import groupby
+from typing import List, Optional, Union
+
+import pandas as pd
 
 import feast
 from feast.constants import ConfigOptions as opt
-from itertools import groupby
-
-
-from feast.core.JobService_pb2_grpc import JobServiceStub
 from feast.core.JobService_pb2 import (
     GetHistoricalFeaturesRequest,
     GetJobRequest,
@@ -45,7 +15,29 @@ from feast.core.JobService_pb2 import (
     StartOfflineToOnlineIngestionJobRequest,
     StartStreamToOnlineIngestionJobRequest,
 )
+from feast.core.JobService_pb2_grpc import JobServiceStub
 from feast.data_source import BigQuerySource, FileSource
+from feast.grpc.grpc import create_grpc_channel
+from feast.staging.entities import (
+    stage_entities_to_bq,
+    stage_entities_to_fs,
+    table_reference_from_string,
+)
+from feast_spark.pyspark.abc import RetrievalJob, SparkJob
+from feast_spark.pyspark.launcher import (
+    get_job_by_id,
+    list_jobs,
+    start_historical_feature_retrieval_job,
+    start_historical_feature_retrieval_spark_session,
+    start_offline_to_online_ingestion,
+    start_stream_to_online_ingestion,
+)
+from feast_spark.remote_job import (
+    RemoteBatchIngestionJob,
+    RemoteRetrievalJob,
+    RemoteStreamIngestionJob,
+    get_remote_job_from_proto,
+)
 
 
 class Client:
@@ -53,7 +45,6 @@ class Client:
 
     def __init__(self, feast_client: feast.Client):
         self._feast = feast_client
-
 
     @property
     def _use_job_service(self) -> bool:

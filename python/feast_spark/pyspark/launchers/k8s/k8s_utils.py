@@ -4,7 +4,7 @@ from typing import Any, Dict, List, NamedTuple, Optional, Tuple
 from kubernetes import client, config
 from kubernetes.client.api import CustomObjectsApi
 
-from feast.pyspark.abc import SparkJobStatus
+from feast_spark.pyspark.abc import SparkJobStatus
 
 __all__ = [
     "_get_api",

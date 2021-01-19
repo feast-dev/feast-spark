@@ -9,7 +9,10 @@ from feast.constants import ConfigOptions as opt
 from feast.data_format import ParquetFormat
 from feast.data_source import BigQuerySource, DataSource, FileSource, KafkaSource
 from feast.feature_table import FeatureTable
-from feast.pyspark.abc import (
+from feast.staging.entities import create_bq_view_of_joined_features_and_entities
+from feast.staging.storage_client import get_staging_client
+from feast.value_type import ValueType
+from feast_spark.pyspark.abc import (
     BatchIngestionJob,
     BatchIngestionJobParameters,
     JobLauncher,
@@ -19,9 +22,6 @@ from feast.pyspark.abc import (
     StreamIngestionJob,
     StreamIngestionJobParameters,
 )
-from feast.staging.entities import create_bq_view_of_joined_features_and_entities
-from feast.staging.storage_client import get_staging_client
-from feast.value_type import ValueType
 
 if TYPE_CHECKING:
     from feast.client import Client
