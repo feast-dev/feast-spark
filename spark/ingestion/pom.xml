@@ -20,15 +20,11 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>dev.feast</groupId>
-        <artifactId>feast-parent</artifactId>
-        <version>${revision}</version>
-        <relativePath>../..</relativePath>
-    </parent>
-
     <name>Feast Spark Ingestion</name>
     <artifactId>feast-ingestion-spark</artifactId>
+
+    <groupId>dev.feast</groupId>
+    <version>${revision}</version>
 
     <properties>
         <scala.version>2.12</scala.version>
@@ -37,19 +33,15 @@
         <scala-maven-plugin.version>4.4.0</scala-maven-plugin.version>
         <maven-assembly-plugin.version>3.3.0</maven-assembly-plugin.version>
         <protobuf.version>3.12.2</protobuf.version>
+        <revision>0.9.0-SNAPSHOT</revision>
+        <commons.lang3.version>3.10</commons.lang3.version>
     </properties>
 
     <dependencies>
         <dependency>
-            <groupId>dev.feast</groupId>
-            <artifactId>datatypes-java</artifactId>
-            <version>${project.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>*</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>${commons.lang3.version}</version>
         </dependency>
 
         <dependency>
@@ -287,6 +279,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version>
                 <executions>
                     <execution>
                         <phase>compile</phase>
@@ -337,6 +330,32 @@
                 <version>3.11.4</version>
                 <executions>
                     <execution>
+                        <id>proto-gen</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <protocArtifact>com.google.protobuf:protoc:${protobuf.version}</protocArtifact>
+                            <protocVersion>${protobuf.version}</protocVersion>
+                            <addProtoSources>all</addProtoSources>
+                            <inputDirectories>
+                                <include>src/proto</include>
+                            </inputDirectories>
+                            <includeDirectories>
+                                <include>src/proto</include>
+                            </includeDirectories>
+                            <includeStdTypes>true</includeStdTypes>
+                            <outputTargets>
+                                <outputTarget>
+                                    <type>java</type>
+                                    <addSources>none</addSources>
+                                    <outputDirectory>src/main/scala</outputDirectory>
+                                </outputTarget>
+                            </outputTargets>
+                        </configuration>
+                    </execution>
+                    <execution>
                         <phase>generate-test-sources</phase>
                         <goals>
                             <goal>run</goal>
@@ -367,12 +386,15 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.0.0-M5</version>
                 <configuration>
+                    <argLine>@{argLine} -Xms2048m -Xmx2048m -Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine>
                     <skipTests>true</skipTests>
                 </configuration>
             </plugin>
             <plugin>
                 <artifactId>exec-maven-plugin</artifactId>
+                <version>1.6.0</version>
                 <groupId>org.codehaus.mojo</groupId>
                 <executions>
                     <execution>

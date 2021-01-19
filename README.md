@@ -49,5 +49,5 @@ ft = feast.FeatureTable(
 # Register objects
 client.apply(entity, ft)
 
-feast_spark.client(client).start_stream_to_online_ingestion(ft)
+feast_spark.Client(client).start_stream_to_online_ingestion(ft)
 ```

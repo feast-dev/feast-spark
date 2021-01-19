@@ -1,0 +1,3 @@
+[submodule "deps/feast"]
+	path = deps/feast
+	url = https://github.com/feast-dev/feast
