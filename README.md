@@ -1,4 +1,4 @@
-# Spark ingeestion jobs for Feast
+# Spark ingestion jobs for Feast
 
 
 ```python

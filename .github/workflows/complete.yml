@@ -1,0 +1,22 @@
+name: complete
+
+on: [push, pull_request]
+
+jobs:
+  lint-java:
+    container: gcr.io/kf-feast/feast-ci:latest
+    runs-on: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Lint java
+        run: make lint-java
+
+  lint-python:
+    container: gcr.io/kf-feast/feast-ci:latest
+    runs-on: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: make install-python-ci-dependencies
+      - name: Lint python
+        run: make lint-python
