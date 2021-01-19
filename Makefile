@@ -17,7 +17,7 @@ lint-java:
 	cd spark/ingestion && ${MVN} --no-transfer-progress spotless:check
 
 install-python-ci-dependencies:
-	pip install --no-cache-dir -r feast_spark/requirements-ci.txt
+	pip install --no-cache-dir -r python/requirements-ci.txt
 
 lint-python:
 	cd ${ROOT_DIR}/python ; mypy feast_spark/
