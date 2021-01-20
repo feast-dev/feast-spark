@@ -24,11 +24,11 @@ from feast_spark.pyspark.abc import (
 )
 
 if TYPE_CHECKING:
-    from feast.client import Client
+    from feast_spark.client import Client
 
 
 def _standalone_launcher(config: Config) -> JobLauncher:
-    from feast.pyspark.launchers import standalone
+    from feast_spark.pyspark.launchers import standalone
 
     return standalone.StandaloneClusterLauncher(
         config.get(opt.SPARK_STANDALONE_MASTER), config.get(opt.SPARK_HOME),
@@ -36,7 +36,7 @@ def _standalone_launcher(config: Config) -> JobLauncher:
 
 
 def _dataproc_launcher(config: Config) -> JobLauncher:
-    from feast.pyspark.launchers import gcloud
+    from feast_spark.pyspark.launchers import gcloud
 
     return gcloud.DataprocClusterLauncher(
         cluster_name=config.get(opt.DATAPROC_CLUSTER_NAME),
@@ -50,7 +50,7 @@ def _dataproc_launcher(config: Config) -> JobLauncher:
 
 
 def _emr_launcher(config: Config) -> JobLauncher:
-    from feast.pyspark.launchers import aws
+    from feast_spark.pyspark.launchers import aws
 
     def _get_optional(option):
         if config.exists(option):
@@ -66,7 +66,7 @@ def _emr_launcher(config: Config) -> JobLauncher:
 
 
 def _k8s_launcher(config: Config) -> JobLauncher:
-    from feast.pyspark.launchers import k8s
+    from feast_spark.pyspark.launchers import k8s
 
     staging_location = config.get(opt.SPARK_STAGING_LOCATION)
     staging_uri = urlparse(staging_location)
@@ -77,6 +77,9 @@ def _k8s_launcher(config: Config) -> JobLauncher:
         staging_location=staging_location,
         incluster=config.getboolean(opt.SPARK_K8S_USE_INCLUSTER_CONFIG),
         staging_client=get_staging_client(staging_uri.scheme, config),
+        # azure-related arguments are None if not using Azure blob storage
+        azure_account_name=config.get(opt.AZURE_BLOB_ACCOUNT_NAME, None),
+        azure_account_key=config.get(opt.AZURE_BLOB_ACCOUNT_ACCESS_KEY, None),
     )
 
 
@@ -148,7 +151,7 @@ def _feature_table_to_argument(
         "project": project,
         "name": feature_table.name,
         "entities": [
-            {"name": n, "type": client.get_entity(n, project=project).value_type}
+            {"name": n, "type": client.feature_store.get_entity(n, project=project).value_type}
             for n in feature_table.entities
         ],
         "max_age": feature_table.max_age.ToSeconds() if feature_table.max_age else None,
@@ -164,16 +167,16 @@ def start_historical_feature_retrieval_spark_session(
 ):
     from pyspark.sql import SparkSession
 
-    from feast.pyspark.historical_feature_retrieval_job import (
+    from feast_spark.pyspark.historical_feature_retrieval_job import (
         retrieve_historical_features,
     )
 
     spark_session = SparkSession.builder.getOrCreate()
     return retrieve_historical_features(
         spark=spark_session,
-        entity_source_conf=_source_to_argument(entity_source, client._config),
+        entity_source_conf=_source_to_argument(entity_source, client.config),
         feature_tables_sources_conf=[
-            _source_to_argument(feature_table.batch_source, client._config)
+            _source_to_argument(feature_table.batch_source, client.config)
             for feature_table in feature_tables
         ],
         feature_tables_conf=[
@@ -191,24 +194,29 @@ def start_historical_feature_retrieval_job(
     output_format: str,
     output_path: str,
 ) -> RetrievalJob:
-    launcher = resolve_launcher(client._config)
+    launcher = resolve_launcher(client.config)
     feature_sources = [
         _source_to_argument(
             replace_bq_table_with_joined_view(feature_table, entity_source),
-            client._config,
+            client.config,
         )
         for feature_table in feature_tables
     ]
 
+    extra_packages = []
+    if output_format == "tfrecord":
+        extra_packages.append("com.linkedin.sparktfrecord:spark-tfrecord_2.12:0.3.0")
+
     return launcher.historical_feature_retrieval(
         RetrievalJobParameters(
-            entity_source=_source_to_argument(entity_source, client._config),
+            entity_source=_source_to_argument(entity_source, client.config),
             feature_tables_sources=feature_sources,
             feature_tables=[
                 _feature_table_to_argument(client, project, feature_table)
                 for feature_table in feature_tables
             ],
             destination={"format": output_format, "path": output_path},
+            extra_packages=extra_packages,
         )
     )
 
@@ -250,28 +258,28 @@ def start_offline_to_online_ingestion(
     end: datetime,
 ) -> BatchIngestionJob:
 
-    launcher = resolve_launcher(client._config)
+    launcher = resolve_launcher(client.config)
 
     return launcher.offline_to_online_ingestion(
         BatchIngestionJobParameters(
-            jar=client._config.get(opt.SPARK_INGESTION_JAR),
-            source=_source_to_argument(feature_table.batch_source, client._config),
+            jar=client.config.get(opt.SPARK_INGESTION_JAR),
+            source=_source_to_argument(feature_table.batch_source, client.config),
             feature_table=_feature_table_to_argument(client, project, feature_table),
             start=start,
             end=end,
-            redis_host=client._config.get(opt.REDIS_HOST),
-            redis_port=client._config.getint(opt.REDIS_PORT),
-            redis_ssl=client._config.getboolean(opt.REDIS_SSL),
+            redis_host=client.config.get(opt.REDIS_HOST),
+            redis_port=client.config.getint(opt.REDIS_PORT),
+            redis_ssl=client.config.getboolean(opt.REDIS_SSL),
             statsd_host=(
-                client._config.getboolean(opt.STATSD_ENABLED)
-                and client._config.get(opt.STATSD_HOST)
+                client.config.getboolean(opt.STATSD_ENABLED)
+                and client.config.get(opt.STATSD_HOST)
             ),
             statsd_port=(
-                client._config.getboolean(opt.STATSD_ENABLED)
-                and client._config.getint(opt.STATSD_PORT)
+                client.config.getboolean(opt.STATSD_ENABLED)
+                and client.config.getint(opt.STATSD_PORT)
             ),
-            deadletter_path=client._config.get(opt.DEADLETTER_PATH),
-            stencil_url=client._config.get(opt.STENCIL_URL),
+            deadletter_path=client.config.get(opt.DEADLETTER_PATH),
+            stencil_url=client.config.get(opt.STENCIL_URL),
         )
     )
 
@@ -280,20 +288,20 @@ def get_stream_to_online_ingestion_params(
     client: "Client", project: str, feature_table: FeatureTable, extra_jars: List[str]
 ) -> StreamIngestionJobParameters:
     return StreamIngestionJobParameters(
-        jar=client._config.get(opt.SPARK_INGESTION_JAR),
+        jar=client.config.get(opt.SPARK_INGESTION_JAR),
         extra_jars=extra_jars,
-        source=_source_to_argument(feature_table.stream_source, client._config),
+        source=_source_to_argument(feature_table.stream_source, client.config),
         feature_table=_feature_table_to_argument(client, project, feature_table),
-        redis_host=client._config.get(opt.REDIS_HOST),
-        redis_port=client._config.getint(opt.REDIS_PORT),
-        redis_ssl=client._config.getboolean(opt.REDIS_SSL),
-        statsd_host=client._config.getboolean(opt.STATSD_ENABLED)
-        and client._config.get(opt.STATSD_HOST),
-        statsd_port=client._config.getboolean(opt.STATSD_ENABLED)
-        and client._config.getint(opt.STATSD_PORT),
-        deadletter_path=client._config.get(opt.DEADLETTER_PATH),
-        stencil_url=client._config.get(opt.STENCIL_URL),
-        drop_invalid_rows=client._config.get(opt.INGESTION_DROP_INVALID_ROWS),
+        redis_host=client.config.get(opt.REDIS_HOST),
+        redis_port=client.config.getint(opt.REDIS_PORT),
+        redis_ssl=client.config.getboolean(opt.REDIS_SSL),
+        statsd_host=client.config.getboolean(opt.STATSD_ENABLED)
+        and client.config.get(opt.STATSD_HOST),
+        statsd_port=client.config.getboolean(opt.STATSD_ENABLED)
+        and client.config.getint(opt.STATSD_PORT),
+        deadletter_path=client.config.get(opt.DEADLETTER_PATH),
+        stencil_url=client.config.get(opt.STENCIL_URL),
+        drop_invalid_rows=client.config.get(opt.INGESTION_DROP_INVALID_ROWS),
     )
 
 
@@ -301,7 +309,7 @@ def start_stream_to_online_ingestion(
     client: "Client", project: str, feature_table: FeatureTable, extra_jars: List[str]
 ) -> StreamIngestionJob:
 
-    launcher = resolve_launcher(client._config)
+    launcher = resolve_launcher(client.config)
 
     return launcher.start_stream_to_online_ingestion(
         get_stream_to_online_ingestion_params(
@@ -311,12 +319,12 @@ def start_stream_to_online_ingestion(
 
 
 def list_jobs(include_terminated: bool, client: "Client") -> List[SparkJob]:
-    launcher = resolve_launcher(client._config)
+    launcher = resolve_launcher(client.config)
     return launcher.list_jobs(include_terminated=include_terminated)
 
 
 def get_job_by_id(job_id: str, client: "Client") -> SparkJob:
-    launcher = resolve_launcher(client._config)
+    launcher = resolve_launcher(client.config)
     return launcher.get_job_by_id(job_id)
 
 

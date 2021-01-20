@@ -7,7 +7,6 @@ from urllib.parse import urlparse
 
 from google.cloud.dataproc_v1 import Job, JobControllerClient, JobStatus
 
-from feast.staging.storage_client import get_staging_client
 from feast_spark.pyspark.abc import (
     BatchIngestionJob,
     BatchIngestionJobParameters,
@@ -22,11 +21,17 @@ from feast_spark.pyspark.abc import (
     StreamIngestionJob,
     StreamIngestionJobParameters,
 )
+from feast.staging.storage_client import get_staging_client
 
 
 class DataprocJobMixin:
     def __init__(
-        self, job: Job, refresh_fn: Callable[[], Job], cancel_fn: Callable[[], None]
+        self,
+        job: Job,
+        refresh_fn: Callable[[], Job],
+        cancel_fn: Callable[[], None],
+        project: str,
+        region: str,
     ):
         """
         Implementation of common methods for different types of SparkJob running on Dataproc cluster.
@@ -39,6 +44,8 @@ class DataprocJobMixin:
         self._job = job
         self._refresh_fn = refresh_fn
         self._cancel_fn = cancel_fn
+        self._project = project
+        self._region = region
 
     def get_id(self) -> str:
         """
@@ -130,6 +137,15 @@ class DataprocJobMixin:
             time.sleep(interval_sec)
         return status
 
+    def get_start_time(self):
+        return self._job.status.state_start_time
+
+    def get_log_uri(self) -> Optional[str]:
+        return (
+            f"https://console.cloud.google.com/dataproc/jobs/{self.get_id()}"
+            f"?region={self._region}&project={self._project}"
+        )
+
 
 class DataprocRetrievalJob(DataprocJobMixin, RetrievalJob):
     """
@@ -141,6 +157,8 @@ class DataprocRetrievalJob(DataprocJobMixin, RetrievalJob):
         job: Job,
         refresh_fn: Callable[[], Job],
         cancel_fn: Callable[[], None],
+        project: str,
+        region: str,
         output_file_uri: str,
     ):
         """
@@ -149,7 +167,7 @@ class DataprocRetrievalJob(DataprocJobMixin, RetrievalJob):
         Args:
             output_file_uri (str): Uri to the historical feature retrieval job output file.
         """
-        super().__init__(job, refresh_fn, cancel_fn)
+        super().__init__(job, refresh_fn, cancel_fn, project, region)
         self._output_file_uri = output_file_uri
 
     def get_output_file_uri(self, timeout_sec=None, block=True):
@@ -167,6 +185,9 @@ class DataprocBatchIngestionJob(DataprocJobMixin, BatchIngestionJob):
     Batch Ingestion job result for a Dataproc cluster
     """
 
+    def get_feature_table(self) -> str:
+        return self._job.labels.get(DataprocClusterLauncher.FEATURE_TABLE_LABEL_KEY, "")
+
 
 class DataprocStreamingIngestionJob(DataprocJobMixin, StreamIngestionJob):
     """
@@ -178,13 +199,18 @@ class DataprocStreamingIngestionJob(DataprocJobMixin, StreamIngestionJob):
         job: Job,
         refresh_fn: Callable[[], Job],
         cancel_fn: Callable[[], None],
+        project: str,
+        region: str,
         job_hash: str,
     ) -> None:
-        super().__init__(job, refresh_fn, cancel_fn)
+        super().__init__(job, refresh_fn, cancel_fn, project, region)
         self._job_hash = job_hash
 
     def get_hash(self) -> str:
         return self._job_hash
+
+    def get_feature_table(self) -> str:
+        return self._job.labels.get(DataprocClusterLauncher.FEATURE_TABLE_LABEL_KEY, "")
 
 
 class DataprocClusterLauncher(JobLauncher):
@@ -197,6 +223,7 @@ class DataprocClusterLauncher(JobLauncher):
     EXTERNAL_JARS = ["gs://spark-lib/bigquery/spark-bigquery-latest_2.12.jar"]
     JOB_TYPE_LABEL_KEY = "feast_job_type"
     JOB_HASH_LABEL_KEY = "feast_job_hash"
+    FEATURE_TABLE_LABEL_KEY = "feast_feature_tables"
 
     def __init__(
         self,
@@ -274,12 +301,29 @@ class DataprocClusterLauncher(JobLauncher):
             "labels": {self.JOB_TYPE_LABEL_KEY: job_params.get_job_type().name.lower()},
         }
 
-        # Add job hash to labels only for the stream ingestion job
+        maven_package_properties = {
+            "spark.jars.packages": ",".join(job_params.get_extra_packages())
+        }
+        common_properties = {
+            "spark.executor.instances": self.executor_instances,
+            "spark.executor.cores": self.executor_cores,
+            "spark.executor.memory": self.executor_memory,
+        }
+
         if isinstance(job_params, StreamIngestionJobParameters):
+            job_config["labels"][
+                self.FEATURE_TABLE_LABEL_KEY
+            ] = job_params.get_feature_table_name()
+            # Add job hash to labels only for the stream ingestion job
             job_config["labels"][self.JOB_HASH_LABEL_KEY] = job_params.get_job_hash()
 
+        if isinstance(job_params, BatchIngestionJobParameters):
+            job_config["labels"][
+                self.FEATURE_TABLE_LABEL_KEY
+            ] = job_params.get_feature_table_name()
+
         if job_params.get_class_name():
-            properties = {
+            scala_job_properties = {
                 "spark.yarn.user.classpath.first": "true",
                 "spark.executor.instances": self.executor_instances,
                 "spark.executor.cores": self.executor_cores,
@@ -288,15 +332,18 @@ class DataprocClusterLauncher(JobLauncher):
                 "spark.pyspark.python": "python3.7",
             }
 
-            properties.update(extra_properties)
-
             job_config.update(
                 {
                     "spark_job": {
                         "jar_file_uris": [main_file_uri] + self.EXTERNAL_JARS,
                         "main_class": job_params.get_class_name(),
                         "args": job_params.get_arguments(),
-                        "properties": properties,
+                        "properties": {
+                            **scala_job_properties,
+                            **common_properties,
+                            **maven_package_properties,
+                            **extra_properties,
+                        },
                     }
                 }
             )
@@ -307,7 +354,11 @@ class DataprocClusterLauncher(JobLauncher):
                         "main_python_file_uri": main_file_uri,
                         "jar_file_uris": self.EXTERNAL_JARS,
                         "args": job_params.get_arguments(),
-                        "properties": extra_properties if extra_properties else {},
+                        "properties": {
+                            **common_properties,
+                            **maven_package_properties,
+                            **extra_properties,
+                        },
                     }
                 }
             )
@@ -342,21 +393,39 @@ class DataprocClusterLauncher(JobLauncher):
             job_params, {"dev.feast.outputuri": job_params.get_destination_path()}
         )
         return DataprocRetrievalJob(
-            job, refresh_fn, cancel_fn, job_params.get_destination_path()
+            job=job,
+            refresh_fn=refresh_fn,
+            cancel_fn=cancel_fn,
+            project=self.project_id,
+            region=self.region,
+            output_file_uri=job_params.get_destination_path(),
         )
 
     def offline_to_online_ingestion(
         self, ingestion_job_params: BatchIngestionJobParameters
     ) -> BatchIngestionJob:
         job, refresh_fn, cancel_fn = self.dataproc_submit(ingestion_job_params, {})
-        return DataprocBatchIngestionJob(job, refresh_fn, cancel_fn)
+        return DataprocBatchIngestionJob(
+            job=job,
+            refresh_fn=refresh_fn,
+            cancel_fn=cancel_fn,
+            project=self.project_id,
+            region=self.region,
+        )
 
     def start_stream_to_online_ingestion(
         self, ingestion_job_params: StreamIngestionJobParameters
     ) -> StreamIngestionJob:
         job, refresh_fn, cancel_fn = self.dataproc_submit(ingestion_job_params, {})
         job_hash = ingestion_job_params.get_job_hash()
-        return DataprocStreamingIngestionJob(job, refresh_fn, cancel_fn, job_hash)
+        return DataprocStreamingIngestionJob(
+            job=job,
+            refresh_fn=refresh_fn,
+            cancel_fn=cancel_fn,
+            project=self.project_id,
+            region=self.region,
+            job_hash=job_hash,
+        )
 
     def get_job_by_id(self, job_id: str) -> SparkJob:
         job = self.job_client.get_job(
@@ -376,15 +445,35 @@ class DataprocClusterLauncher(JobLauncher):
         cancel_fn = partial(self.dataproc_cancel, job_id)
 
         if job_type == SparkJobType.HISTORICAL_RETRIEVAL.name.lower():
-            output_path = job.pyspark_job.properties.get("dev.feast.outputuri")
-            return DataprocRetrievalJob(job, refresh_fn, cancel_fn, output_path)
+            output_path = job.pyspark_job.properties.get("dev.feast.outputuri", "")
+            return DataprocRetrievalJob(
+                job=job,
+                refresh_fn=refresh_fn,
+                cancel_fn=cancel_fn,
+                project=self.project_id,
+                region=self.region,
+                output_file_uri=output_path,
+            )
 
         if job_type == SparkJobType.BATCH_INGESTION.name.lower():
-            return DataprocBatchIngestionJob(job, refresh_fn, cancel_fn)
+            return DataprocBatchIngestionJob(
+                job=job,
+                refresh_fn=refresh_fn,
+                cancel_fn=cancel_fn,
+                project=self.project_id,
+                region=self.region,
+            )
 
         if job_type == SparkJobType.STREAM_INGESTION.name.lower():
             job_hash = job.labels[self.JOB_HASH_LABEL_KEY]
-            return DataprocStreamingIngestionJob(job, refresh_fn, cancel_fn, job_hash)
+            return DataprocStreamingIngestionJob(
+                job=job,
+                refresh_fn=refresh_fn,
+                cancel_fn=cancel_fn,
+                project=self.project_id,
+                region=self.region,
+                job_hash=job_hash,
+            )
 
         raise ValueError(f"Unrecognized job type: {job_type}")
 

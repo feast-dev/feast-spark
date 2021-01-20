@@ -2,7 +2,7 @@ import os
 import uuid
 from datetime import datetime
 from itertools import groupby
-from typing import List, Optional, Union
+from typing import List, Optional, TYPE_CHECKING, Union
 
 import pandas as pd
 
@@ -39,6 +39,8 @@ from feast_spark.remote_job import (
     get_remote_job_from_proto,
 )
 
+if TYPE_CHECKING:
+    from feast.config import Config
 
 class Client:
     _feast: feast.Client
@@ -47,8 +49,20 @@ class Client:
         self._feast = feast_client
 
     @property
+    def config(self) -> "Config":
+        return self._feast._config
+
+    @property
+    def _extra_grpc_params(self):
+        return self._feast._extra_grpc_params
+
+    @property
+    def feature_store(self) -> feast.Client:
+        return self._feast
+
+    @property
     def _use_job_service(self) -> bool:
-        return self._feast.config.exists(opt.JOB_SERVICE_URL)
+        return self.config.exists(opt.JOB_SERVICE_URL)
 
     @property
     def _job_service(self):
@@ -63,12 +77,12 @@ class Client:
 
         if not self._job_service_stub:
             channel = create_grpc_channel(
-                url=self._config.get(opt.JOB_SERVICE_URL),
-                enable_ssl=self._config.getboolean(opt.JOB_SERVICE_ENABLE_SSL),
-                enable_auth=self._config.getboolean(opt.ENABLE_AUTH),
-                ssl_server_cert_path=self._config.get(opt.JOB_SERVICE_SERVER_SSL_CERT),
-                auth_metadata_plugin=self._auth_metadata,
-                timeout=self._config.getint(opt.GRPC_CONNECTION_TIMEOUT),
+                url=self.config.get(opt.JOB_SERVICE_URL),
+                enable_ssl=self.config.getboolean(opt.JOB_SERVICE_ENABLE_SSL),
+                enable_auth=self.config.getboolean(opt.ENABLE_AUTH),
+                ssl_server_cert_path=self.config.get(opt.JOB_SERVICE_SERVER_SSL_CERT),
+                auth_metadata_plugin=self._feast._auth_metadata,
+                timeout=self.config.getint(opt.GRPC_CONNECTION_TIMEOUT),
             )
             self._job_service_service_stub = JobServiceStub(channel)
         return self._job_service_service_stub
@@ -129,10 +143,10 @@ class Client:
 
         if output_location is None:
             output_location = os.path.join(
-                self._feast.config.get(opt.HISTORICAL_FEATURE_OUTPUT_LOCATION),
+                self.config.get(opt.HISTORICAL_FEATURE_OUTPUT_LOCATION),
                 str(uuid.uuid4()),
             )
-        output_format = self._feast.config.get(opt.HISTORICAL_FEATURE_OUTPUT_FORMAT)
+        output_format = self.config.get(opt.HISTORICAL_FEATURE_OUTPUT_FORMAT)
         feature_sources = [
             feature_table.batch_source for feature_table in feature_tables
         ]
@@ -153,8 +167,8 @@ class Client:
             else:
                 entity_source = stage_entities_to_fs(
                     entity_source,
-                    staging_location=self._feast.config.get(opt.SPARK_STAGING_LOCATION),
-                    config=self._feast.config,
+                    staging_location=self.config.get(opt.SPARK_STAGING_LOCATION),
+                    config=self.config,
                 )
 
         if self._use_job_service:
@@ -170,9 +184,11 @@ class Client:
             )
             return RemoteRetrievalJob(
                 self._job_service,
-                self._feast._extra_grpc_params,
+                self._extra_grpc_params,
                 response.id,
                 output_file_uri=response.output_file_uri,
+                start_time=response.job_start_time.ToDatetime(),
+                log_uri=response.log_uri,
             )
         else:
             return start_historical_feature_retrieval_job(
@@ -272,7 +288,12 @@ class Client:
             request.end_date.FromDatetime(end)
             response = self._job_service.StartOfflineToOnlineIngestionJob(request)
             return RemoteBatchIngestionJob(
-                self._job_service, self._feast._extra_grpc_params, response.id,
+                self._job_service,
+                self._extra_grpc_params,
+                response.id,
+                feature_table.name,
+                response.job_start_time.ToDatetime(),
+                response.log_uri,
             )
 
     def start_stream_to_online_ingestion(
@@ -294,7 +315,12 @@ class Client:
             )
             response = self._job_service.StartStreamToOnlineIngestionJob(request)
             return RemoteStreamIngestionJob(
-                self._job_service, self._feast._extra_grpc_params, response.id
+                self._job_service,
+                self._extra_grpc_params,
+                response.id,
+                feature_table.name,
+                response.job_start_time,
+                response.log_uri,
             )
 
     def list_jobs(self, include_terminated: bool) -> List[SparkJob]:

@@ -3,9 +3,11 @@ import os
 import random
 import string
 import time
+from datetime import datetime
 from typing import Any, Dict, List, NamedTuple, Optional
 from urllib.parse import urlparse, urlunparse
 
+import pytz
 import yaml
 
 from feast_spark.pyspark.abc import BQ_SPARK_PACKAGE
@@ -21,6 +23,7 @@ __all__ = [
     "EmrJobRef",
     "JobInfo",
     "_cancel_job",
+    "_get_job_creation_time",
     "_get_job_state",
     "_historical_retrieval_step",
     "_job_ref_to_str",
@@ -240,6 +243,21 @@ def _get_step_state(emr_client, cluster_id: str, step_id: str) -> str:
     return state
 
 
+def _get_job_creation_time(emr_client, job: EmrJobRef) -> datetime:
+    if job.step_id is None:
+        step_id = _get_first_step_id(emr_client, job.cluster_id)
+    else:
+        step_id = job.step_id
+
+    return _get_step_creation_time(emr_client, job.cluster_id, step_id)
+
+
+def _get_step_creation_time(emr_client, cluster_id: str, step_id: str) -> datetime:
+    response = emr_client.describe_step(ClusterId=cluster_id, StepId=step_id)
+    step_creation_time = response["Step"]["Status"]["Timeline"]["CreationDateTime"]
+    return step_creation_time.astimezone(pytz.utc).replace(tzinfo=None)
+
+
 def _wait_for_step_state(
     emr_client,
     cluster_id: str,
@@ -272,7 +290,7 @@ def _cancel_job(emr_client, job: EmrJobRef):
     emr_client.cancel_steps(
         ClusterId=job.cluster_id,
         StepIds=[step_id],
-        StepCancellationOption="TERMINATE_PROCESS",
+        StepCancellationOption="SEND_INTERRUPT",
     )
 
     _wait_for_job_state(
@@ -281,7 +299,10 @@ def _cancel_job(emr_client, job: EmrJobRef):
 
 
 def _historical_retrieval_step(
-    pyspark_script_path: str, args: List[str], output_file_uri: str,
+    pyspark_script_path: str,
+    args: List[str],
+    output_file_uri: str,
+    packages: List[str] = None,
 ) -> Dict[str, Any]:
 
     return {
@@ -297,7 +318,10 @@ def _historical_retrieval_step(
                     "Value": output_file_uri,
                 },
             ],
-            "Args": ["spark-submit", pyspark_script_path] + args,
+           "Args": ["spark-submit"]
+            + (["--packages", ",".join(packages)] if packages else [])
+            + [pyspark_script_path]
+            + args,
             "Jar": "command-runner.jar",
         },
     }

@@ -25,6 +25,7 @@ AUTHOR = "Feast"
 REQUIRES_PYTHON = ">=3.6.0"
 
 REQUIRED = [
+    "feast==0.9.0rc1",
     "Click==7.*",
     "google-api-core==1.22.4",
     "google-cloud-bigquery==1.18.*",
@@ -92,6 +93,6 @@ setup(
         "Programming Language :: Python :: 3.6",
     ],
     entry_points={"console_scripts": ["feast-spark=feast_spark.cli:cli"]},
-    use_scm_version={"root": "../..", "relative_to": __file__, "tag_regex": TAG_REGEX},
+    use_scm_version={"root": "../", "relative_to": __file__, "tag_regex": TAG_REGEX},
     setup_requires=["setuptools_scm"],
 )

@@ -25,3 +25,8 @@ lint-python:
 	cd ${ROOT_DIR}/python ; flake8 feast_spark/
 	cd ${ROOT_DIR}/python ; black --check feast_spark
 
+build-local-test-docker:
+	docker build -t feast:local -f infra/docker/tests/Dockerfile .
+
+build-java-no-tests:
+	cd spark/ingestion && ${MVN} --no-transfer-progress -Dmaven.javadoc.skip=true -Dgpg.skip -DskipUTs=true -DskipITs=true -Drevision=${REVISION} clean package
