@@ -151,7 +151,10 @@ def _feature_table_to_argument(
         "project": project,
         "name": feature_table.name,
         "entities": [
-            {"name": n, "type": client.feature_store.get_entity(n, project=project).value_type}
+            {
+                "name": n,
+                "type": client.feature_store.get_entity(n, project=project).value_type,
+            }
             for n in feature_table.entities
         ],
         "max_age": feature_table.max_age.ToSeconds() if feature_table.max_age else None,

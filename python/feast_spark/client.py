@@ -2,7 +2,7 @@ import os
 import uuid
 from datetime import datetime
 from itertools import groupby
-from typing import List, Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 import pandas as pd
 
@@ -41,6 +41,7 @@ from feast_spark.remote_job import (
 
 if TYPE_CHECKING:
     from feast.config import Config
+
 
 class Client:
     _feast: feast.Client

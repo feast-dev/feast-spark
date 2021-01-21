@@ -2,7 +2,7 @@ MVN := mvn ${MAVEN_EXTRA_OPTS}
 ROOT_DIR 	:= $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 format-java:
-	${MVN} spotless:apply
+	cd spark/ingestion && ${MVN} spotless:apply
 
 format-python:
 	# Sort
