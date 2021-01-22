@@ -1,0 +1,230 @@
+prowjob_namespace: prow
+pod_namespace: test-pods
+
+in_repo_config:
+  enabled:
+    "*": true
+
+plank:
+  job_url_prefix_config:
+    "*": https://prow.feast.dev/view/gcs
+  pod_pending_timeout: 60m
+  report_templates:
+    '*': >-
+        [Full PR test history](https://prow.feast.dev/pr-history?org={{.Spec.Refs.Org}}&repo={{.Spec.Refs.Repo}}&pr={{with index .Spec.Refs.Pulls 0}}{{.Number}}{{end}}).
+        [Your PR dashboard](https://prow.feast.dev/pr?query=is:pr+state:open+author:{{with
+        index .Spec.Refs.Pulls 0}}{{.Author}}{{end}}).
+  default_decoration_configs:
+    "*":
+      timeout: 1h
+      grace_period: 15s
+      gcs_configuration:
+        bucket: gs://feast-prow-artifacts
+        path_strategy: explicit
+      gcs_credentials_secret: gcs-credentials
+      utility_images:
+        clonerefs: gcr.io/k8s-prow/clonerefs:v20201112-00537d1bb4
+        entrypoint: gcr.io/k8s-prow/entrypoint:v20201112-00537d1bb4
+        initupload: gcr.io/k8s-prow/initupload:v20201112-00537d1bb4
+        sidecar: gcr.io/k8s-prow/sidecar:v20201112-00537d1bb4
+
+deck:
+  tide_update_period: 1s
+  spyglass:
+    size_limit: 10e+6 # 10MB
+    lenses:
+    - lens:
+        name: metadata
+      required_files:
+      - started.json|finished.json
+    - lens:
+        name: buildlog
+      required_files:
+      - build-log.txt
+    - lens:
+        name: junit
+      required_files:
+      - artifacts/.*\.xml
+
+tide:
+  queries:
+  - repos:
+    - feast-dev/feast
+    labels:
+    - lgtm
+    - approved
+    missingLabels:
+    - do-not-merge
+    - do-not-merge/hold
+    - do-not-merge/invalid-owners-file
+    - do-not-merge/work-in-progress
+    - needs-rebase
+    - needs-kind
+  merge_method:
+    feast-dev/feast: squash
+  blocker_label: merge-blocker
+  squash_label: tide/squash
+
+# presubmits and postsubmits configure ProwJobs:
+# https://github.com/kubernetes/test-infra/blob/6571843b1aa7bd6cf577a7a8b9e9971241f424d5/prow/jobs.md
+
+presubmits:
+  feast-dev/feast-spark:
+  - name: test-end-to-end
+    decorate: true
+    always_run: true
+    spec:
+      containers:
+      - image: gcr.io/kf-feast/feast-ci:latest
+        command: ["infra/scripts/test-end-to-end.sh"]
+        resources:
+          requests:
+            cpu: "6"
+            memory: "6144Mi"
+        env:
+          - name: GOOGLE_APPLICATION_CREDENTIALS
+            value: /etc/gcloud/service-account.json
+        volumeMounts:
+          - mountPath: /etc/gcloud/service-account.json
+            name: service-account
+            readOnly: true
+            subPath: service-account.json
+      volumes:
+        - name: service-account
+          secret:
+            secretName: feast-service-account
+
+  - name: test-end-to-end-gcp
+    decorate: true
+    always_run: true
+    max_concurrency: 1
+    spec:
+      containers:
+      - image: gcr.io/kf-feast/feast-ci:latest
+        command: [ "infra/scripts/test-end-to-end-gcp.sh" ]
+        resources:
+          requests:
+            cpu: "6"
+            memory: "6144Mi"
+        env:
+          - name: GOOGLE_APPLICATION_CREDENTIALS
+            value: /etc/gcloud/service-account.json
+        volumeMounts:
+          - mountPath: /etc/gcloud/service-account.json
+            name: service-account
+            readOnly: true
+            subPath: service-account.json
+      volumes:
+        - name: service-account
+          secret:
+            secretName: feast-service-account
+
+
+  - name: test-end-to-end-aws
+    decorate: true
+    always_run: true
+    max_concurrency: 1
+    spec:
+      containers:
+        - image: gcr.io/kf-feast/feast-ci:latest
+          command: [ "infra/scripts/codebuild_runner.py", "--location-from-prow", "--project-name", "feast-ci-project"  ]
+          resources:
+            requests:
+              cpu: "2"
+              memory: "2048Mi"
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: feast-aws-creds
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: feast-aws-creds
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: AWS_DEFAULT_REGION
+              value: us-west-2
+  - name: test-end-to-end-sparkop
+    decorate: true
+    always_run: true
+    max_concurrency: 1
+    spec:
+      containers:
+        - image: gcr.io/kf-feast/feast-ci:latest
+          command: [ "infra/scripts/codebuild_runner.py", "--location-from-prow", "--project-name", "feast-ci-sparkop-project" ]
+          resources:
+            requests:
+              cpu: "2"
+              memory: "2048Mi"
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: feast-aws-creds
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: feast-aws-creds
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: AWS_DEFAULT_REGION
+              value: us-west-2
+
+  - name: test-end-to-end-azure
+    decorate: true
+    always_run: true
+    max_concurrency: 1
+    spec:
+      containers:
+      - image: gcr.io/kf-feast/feast-ci:develop
+        command: [ "infra/scripts/azure-runner.sh" ]
+        resources:
+          requests:
+            cpu: "2"
+            memory: "2048Mi"
+        env:
+          - name: GOOGLE_APPLICATION_CREDENTIALS
+            value: /etc/gcloud/service-account.json
+          - name: RESOURCE_GROUP
+            value: Feast
+          - name: AKS_CLUSTER_NAME
+            value: main
+          - name: DOCKER_REPOSITORY
+            value: gcr.io/kf-feast
+          - name: STAGING_PATH
+            value: wasbs://staging@feastcicd.blob.core.windows.net/cicd-staging
+          - name: AZ_SERVICE_PRINCIPAL_ID
+            valueFrom:
+              secretKeyRef:
+                name: feast-az-creds
+                key: AZ_SERVICE_PRINCIPAL_ID
+          - name: AZ_SERVICE_PRINCIPAL_PASS
+            valueFrom:
+              secretKeyRef:
+                name: feast-az-creds
+                key: AZ_SERVICE_PRINCIPAL_PASS
+          - name: AZ_SERVICE_PRINCIPAL_TENANT_ID
+            valueFrom:
+              secretKeyRef:
+                name: feast-az-creds
+                key: AZ_SERVICE_PRINCIPAL_TENANT_ID
+          - name: AZURE_BLOB_ACCOUNT_NAME
+            valueFrom:
+              secretKeyRef:
+                name: feast-az-creds
+                key: AZURE_BLOB_ACCOUNT_NAME
+          - name: AZURE_BLOB_ACCOUNT_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: feast-az-creds
+                key: AZURE_BLOB_ACCOUNT_ACCESS_KEY
+        volumeMounts:
+          - mountPath: /etc/gcloud/service-account.json
+            name: service-account
+            readOnly: true
+            subPath: service-account.json
+      volumes:
+        - name: service-account
+          secret:
+            secretName: feast-service-account
