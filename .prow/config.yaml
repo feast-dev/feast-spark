@@ -49,7 +49,7 @@ deck:
 tide:
   queries:
   - repos:
-    - feast-dev/feast
+    - feast-dev/feast-spark
     labels:
     - lgtm
     - approved
