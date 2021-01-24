@@ -1,6 +1,6 @@
 # Spark ingestion jobs for Feast
 
-
+Example
 ```python
 
 import feast_spark
