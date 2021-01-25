@@ -48,6 +48,7 @@ class Client:
 
     def __init__(self, feast_client: feast.Client):
         self._feast = feast_client
+        self._job_service_stub: Optional[JobServiceStub] = None
 
     @property
     def config(self) -> "Config":

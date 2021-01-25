@@ -1,6 +1,8 @@
 MVN := mvn ${MAVEN_EXTRA_OPTS}
 ROOT_DIR 	:= $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
+export
+
 format-java:
 	cd spark/ingestion && ${MVN} spotless:apply
 
@@ -28,5 +30,24 @@ lint-python:
 build-local-test-docker:
 	docker build -t feast:local -f infra/docker/tests/Dockerfile .
 
-build-java-no-tests:
+build-ingestion-jar-no-tests:
 	cd spark/ingestion && ${MVN} --no-transfer-progress -Dmaven.javadoc.skip=true -Dgpg.skip -DskipUTs=true -DskipITs=true -Drevision=${REVISION} clean package
+
+build-jobservice-docker:
+	docker build -t $(REGISTRY)/feast-jobservice:$(VERSION) -f infra/docker/jobservice/Dockerfile .
+
+push-jobservice-docker:
+	docker push $(REGISTRY)/feast-jobservice:$(VERSION)
+
+install-python: install-python-ci-dependencies
+	python -m pip install -e python
+
+install-ci-dependencies: install-python-ci-dependencies
+
+# Forward all other build-X and push-X targets to the makefile that knows how to build docker
+# containers
+build-%:
+	cd deps/feast && $(MAKE) $@
+
+push-%:
+	cd deps/feast && $(MAKE) $@

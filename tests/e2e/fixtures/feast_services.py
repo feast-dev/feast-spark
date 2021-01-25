@@ -56,10 +56,10 @@ def enable_auth(request):
 
 @pytest.fixture(scope="session")
 def feast_core(
-    project_root, project_version, enable_auth, postgres_server: PostgreSQLExecutor
+    java_project_root, project_version, enable_auth, postgres_server: PostgreSQLExecutor
 ):
     jar = str(
-        project_root / "core" / "target" / f"feast-core-{project_version}-exec.jar"
+        java_project_root / "core" / "target" / f"feast-core-{project_version}-exec.jar"
     )
     config = dict(
         feast=dict(
@@ -95,7 +95,7 @@ def feast_core(
 
 @pytest.fixture(scope="session")
 def feast_serving(
-    project_root,
+    java_project_root,
     project_version,
     enable_auth,
     redis_server: RedisExecutor,
@@ -105,7 +105,7 @@ def feast_serving(
     _wait_port_open(6565)  # in case core is restarting with new config
 
     jar = str(
-        project_root
+        java_project_root
         / "serving"
         / "target"
         / f"feast-serving-{project_version}-exec.jar"
@@ -206,7 +206,7 @@ def feast_jobservice(
                 global_staging_path, "historical_output"
             )
 
-        process = subprocess.Popen(["feast", "server"], env=env)
+        process = subprocess.Popen(["feast-spark", "server"], env=env)
         _wait_port_open(6568)
         yield "localhost", 6568
         process.terminate()

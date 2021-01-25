@@ -57,7 +57,7 @@ DOCKER_REPOSITORY=gcr.io/kf-feast GIT_TAG=develop bash ./infra/scripts/setup-e2e
 
 7. Build the ingestion jar locally
 ```bash
-make build-java-no-tests REVISION=develop
+make build-ingestion-jar-no-tests REVISION=develop
 ```
 
 8. Create staging bucket using awscli. First, create a port-forward for minio:
