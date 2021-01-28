@@ -1,3 +1,4 @@
+import hashlib
 import random
 import string
 import time
@@ -30,6 +31,7 @@ from .k8s_utils import (
     DEFAULT_JOB_TEMPLATE,
     HISTORICAL_RETRIEVAL_JOB_TYPE,
     LABEL_FEATURE_TABLE,
+    LABEL_FEATURE_TABLE_HASH,
     METADATA_JOBHASH,
     METADATA_OUTPUT_URI,
     OFFLINE_TO_ONLINE_JOB_TYPE,
@@ -53,6 +55,14 @@ def _generate_job_id() -> str:
     return "feast-" + "".join(
         random.choice(string.ascii_lowercase + string.digits) for _ in range(8)
     )
+
+
+def _truncate_label(label: str) -> str:
+    return label[:63]
+
+
+def _generate_table_hash(table_name: str) -> str:
+    return hashlib.md5(table_name.encode()).hexdigest()
 
 
 class KubernetesJobMixin:
@@ -277,7 +287,11 @@ class KubernetesJobLauncher(JobLauncher):
         return cast(RetrievalJob, self._job_from_job_info(job_info))
 
     def _upload_jar(self, jar_path: str) -> str:
-        if jar_path.startswith("s3://") or jar_path.startswith("s3a://"):
+        if (
+            jar_path.startswith("s3://")
+            or jar_path.startswith("s3a://")
+            or jar_path.startswith("https://")
+        ):
             return jar_path
         elif jar_path.startswith("file://"):
             local_jar_path = urlparse(jar_path).path
@@ -324,7 +338,12 @@ class KubernetesJobLauncher(JobLauncher):
             arguments=ingestion_job_params.get_arguments(),
             namespace=self._namespace,
             extra_labels={
-                LABEL_FEATURE_TABLE: ingestion_job_params.get_feature_table_name()
+                LABEL_FEATURE_TABLE: _truncate_label(
+                    ingestion_job_params.get_feature_table_name()
+                ),
+                LABEL_FEATURE_TABLE_HASH: _generate_table_hash(
+                    ingestion_job_params.get_feature_table_name()
+                ),
             },
         )
 
@@ -370,7 +389,12 @@ class KubernetesJobLauncher(JobLauncher):
             arguments=ingestion_job_params.get_arguments(),
             namespace=self._namespace,
             extra_labels={
-                LABEL_FEATURE_TABLE: ingestion_job_params.get_feature_table_name()
+                LABEL_FEATURE_TABLE: _truncate_label(
+                    ingestion_job_params.get_feature_table_name()
+                ),
+                LABEL_FEATURE_TABLE_HASH: _generate_table_hash(
+                    ingestion_job_params.get_feature_table_name()
+                ),
             },
         )
 
@@ -387,10 +411,12 @@ class KubernetesJobLauncher(JobLauncher):
         else:
             return self._job_from_job_info(job_info)
 
-    def list_jobs(self, include_terminated: bool) -> List[SparkJob]:
+    def list_jobs(
+        self, include_terminated: bool, table_name: Optional[str] = None
+    ) -> List[SparkJob]:
         return [
             self._job_from_job_info(job)
-            for job in _list_jobs(self._api, self._namespace)
+            for job in _list_jobs(self._api, self._namespace, table_name)
             if include_terminated
             or job.state not in (SparkJobStatus.COMPLETED, SparkJobStatus.FAILED)
         ]
