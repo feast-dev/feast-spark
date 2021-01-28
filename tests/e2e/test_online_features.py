@@ -208,7 +208,7 @@ def test_list_jobs_long_table_name(
     feast_client.apply(feature_table)
 
     data_sample = generate_data()
-    feast_spark.Client(feast_client).ingest(feature_table, data_sample)
+    feast_client.ingest(feature_table, data_sample)
 
     job = feast_spark.Client(feast_client).start_offline_to_online_ingestion(
         feature_table,
