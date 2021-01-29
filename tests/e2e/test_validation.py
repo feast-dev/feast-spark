@@ -7,7 +7,7 @@ import pytest
 from great_expectations.dataset import PandasDataset
 
 from feast import Client
-from feast.contrib.validation.ge import apply_validation, create_validation_udf
+from feast_spark.contrib.validation.ge import apply_validation, create_validation_udf
 from feast.wait import wait_retry_backoff
 from tests.e2e.fixtures.statsd_stub import StatsDServer
 from tests.e2e.utils.common import avro_schema, create_schema, start_job, stop_job
