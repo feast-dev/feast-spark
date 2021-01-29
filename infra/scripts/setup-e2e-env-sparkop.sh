@@ -1,6 +1,7 @@
 #!/bin/bash
 
-make compile-protos-python
+make install-ci-dependencies
+make install-python
 
 python -m pip install --upgrade pip==20.2 setuptools wheel
 
@@ -12,4 +13,4 @@ python -m pip install -qr tests/requirements.txt
 echo "########## Building ingestion jar"
 TIMEFORMAT='########## took %R seconds'
 
-time make build-java-no-tests REVISION=develop MAVEN_EXTRA_OPTS="-q --no-transfer-progress"
+time make build-ingestion-jar-no-tests REVISION=develop MAVEN_EXTRA_OPTS="-q --no-transfer-progress"
