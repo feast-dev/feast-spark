@@ -1,6 +1,6 @@
 # Spark ingestion jobs for [Feast](https://github.com/feast-dev/feast)
 
-Example usage:
+Usage:
 
 ```python
 
