@@ -2,12 +2,14 @@
 
 set -euo pipefail
 
+export HELM_CHART_LOCATION=deps/feast/infra/charts/feast
+
 STEP_BREADCRUMB='~~~~~~~~'
 SECONDS=0
 TIMEFORMAT="${STEP_BREADCRUMB} took %R seconds"
 
 GIT_TAG=$PULL_PULL_SHA
-GIT_REMOTE_URL=https://github.com/feast-dev/feast.git
+GIT_REMOTE_URL=https://github.com/feast-dev/feast-spark.git
 
 echo "########## Starting e2e tests for ${GIT_REMOTE_URL} ${GIT_TAG} ###########"
 
@@ -60,6 +62,6 @@ time kubectl run -n "$NAMESPACE" -i ci-test-runner  \
     --env="FEAST_AZURE_BLOB_ACCOUNT_NAME=${AZURE_BLOB_ACCOUNT_NAME}" \
     --env="FEAST_AZURE_BLOB_ACCOUNT_ACCESS_KEY=${AZURE_BLOB_ACCOUNT_ACCESS_KEY}" \
     --  \
-    bash -c "mkdir src && cd src && git clone ${GIT_REMOTE_URL} && cd feast && git config remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pull/*' && git fetch -q && git checkout ${GIT_TAG} && ./infra/scripts/setup-e2e-env-sparkop.sh && ./infra/scripts/test-end-to-end-sparkop.sh"
+    bash -c "mkdir src && cd src && git clone --recursive ${GIT_REMOTE_URL} && cd feast* && git config remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pull/*' && git fetch -q && git checkout ${GIT_TAG} && git submodule update --init --recursive && ./infra/scripts/setup-e2e-env-sparkop.sh && ./infra/scripts/test-end-to-end-sparkop.sh"
 
 echo "########## e2e tests took $SECONDS seconds ###########"

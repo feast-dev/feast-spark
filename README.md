@@ -1,5 +1,6 @@
-# Spark ingestion jobs for Feast
+# Spark ingestion jobs for [Feast](https://github.com/feast-dev/feast)
 
+Example usage:
 
 ```python
 
@@ -16,7 +17,7 @@ entity = feast.Entity(
     labels={"team": "matchmaking"},
 )
 
-# Create Feature Tables using Feast sdk
+# Create Feature Tables using Feast SDK
 batch_source = feast.FileSource(
     file_format=ParquetFormat(),
     file_url="file://feast/*",
@@ -46,8 +47,9 @@ ft = feast.FeatureTable(
     stream_source=stream_source,
 )
 
-# Register objects
+# Register objects in Feast
 client.apply(entity, ft)
 
+# Start spark streaming ingestion job that reads from kafka and writes to the online store
 feast_spark.Client(client).start_stream_to_online_ingestion(ft)
 ```

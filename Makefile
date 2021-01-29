@@ -1,6 +1,7 @@
 MVN := mvn ${MAVEN_EXTRA_OPTS}
 ROOT_DIR 	:= $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
+# Make sure env vars are available to submakes
 export
 
 format-java:
@@ -44,7 +45,7 @@ install-python: install-python-ci-dependencies
 
 install-ci-dependencies: install-python-ci-dependencies
 
-# Forward all other build-X and push-X targets to the makefile that knows how to build docker
+# Forward all other build-X and push-X targets to the Makefile that knows how to build docker
 # containers
 build-%:
 	cd deps/feast && $(MAKE) $@
