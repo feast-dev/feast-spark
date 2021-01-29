@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-. /Users/olegavdeev/tmp/feastci/bin/activate
-
 CURRENT_PATH=$PWD
 DESTINATION=${DESTINATION:-$CURRENT_PATH}
 
