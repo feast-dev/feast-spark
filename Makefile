@@ -34,6 +34,9 @@ build-local-test-docker:
 build-ingestion-jar-no-tests:
 	cd spark/ingestion && ${MVN} --no-transfer-progress -Dmaven.javadoc.skip=true -Dgpg.skip -DskipUTs=true -DskipITs=true -Drevision=${REVISION} clean package
 
+build-metrics-jar:
+	cd spark/metrics && ${MVN} --no-transfer-progress -Dmaven.javadoc.skip=true -Dgpg.skip -Drevision=${REVISION} clean package
+
 build-jobservice-docker:
 	docker build -t $(REGISTRY)/feast-jobservice:$(VERSION) -f infra/docker/jobservice/Dockerfile .
 
