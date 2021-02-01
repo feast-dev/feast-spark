@@ -40,6 +40,12 @@ build-jobservice-docker:
 push-jobservice-docker:
 	docker push $(REGISTRY)/feast-jobservice:$(VERSION)
 
+build-spark-docker:
+	docker build -t $(REGISTRY)/feast-spark:$(VERSION) --build-arg VERSION=$(VERSION) -f infra/docker/spark/Dockerfile .
+
+push-spark-docker:
+	docker push $(REGISTRY)/feast-spark:$(VERSION)
+
 install-python: install-python-ci-dependencies
 	python -m pip install -e python
 
