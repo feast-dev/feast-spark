@@ -16,6 +16,17 @@ echo "########## Starting e2e tests for ${GIT_REMOTE_URL} ${GIT_TAG} ###########
 # Note requires running in root feast directory
 source infra/scripts/k8s-common-functions.sh
 
+# Figure out docker image versions
+
+# Those are build from submodule, but tagged with the sha tag of this repo.
+export JUPYTER_GIT_TAG=$GIT_TAG
+export SERVING_GIT_TAG=$GIT_TAG
+export CORE_GIT_TAG=$GIT_TAG
+export CI_GIT_TAG=$GIT_TAG
+
+# Jobservice is built by this repo
+export JOBSERVICE_GIT_TAG=$GIT_TAG
+
 # Workaround for COPY command in core docker image that pulls local maven repo into the image
 # itself.
 mkdir .m2 2>/dev/null || true
@@ -36,9 +47,12 @@ RELEASE=sparkop
 # Delete old helm release and PVCs
 k8s_cleanup "$RELEASE" "$NAMESPACE"
 
-wait_for_images "${DOCKER_REPOSITORY}" "${GIT_TAG}"
+# Wait for CI and jobservice image to be built
+wait_for_image "${DOCKER_REPOSITORY}" feast-ci "${CI_GIT_TAG}"
+wait_for_image "${DOCKER_REPOSITORY}" feast-jobservice "${JOBSERVICE_GIT_TAG}"
 
-# Helm install everything in a namespace
+# Helm install everything in a namespace. Note that this function will use XXX_GIT_TAG variables 
+# we've set above to find the image versions.
 helm_install "$RELEASE" "${DOCKER_REPOSITORY}" "${GIT_TAG}" "$NAMESPACE" \
         --set "feast-jobservice.envOverrides.FEAST_AZURE_BLOB_ACCOUNT_NAME=${AZURE_BLOB_ACCOUNT_NAME}" \
         --set "feast-jobservice.envOverrides.FEAST_AZURE_BLOB_ACCOUNT_ACCESS_KEY=${AZURE_BLOB_ACCOUNT_ACCESS_KEY}"

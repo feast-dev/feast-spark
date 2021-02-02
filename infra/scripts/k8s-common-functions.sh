@@ -2,11 +2,13 @@
 
 set -euo pipefail
 
-function wait_for_images {
+function wait_for_image {
     local DOCKER_REPOSITORY=$1
-    local GIT_TAG=$2
+    local IMAGE_NAME=$2
+    local GIT_TAG=$3
     # Wait for images to be available in the docker repository; ci is the last image built
-    timeout 15m bash -c "while ! gcloud container images list-tags ${DOCKER_REPOSITORY}/feast-ci --format=json | jq -e \".[] | select(.tags[] | contains (\\\"${GIT_TAG}\\\"))\" > /dev/null; do sleep 10s; done"
+    echo "Waiting for ${DOCKER_REPOSITORY}/${IMAGE_NAME}:${GIT_TAG} to become available"
+    timeout 15m bash -c "while ! gcloud container images list-tags ${DOCKER_REPOSITORY}/${IMAGE_NAME} --format=json | jq -e \".[] | select(.tags[] | contains (\\\"${GIT_TAG}\\\"))\" > /dev/null; do sleep 10s; done"
 }
 
 function k8s_cleanup {
@@ -42,8 +44,15 @@ function helm_install {
     # Args:
     #   $RELEASE is helm release name
     #   $DOCKER_REPOSITORY is the docker repo containing feast images tagged with $GIT_TAG
-    #   ... you can pass additional args to this function that are passed on to helm install
     #   $NAMESPACE is the namespace name
+    #   $GIT_TAG is the git tag to use when pulling the images. This can also be overridden
+    #            on per-image basis, that is, if these are set, they'll be used instead:
+    #               $JUPYTER_GIT_TAG
+    #               $SERVING_GIT_TAG
+    #               $CORE_GIT_TAG
+    #               $JOBSERVICE_GIT_TAG
+    #
+    #   ... you can pass additional args to this function that are passed on to helm install
 
     local RELEASE=$1
     local DOCKER_REPOSITORY=$2
@@ -59,13 +68,13 @@ function helm_install {
     if ! time helm install --wait "$RELEASE" "${HELM_CHART_LOCATION:-./infra/charts/feast}" \
         --timeout 15m \
         --set "feast-jupyter.image.repository=${DOCKER_REPOSITORY}/feast-jupyter" \
-        --set "feast-jupyter.image.tag=${GIT_TAG}" \
+        --set "feast-jupyter.image.tag=${JUPYTER_GIT_TAG:-$GIT_TAG}" \
         --set "feast-online-serving.image.repository=${DOCKER_REPOSITORY}/feast-serving" \
-        --set "feast-online-serving.image.tag=${GIT_TAG}" \
+        --set "feast-online-serving.image.tag=${SERVING_GIT_TAG:-$GIT_TAG}" \
         --set "feast-jobservice.image.repository=${DOCKER_REPOSITORY}/feast-jobservice" \
-        --set "feast-jobservice.image.tag=${GIT_TAG}" \
+        --set "feast-jobservice.image.tag=${JOBSERVICE_GIT_TAG:-$GIT_TAG}" \
         --set "feast-core.image.repository=${DOCKER_REPOSITORY}/feast-core" \
-        --set "feast-core.image.tag=${GIT_TAG}" \
+        --set "feast-core.image.tag=${CORE_GIT_TAG:-$GIT_TAG}" \
         --set "prometheus-statsd-exporter.enabled=false" \
         --set "prometheus.enabled=false" \
         --set "grafana.enabled=false" \
