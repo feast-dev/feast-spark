@@ -7,7 +7,7 @@ import pytest
 @pytest.fixture(scope="session")
 def java_project_root():
     # This file is %root%/tests/e2e/fixtures/base.py
-    return Path(__file__).parent.parent.parent.parent / "deps" / "feast"
+    return Path(__file__).parent.parent.parent.parent / "deps" / "feast-java"
 
 
 @pytest.fixture(scope="session")

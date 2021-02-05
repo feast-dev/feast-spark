@@ -1,3 +1,6 @@
 [submodule "deps/feast"]
 	path = deps/feast
 	url = https://github.com/feast-dev/feast
+[submodule "deps/feast-java"]
+	path = deps/feast-java
+	url = https://github.com/feast-dev/feast-java

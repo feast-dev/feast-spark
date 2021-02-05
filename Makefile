@@ -58,8 +58,22 @@ push-spark-docker:
 
 install-ci-dependencies: install-python-ci-dependencies
 
-# Forward all other build-X and push-X targets to the Makefile that knows how to build docker
-# containers
+# Forward all other build-X and push-X targets to the appropriate Makefile
+build-java-no-tests:
+	cd deps/feast-java && $(MAKE) $@
+
+build-core-docker:
+	cd deps/feast-java && $(MAKE) $@
+
+build-serving-docker:
+	cd deps/feast-java && $(MAKE) $@
+
+push-core-docker:
+	cd deps/feast-java && $(MAKE) $@
+
+push-serving-docker:
+	cd deps/feast-java && $(MAKE) $@
+
 build-%:
 	cd ${SUBMODULE_DIR} && $(MAKE) $@
 
