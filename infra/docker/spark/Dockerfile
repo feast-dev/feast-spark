@@ -18,6 +18,8 @@ ARG TFRECORD_VERSION=0.3.0
 ARG GCS_CONNECTOR_VERSION=2.0.1
 ARG BQ_CONNECTOR_VERSION=0.18.1
 
+COPY --from=builder /build/spark/ingestion/target/feast-ingestion-spark-${VERSION}.jar /opt/spark/jars
+
 USER root
 # Add HADOOP_AWS_JAR and AWS_JAVA_SDK
 ADD https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/${HADOOP_AWS_VERSION}/hadoop-aws-${HADOOP_AWS_VERSION}.jar /opt/spark/jars
@@ -26,7 +28,6 @@ ADD https://repo1.maven.org/maven2/com/linkedin/sparktfrecord/spark-tfrecord_2.1
 ADD https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop2-${GCS_CONNECTOR_VERSION}.jar /opt/spark/jars
 ADD https://repo1.maven.org/maven2/com/google/cloud/spark/spark-bigquery-with-dependencies_2.12/${BQ_CONNECTOR_VERSION}/spark-bigquery-with-dependencies_2.12-${BQ_CONNECTOR_VERSION}.jar /opt/spark/jars
 
-COPY --from=builder /build/spark/ingestion/target/feast-ingestion-spark-${VERSION}.jar /opt/spark/jars
 
 
 ENTRYPOINT [ "/opt/entrypoint.sh" ]
