@@ -1,6 +1,0 @@
-dependencies:
-- name: feast-jobservice
-  repository: ""
-  version: 0.10.0-SNAPSHOT
-digest: sha256:b27ed7a37d18867f05d24592b6b7e7bfba1a09488c760081103f6bd5d97e44f7
-generated: "2021-02-08T11:44:17.449887+08:00"

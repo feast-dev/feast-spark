@@ -11,6 +11,7 @@ https://docs.feast.dev/v/master/getting-started/deploying-feast/kubernetes
 | Repository | Name | Version |
 |------------|------|---------|
 |  | feast-jobservice | 0.10.0-SNAPSHOT |
+|  | prometheus-statsd-exporter | 0.1.2 |
 
 ## Values
 
