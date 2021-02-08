@@ -2,7 +2,6 @@
 
 set -euo pipefail
 
-export HELM_CHART_LOCATION=deps/feast/infra/charts/feast
 
 STEP_BREADCRUMB='~~~~~~~~'
 SECONDS=0
@@ -17,12 +16,6 @@ echo "########## Starting e2e tests for ${GIT_REMOTE_URL} ${GIT_TAG} ###########
 source infra/scripts/k8s-common-functions.sh
 
 # Figure out docker image versions
-
-# Those are build from submodule, but tagged with the sha tag of this repo.
-export JUPYTER_GIT_TAG=$GIT_TAG
-export SERVING_GIT_TAG=$GIT_TAG
-export CORE_GIT_TAG=$GIT_TAG
-export CI_GIT_TAG=$GIT_TAG
 
 # Jobservice is built by this repo
 export JOBSERVICE_GIT_TAG=$GIT_TAG

@@ -5,10 +5,10 @@ on: [push, pull_request]
 jobs:
 
   build-push-docker-images-for-e2e-tests:
-    runs-on: [self-hosted]
+    runs-on: [ubuntu-latest]
     strategy:
       matrix:
-        component: [core, serving, jobservice, jupyter, ci]
+        component: [jobservice, spark]
     env:
       GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha }}
       REGISTRY: gcr.io/kf-feast
@@ -17,10 +17,16 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
+      - uses: actions/checkout@v2
+      - uses: docker/setup-qemu-action@v1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
       - uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
         with:
           version: '290.0.1'
           export_default_credentials: true
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
       - run: gcloud auth configure-docker --quiet
       - name: Get m2 cache
         run: |

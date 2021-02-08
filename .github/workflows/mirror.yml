@@ -2,8 +2,9 @@ name: mirror
 
 on:
   push:
-    branches:
-      - '**'
+    branches: master
+    tags:
+      - 'v*.*.*'
 
 jobs:
   mirror:

@@ -65,20 +65,17 @@ function helm_install {
     # has some issues with unbound PVCs (that cause kubectl delete pvc to hang).
     echo "${STEP_BREADCRUMB:-} Helm installing feast"
 
+    helm repo add feast-charts https://feast-charts.storage.googleapis.com
+    helm repo update
+    helm install feast-release feast-charts/feast "$@"
+
     if ! time helm install --wait "$RELEASE" "${HELM_CHART_LOCATION:-./infra/charts/feast}" \
         --timeout 15m \
-        --set "feast-jupyter.image.repository=${DOCKER_REPOSITORY}/feast-jupyter" \
-        --set "feast-jupyter.image.tag=${JUPYTER_GIT_TAG:-$GIT_TAG}" \
-        --set "feast-online-serving.image.repository=${DOCKER_REPOSITORY}/feast-serving" \
-        --set "feast-online-serving.image.tag=${SERVING_GIT_TAG:-$GIT_TAG}" \
         --set "feast-jobservice.image.repository=${DOCKER_REPOSITORY}/feast-jobservice" \
         --set "feast-jobservice.image.tag=${JOBSERVICE_GIT_TAG:-$GIT_TAG}" \
-        --set "feast-core.image.repository=${DOCKER_REPOSITORY}/feast-core" \
-        --set "feast-core.image.tag=${CORE_GIT_TAG:-$GIT_TAG}" \
         --set "prometheus-statsd-exporter.enabled=false" \
         --set "prometheus.enabled=false" \
         --set "grafana.enabled=false" \
-        --set "feast-jobservice.enabled=false" \
         --namespace "$NAMESPACE" \
         "$@" ; then
 
