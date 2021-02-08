@@ -194,6 +194,7 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
         """List all types of jobs"""
         jobs = list_jobs(
             include_terminated=request.include_terminated,
+            project=request.project,
             table_name=request.table_name,
             client=self.client,
         )
