@@ -39,7 +39,6 @@ compile-protos-python: install-python-ci-dependencies
 install-python: compile-protos-python
 	cd ${ROOT_DIR}; python -m pip install -e python
 	cd ${SUBMODULE_DIR}; make install-python
-	cd ${ROOT_DIR}; python -m pip install -e python
 
 lint-python:
 	cd ${ROOT_DIR}/python ; mypy feast_spark/
