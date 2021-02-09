@@ -28,8 +28,9 @@ install-python-ci-dependencies:
 	pip install --no-cache-dir -r python/requirements-ci.txt
 
 # Supports feast-dev repo master branch
-install-python-latest: install-python-ci-dependencies
-	cd ${SUBMODULE_DIR}; make compile-protos-python
+install-python: install-python-ci-dependencies
+	cd ${SUBMODULE_DIR}; make install-python
+	cd ${ROOT_DIR}; python -m pip install -e python
 
 lint-python:
 	cd ${ROOT_DIR}/python ; mypy feast_spark/
@@ -54,9 +55,6 @@ build-spark-docker:
 
 push-spark-docker:
 	docker push $(REGISTRY)/feast-spark:$(VERSION)
-
-install-python: install-python-ci-dependencies
-	python -m pip install -e python
 
 install-ci-dependencies: install-python-ci-dependencies
 
