@@ -38,7 +38,8 @@ compile-protos-python: install-python-ci-dependencies
 # Supports feast-dev repo master branch
 install-python: compile-protos-python
 	cd ${ROOT_DIR}; python -m pip install -e python
-	cd ${SUBMODULE_DIR}; make install-python
+	cd ${SUBMODULE_DIR}; make compile-protos-python
+	cd ${SUBMODULE_DIR}; python -m pip install -e sdk/python
 
 lint-python:
 	cd ${ROOT_DIR}/python ; mypy feast_spark/
