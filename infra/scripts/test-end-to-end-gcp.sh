@@ -14,7 +14,7 @@ make build-java-no-tests REVISION=develop
 make build-ingestion-jar-no-tests REVISION=develop
 
 python -m pip install --upgrade pip setuptools wheel
-make install-python
+make install-python-latest
 python -m pip install -qr tests/requirements.txt
 export FEAST_TELEMETRY="False"
 
