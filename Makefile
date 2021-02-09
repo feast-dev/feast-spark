@@ -1,11 +1,19 @@
 MVN := mvn ${MAVEN_EXTRA_OPTS}
 ROOT_DIR 	:= $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+SUBMODULE_DIR := deps/feast
 
 # Make sure env vars are available to submakes
 export
 
+# Java
+
 format-java:
 	cd spark/ingestion && ${MVN} spotless:apply
+
+lint-java:
+	cd spark/ingestion && ${MVN} --no-transfer-progress spotless:check
+
+# Python
 
 format-python:
 	# Sort
@@ -16,11 +24,13 @@ format-python:
 	cd ${ROOT_DIR}/python; black --target-version py37 feast_spark
 	#cd ${ROOT_DIR}/tests/e2e; black --target-version py37 .
 
-lint-java:
-	cd spark/ingestion && ${MVN} --no-transfer-progress spotless:check
-
 install-python-ci-dependencies:
 	pip install --no-cache-dir -r python/requirements-ci.txt
+
+# Supports feast-dev repo master branch
+install-python: install-python-ci-dependencies
+	cd ${SUBMODULE_DIR}; make install-python
+	cd ${ROOT_DIR}; python -m pip install -e python
 
 lint-python:
 	cd ${ROOT_DIR}/python ; mypy feast_spark/
@@ -46,15 +56,12 @@ build-spark-docker:
 push-spark-docker:
 	docker push $(REGISTRY)/feast-spark:$(VERSION)
 
-install-python: install-python-ci-dependencies
-	python -m pip install -e python
-
 install-ci-dependencies: install-python-ci-dependencies
 
 # Forward all other build-X and push-X targets to the Makefile that knows how to build docker
 # containers
 build-%:
-	cd deps/feast && $(MAKE) $@
+	cd ${SUBMODULE_DIR} && $(MAKE) $@
 
 push-%:
-	cd deps/feast && $(MAKE) $@
+	cd ${SUBMODULE_DIR} && $(MAKE) $@
