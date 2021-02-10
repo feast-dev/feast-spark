@@ -3,23 +3,11 @@
 set -euo pipefail
 
 export HELM_CHART_LOCATION=deps/feast/infra/charts/feast
+export DOCKER_REPOSITORY=gcr.io/kf-feast
 
 STEP_BREADCRUMB='~~~~~~~~'
 SECONDS=0
 TIMEFORMAT="${STEP_BREADCRUMB} took %R seconds"
-
-function maybe_build_push_docker {
-    # Build and push docker image, tagged with SHA tag, if it doesn't exist already.
-    NAME=$1
-    TARGET=$NAME-docker
-    SUFFIX=feast-$NAME
-
-    if ! aws ecr describe-images --repository-name "feast-ci/feast/$SUFFIX" "--image-ids=imageTag=${GIT_TAG}" >/dev/null ; then
-        make "build-$TARGET" "push-$TARGET" REGISTRY="${DOCKER_REPOSITORY}" VERSION="${GIT_TAG}"
-    else
-        echo "Image ${DOCKER_REPOSITORY}/$SUFFIX:$GIT_TAG already exists, skipping docker build"
-    fi
-}
 
 source infra/scripts/k8s-common-functions.sh
 
@@ -48,19 +36,19 @@ kubectl get pods
 
 case $STAGE in
     core-docker)
-        maybe_build_push_docker core
+        wait_for_image "${DOCKER_REPOSITORY}" feast-core "${GIT_TAG}"
         ;;
     serving-docker)
-        maybe_build_push_docker serving
+        wait_for_image "${DOCKER_REPOSITORY}" feast-serving "${GIT_TAG}"
         ;;
     jupyter-docker)
-        maybe_build_push_docker jupyter
+        wait_for_image "${DOCKER_REPOSITORY}" feast-jupyter "${GIT_TAG}"
         ;;
     jobservice-docker)
-        maybe_build_push_docker jobservice
+        wait_for_image "${DOCKER_REPOSITORY}" feast-jobservice "${GIT_TAG}"
         ;;
     ci-docker)
-        maybe_build_push_docker ci
+        wait_for_image "${DOCKER_REPOSITORY}" feast-ci "${GIT_TAG}"
         ;;
     e2e-test-emr)
         # EMR test - runs in default namespace.
