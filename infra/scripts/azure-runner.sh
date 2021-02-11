@@ -16,6 +16,7 @@ echo "########## Starting e2e tests for ${GIT_REMOTE_URL} ${GIT_TAG} ###########
 source infra/scripts/k8s-common-functions.sh
 
 # Figure out docker image versions
+export CI_GIT_TAG=latest
 
 # Jobservice is built by this repo
 export JOBSERVICE_GIT_TAG=$GIT_TAG

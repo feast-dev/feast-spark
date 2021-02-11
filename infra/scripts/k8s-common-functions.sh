@@ -67,15 +67,22 @@ function helm_install {
 
     helm repo add feast-charts https://feast-charts.storage.googleapis.com
     helm repo update
-    helm install feast-release feast-charts/feast "$@"
+    if ! time helm install feast-release feast-charts/feast "$@" \
+        --set "prometheus-statsd-exporter.enabled=false" \
+        --set "feast-jobservice.enabled=false" \
+        --set "prometheus.enabled=false" \
+        --set "grafana.enabled=false" \
+        --namespace "$NAMESPACE" ; then
 
-    if ! time helm install --wait "$RELEASE" "${HELM_CHART_LOCATION:-./infra/charts/feast}" \
+          echo "Error during helm install (Feast Main). "
+          exit 1
+    fi
+
+    if ! time helm install --wait "$RELEASE" "${HELM_CHART_LOCATION:-./infra/charts/feast-spark}" \
         --timeout 15m \
         --set "feast-jobservice.image.repository=${DOCKER_REPOSITORY}/feast-jobservice" \
         --set "feast-jobservice.image.tag=${JOBSERVICE_GIT_TAG:-$GIT_TAG}" \
         --set "prometheus-statsd-exporter.enabled=false" \
-        --set "prometheus.enabled=false" \
-        --set "grafana.enabled=false" \
         --namespace "$NAMESPACE" \
         "$@" ; then
 
