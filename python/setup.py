@@ -25,7 +25,7 @@ AUTHOR = "Feast"
 REQUIRES_PYTHON = ">=3.6.0"
 
 REQUIRED = [
-    "feast==0.9.0",
+    "feast==0.9.2",
     "Click==7.*",
     "google-api-core==1.22.4",
     "google-cloud-bigquery==1.18.*",
@@ -33,18 +33,7 @@ REQUIRED = [
     "google-cloud-core==1.0.*",
     "googleapis-common-protos==1.52.*",
     "google-cloud-bigquery-storage==0.7.*",
-    "grpcio==1.31.0",
-    "pandas~=1.0.0",
-    "pandavro==1.5.*",
-    "protobuf>=3.10",
-    "PyYAML==5.3.*",
-    "fastavro>=0.22.11,<0.23",
-    "tabulate==0.8.*",
-    "toml==0.10.*",
-    "tqdm==4.*",
-    "pyarrow==2.0.0",
-    "numpy",
-    "google",
+    "google-cloud-dataproc==2.0.2",
     "kubernetes==12.0.*",
 ]
 
