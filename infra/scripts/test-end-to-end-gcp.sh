@@ -38,6 +38,8 @@ kubectl run -n "$NAMESPACE" -i ci-test-runner  \
     --restart=Never \
     --image="${DOCKER_REPOSITORY}/feast-ci:latest" \
     --env="FEAST_TELEMETRY=false" \
+    --env="DISABLE_FEAST_SERVICE_FIXTURES=1" \
+    --env="DISABLE_SERVICE_FIXTURES=1" \
     -- bash -c \
 "mkdir src && cd src && git clone --recursive ${GIT_REMOTE_URL} && cd feast-spark && " \
 "git config remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pull/*' && git fetch -q && git checkout ${GIT_TAG} && " \
