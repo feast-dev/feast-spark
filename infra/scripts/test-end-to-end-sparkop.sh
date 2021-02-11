@@ -16,6 +16,6 @@ PYTHONPATH=sdk/python pytest tests/e2e/ \
       --serving-url feast-release-feast-online-serving:6566 \
       --env k8s \
       --staging-path $STAGING_PATH \
-      --redis-url sparkop-redis-master.sparkop.svc.cluster.local:6379 \
-      --kafka-brokers sparkop-kafka.sparkop.svc.cluster.local:9092 \
+      --redis-url feast-release-redis-master.sparkop.svc.cluster.local:6379 \
+      --kafka-brokers feast-release-kafka.sparkop.svc.cluster.local:9092 \
       -m "not bq"
