@@ -9,6 +9,8 @@ test -z ${GCLOUD_PROJECT} && GCLOUD_PROJECT="kf-feast"
 test -z ${GCLOUD_REGION} && GCLOUD_REGION="us-central1"
 test -z ${GCLOUD_NETWORK} && GCLOUD_NETWORK="default"
 test -z ${GCLOUD_SUBNET} && GCLOUD_SUBNET="default"
+test -z ${KUBE_CLUSTER} && KUBE_CLUSTER="feast-e2e-dataflow"
+
 test -z ${DOCKER_REPOSITORY} && DOCKER_REPOSITORY="gcr.io/kf-feast"
 
 infra/scripts/download-maven-cache.sh --archive-uri ${MAVEN_CACHE} --output-dir /tmp
@@ -23,6 +25,8 @@ gcloud -q auth configure-docker
 gcloud config set project ${GCLOUD_PROJECT}
 gcloud config set compute/region ${GCLOUD_REGION}
 gcloud config list
+
+gcloud container clusters get-credentials ${KUBE_CLUSTER} --region ${GCLOUD_REGION} --project ${GCLOUD_PROJECT}
 
 # Install components via helm
 helm_install "gcp-test" "${DOCKER_REPOSITORY}" "${GIT_TAG}" "default"
