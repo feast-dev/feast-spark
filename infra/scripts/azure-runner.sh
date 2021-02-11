@@ -39,6 +39,7 @@ NAMESPACE=sparkop
 RELEASE=sparkop
 
 # Delete old helm release and PVCs
+k8s_cleanup "feast-release" "$NAMESPACE"
 k8s_cleanup "$RELEASE" "$NAMESPACE"
 
 # Wait for CI and jobservice image to be built

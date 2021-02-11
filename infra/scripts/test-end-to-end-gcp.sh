@@ -30,8 +30,21 @@ gcloud config list
 
 gcloud container clusters get-credentials ${KUBE_CLUSTER} --region ${GCLOUD_REGION} --project ${GCLOUD_PROJECT}
 
+k8s_cleanup "feast-release" "default"
+k8s_cleanup "js" "default"
+
 # Install components via helm
-helm_install "gcp-test" "${DOCKER_REPOSITORY}" "${GIT_TAG}" "default"
+helm_install "js" "${DOCKER_REPOSITORY}" "${GIT_TAG}" "default" \
+  --set "feast-jobservice.envOverrides.FEAST_CORE_URL=feast-release-feast-core:6565" \
+  --set "feast-jobservice.envOverrides.FEAST_SPARK_LAUNCHER=dataproc" \
+  --set "feast-jobservice.envOverrides.FEAST_DATAPROC_CLUSTER_NAME=feast-e2e" \
+  --set "feast-jobservice.envOverrides.FEAST_DATAPROC_PROJECT=kf-feast" \
+  --set "feast-jobservice.envOverrides.FEAST_DATAPROC_REGION=us-central1" \
+  --set "feast-jobservice.envOverrides.FEAST_REDIS_HOST=10.128.0.105" \
+  --set 'feast-online-serving."application-override.yaml".feast.stores[0].type=REDIS_CLUSTER' \
+  --set 'feast-online-serving."application-override.yaml".feast.stores[0].name=REDIS_CLUSTER' \
+  --set 'feast-online-serving."application-override.yaml".feast.stores[0].config.connection_string=10.128.0.105:6379' \
+
 
 kubectl run -n "$NAMESPACE" -i ci-test-runner  \
     --pod-running-timeout=5m \
@@ -47,11 +60,3 @@ kubectl run -n "$NAMESPACE" -i ci-test-runner  \
 "pytest -v tests/e2e/ --staging-path gs://feast-templocation-kf-feast/ --core-url feast-release-feast-core:6565 " \
 "--serving-url feast-release-feast-online-serving:6566 --job-service-url gcp-test-feast-jobservice:6568 " \
 "--kafka-brokers 10.128.0.103:9094 --bq-project kf-feast"
-
-#su -p postgres -c "PATH=$PATH HOME=/tmp pytest -v tests/e2e/ \
-#      --feast-version develop --env=gcloud --dataproc-cluster-name feast-e2e \
-#      --dataproc-project kf-feast --dataproc-region us-central1 \
-#        \
-#      --with-job-service \
-#      --redis-url 10.128.0.105:6379 --redis-cluster  \
-#      "
