@@ -30,8 +30,10 @@ compile-protos-python: install-python-ci-dependencies
 	FEAST_PATH=(python -c 'import feast; import os; print(os.path.dirname(feast.__file__))')
 	@$(foreach dir,$(PROTO_TYPE_SUBDIRS),cd ${ROOT_DIR}/protos; python -m grpc_tools.protoc -I ${FEAST_PATH}/protos --python_out=../python/ --mypy_out=../python/ ${FEAST_PATH}/protos/feast/$(dir)/*.proto;)
 	@$(foreach dir,$(PROTO_TYPE_SUBDIRS),cd ${ROOT_DIR}/protos; python -m grpc_tools.protoc -I ${FEAST_PATH}/protos --grpc_python_out=../python/ ${FEAST_PATH}/protos/feast/$(dir)/*.proto;)
+	@$(foreach dir,third_party,cd ${ROOT_DIR}/protos; python -m grpc_tools.protoc -I ${FEAST_PATH}/protos --python_out=../python/ --mypy_out=../python/ ${FEAST_PATH}/protos/feast/$(dir)/grpc/health/v1/*.proto;)
+	@$(foreach dir,third_party,cd ${ROOT_DIR}/protos; python -m grpc_tools.protoc -I ${FEAST_PATH}/protos --grpc_python_out=../python/ ${FEAST_PATH}/protos/feast/$(dir)/grpc/health/v1/*.proto;)
 	cd ${ROOT_DIR}/protos; python -m grpc_tools.protoc -I. -I ${FEAST_PATH}/protos --python_out=../python/ --mypy_out=../python/ feast/core/*.proto
-	cd ${ROOT_DIR}/protos; python -m grpc_tools.protoc -I. -I ${FEAST_PATH}/protos --python_out=../python/ --grpc_python_out=../python/ --mypy_out=../python/ feast/third_party/grpc/health/v1/*.proto
+	cd ${ROOT_DIR}/protos; python -m grpc_tools.protoc -I. -I ${FEAST_PATH}/protos --python_out=../python/ --grpc_python_out=../python/ --mypy_out=../python/ feast/core/*.proto
 
 # Supports feast-dev repo master branch
 install-python: compile-protos-python
