@@ -12,8 +12,8 @@ export FEAST_SPARK_K8S_NAMESPACE=sparkop
 
 PYTHONPATH=sdk/python pytest tests/e2e/ \
       --feast-version develop \
-      --core-url sparkop-feast-core:6565 \
-      --serving-url sparkop-feast-online-serving:6566 \
+      --core-url feast-release-feast-core:6565 \
+      --serving-url feast-release-feast-online-serving:6566 \
       --env k8s \
       --staging-path $STAGING_PATH \
       --redis-url sparkop-redis-master.sparkop.svc.cluster.local:6379 \
