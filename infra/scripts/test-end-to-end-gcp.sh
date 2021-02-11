@@ -2,6 +2,8 @@
 
 export DISABLE_SERVICE_FIXTURES=1
 export GIT_TAG=$PULL_PULL_SHA
+export GIT_REMOTE_URL=https://github.com/feast-dev/feast-spark.git
+
 export MAVEN_OPTS="-Dmaven.repo.local=/tmp/.m2/repository -DdependencyLocationsEnabled=false -Dmaven.wagon.httpconnectionManager.ttlSeconds=25 -Dmaven.wagon.http.retryHandler.count=3 -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false"
 export MAVEN_CACHE="gs://feast-templocation-kf-feast/.m2.2020-11-17.tar"
 
@@ -31,18 +33,23 @@ gcloud container clusters get-credentials ${KUBE_CLUSTER} --region ${GCLOUD_REGI
 # Install components via helm
 helm_install "gcp-test" "${DOCKER_REPOSITORY}" "${GIT_TAG}" "default"
 
-# Build ingestion jar
-make build-ingestion-jar-no-tests REVISION=develop
+kubectl run -n "$NAMESPACE" -i ci-test-runner  \
+    --pod-running-timeout=5m \
+    --restart=Never \
+    --image="${DOCKER_REPOSITORY}/feast-ci:latest" \
+    --env="FEAST_TELEMETRY=false" \
+    -- bash -c \
+"mkdir src && cd src && git clone --recursive ${GIT_REMOTE_URL} && cd feast-spark && " \
+"git config remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pull/*' && git fetch -q && git checkout ${GIT_TAG} && " \
+"make install-python && python -m pip install -qr tests/requirements.txt && " \
+"pytest -v tests/e2e/ --staging-path gs://feast-templocation-kf-feast/ --core-url feast-release-feast-core:6565 " \
+"--serving-url feast-release-feast-online-serving:6566 --job-service-url gcp-test-feast-jobservice:6568 " \
+"--kafka-brokers 10.128.0.103:9094 --bq-project kf-feast"
 
-python -m pip install --upgrade pip setuptools wheel
-make install-python
-python -m pip install -qr tests/requirements.txt
-export FEAST_TELEMETRY="False"
-
-su -p postgres -c "PATH=$PATH HOME=/tmp pytest -v tests/e2e/ \
-      --feast-version develop --env=gcloud --dataproc-cluster-name feast-e2e \
-      --dataproc-project kf-feast --dataproc-region us-central1 \
-      --staging-path gs://feast-templocation-kf-feast/ \
-      --with-job-service \
-      --redis-url 10.128.0.105:6379 --redis-cluster --kafka-brokers 10.128.0.103:9094 \
-      --bq-project kf-feast"
+#su -p postgres -c "PATH=$PATH HOME=/tmp pytest -v tests/e2e/ \
+#      --feast-version develop --env=gcloud --dataproc-cluster-name feast-e2e \
+#      --dataproc-project kf-feast --dataproc-region us-central1 \
+#        \
+#      --with-job-service \
+#      --redis-url 10.128.0.105:6379 --redis-cluster  \
+#      "
