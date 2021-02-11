@@ -53,11 +53,11 @@ helm_install "js" "${DOCKER_REPOSITORY}" "${GIT_TAG}" "$NAMESPACE" \
 
 CMD=$(printf '%s' \
   "mkdir src && cd src && git clone --recursive ${GIT_REMOTE_URL} && cd feast-spark && " \
-  "git config remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pull/*' &&" \
+  "git config remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pull/*' && " \
   "git fetch -q && git checkout ${GIT_TAG} && " \
   "make install-python && " \
   "python -m pip install -qr tests/requirements.txt && " \
-  "pytest -v tests/e2e/ " \
+  "pytest -v tests/e2e/ --env gcloud " \
   "--staging-path gs://feast-templocation-kf-feast/ " \
   "--core-url feast-release-feast-core:6565 " \
   "--serving-url feast-release-feast-online-serving:6566 " \

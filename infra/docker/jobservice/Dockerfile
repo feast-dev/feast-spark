@@ -23,4 +23,6 @@ RUN wget -q https://github.com/grpc-ecosystem/grpc-health-probe/releases/downloa
          -O /usr/bin/grpc-health-probe && \
     chmod +x /usr/bin/grpc-health-probe
 
+ENV FEAST_TELEMETRY=false
+
 CMD ["python", "-m", "feast_spark.cli", "server"]
