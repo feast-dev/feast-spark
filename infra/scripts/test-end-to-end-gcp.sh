@@ -58,6 +58,9 @@ CMD=$(printf '%s' "mkdir src && cd src && git clone --recursive ${GIT_REMOTE_URL
   "--serving-url feast-release-feast-online-serving:6566 --job-service-url gcp-test-feast-jobservice:6568 " \
   "--kafka-brokers 10.128.0.103:9094 --bq-project kf-feast")
 
+# Delete old test running pod if it exists
+kubectl delete pod -n "$NAMESPACE" ci-test-runner 2>/dev/null || true
+
 kubectl run -n "$NAMESPACE" -i ci-test-runner  \
     --pod-running-timeout=5m \
     --restart=Never \
