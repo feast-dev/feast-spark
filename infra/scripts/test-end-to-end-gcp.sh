@@ -46,16 +46,22 @@ helm_install "js" "${DOCKER_REPOSITORY}" "${GIT_TAG}" "$NAMESPACE" \
   --set "feast-jobservice.envOverrides.FEAST_DATAPROC_REGION=us-central1" \
   --set "feast-jobservice.envOverrides.FEAST_REDIS_HOST=10.128.0.105" \
   --set 'feast-online-serving.application-override\.yaml.feast.stores[0].type=REDIS_CLUSTER' \
-  --set 'feast-online-serving.application-override\.yaml.feast.stores[0].name=REDIS_CLUSTER' \
+  --set 'feast-online-serving.application-override\.yaml.feast.stores[0].name=online' \
   --set 'feast-online-serving.application-override\.yaml.feast.stores[0].config.connection_string=10.128.0.105:6379' \
-  --set "redis.enabled=false"
+  --set "redis.enabled=false" \
+  --set "kafka.enabled=false"
 
-CMD=$(printf '%s' "mkdir src && cd src && git clone --recursive ${GIT_REMOTE_URL} && cd feast-spark && " \
+CMD=$(printf '%s' \
+  "mkdir src && cd src && git clone --recursive ${GIT_REMOTE_URL} && cd feast-spark && " \
   "git config remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pull/*' &&" \
   "git fetch -q && git checkout ${GIT_TAG} && " \
-  "make install-python && python -m pip install -qr tests/requirements.txt && " \
-  "pytest -v tests/e2e/ --staging-path gs://feast-templocation-kf-feast/ --core-url feast-release-feast-core:6565 " \
-  "--serving-url feast-release-feast-online-serving:6566 --job-service-url gcp-test-feast-jobservice:6568 " \
+  "make install-python && " \
+  "python -m pip install -qr tests/requirements.txt && " \
+  "pytest -v tests/e2e/ " \
+  "--staging-path gs://feast-templocation-kf-feast/ " \
+  "--core-url feast-release-feast-core:6565 " \
+  "--serving-url feast-release-feast-online-serving:6566 " \
+  "--job-service-url js-feast-jobservice:6568 " \
   "--kafka-brokers 10.128.0.103:9094 --bq-project kf-feast")
 
 # Delete old test running pod if it exists
