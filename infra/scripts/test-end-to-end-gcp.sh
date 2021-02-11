@@ -7,6 +7,8 @@ export GIT_REMOTE_URL=https://github.com/feast-dev/feast-spark.git
 export MAVEN_OPTS="-Dmaven.repo.local=/tmp/.m2/repository -DdependencyLocationsEnabled=false -Dmaven.wagon.httpconnectionManager.ttlSeconds=25 -Dmaven.wagon.http.retryHandler.count=3 -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false"
 export MAVEN_CACHE="gs://feast-templocation-kf-feast/.m2.2020-11-17.tar"
 
+NAMESPACE=default
+
 test -z ${GCLOUD_PROJECT} && GCLOUD_PROJECT="kf-feast"
 test -z ${GCLOUD_REGION} && GCLOUD_REGION="us-central1"
 test -z ${GCLOUD_NETWORK} && GCLOUD_NETWORK="default"
@@ -30,20 +32,23 @@ gcloud config list
 
 gcloud container clusters get-credentials ${KUBE_CLUSTER} --region ${GCLOUD_REGION} --project ${GCLOUD_PROJECT}
 
-k8s_cleanup "feast-release" "default"
-k8s_cleanup "js" "default"
+k8s_cleanup "feast-release" "$NAMESPACE"
+k8s_cleanup "js" "$NAMESPACE"
+
+wait_for_image "${DOCKER_REPOSITORY}" feast-jobservice "${GIT_TAG}"
 
 # Install components via helm
-helm_install "js" "${DOCKER_REPOSITORY}" "${GIT_TAG}" "default" \
+helm_install "js" "${DOCKER_REPOSITORY}" "${GIT_TAG}" "$NAMESPACE" \
   --set "feast-jobservice.envOverrides.FEAST_CORE_URL=feast-release-feast-core:6565" \
   --set "feast-jobservice.envOverrides.FEAST_SPARK_LAUNCHER=dataproc" \
   --set "feast-jobservice.envOverrides.FEAST_DATAPROC_CLUSTER_NAME=feast-e2e" \
   --set "feast-jobservice.envOverrides.FEAST_DATAPROC_PROJECT=kf-feast" \
   --set "feast-jobservice.envOverrides.FEAST_DATAPROC_REGION=us-central1" \
   --set "feast-jobservice.envOverrides.FEAST_REDIS_HOST=10.128.0.105" \
-  --set 'feast-online-serving."application-override.yaml".feast.stores[0].type=REDIS_CLUSTER' \
-  --set 'feast-online-serving."application-override.yaml".feast.stores[0].name=REDIS_CLUSTER' \
-  --set 'feast-online-serving."application-override.yaml".feast.stores[0].config.connection_string=10.128.0.105:6379' \
+  --set 'feast-online-serving.\"application-override.yaml\".feast.stores[0].type=REDIS_CLUSTER' \
+  --set 'feast-online-serving.\"application-override.yaml\".feast.stores[0].name=REDIS_CLUSTER' \
+  --set 'feast-online-serving.\"application-override.yaml\".feast.stores[0].config.connection_string=10.128.0.105:6379' \
+  --set "redis.enabled=false"
 
 
 kubectl run -n "$NAMESPACE" -i ci-test-runner  \
