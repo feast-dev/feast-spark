@@ -62,10 +62,10 @@ setup_sparkop_role
 
 # Run the test suite as a one-off pod.
 echo "${STEP_BREADCRUMB} Running the test suite"
-time kubectl run -n "$NAMESPACE" -i ci-test-runner  \
+kubectl run -n "$NAMESPACE" -i ci-test-runner  \
     --pod-running-timeout=5m \
     --restart=Never \
-    --image="${DOCKER_REPOSITORY}/feast-ci:${GIT_TAG}" \
+    --image="${DOCKER_REPOSITORY}/feast-ci:latest" \
     --env="STAGING_PATH=${STAGING_PATH}" \
     --env="FEAST_AZURE_BLOB_ACCOUNT_NAME=${AZURE_BLOB_ACCOUNT_NAME}" \
     --env="FEAST_AZURE_BLOB_ACCOUNT_ACCESS_KEY=${AZURE_BLOB_ACCOUNT_ACCESS_KEY}" \
