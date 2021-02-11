@@ -44,6 +44,7 @@ helm_install "js" "${DOCKER_REPOSITORY}" "${GIT_TAG}" "$NAMESPACE" \
   --set "feast-jobservice.envOverrides.FEAST_DATAPROC_CLUSTER_NAME=feast-e2e" \
   --set "feast-jobservice.envOverrides.FEAST_DATAPROC_PROJECT=kf-feast" \
   --set "feast-jobservice.envOverrides.FEAST_DATAPROC_REGION=us-central1" \
+  --set "feast-jobservice.envOverrides.FEAST_SPARK_STAGING_LOCATION=gs://feast-templocation-kf-feast/" \
   --set "feast-jobservice.envOverrides.FEAST_REDIS_HOST=10.128.0.105" \
   --set 'feast-online-serving.application-override\.yaml.feast.stores[0].type=REDIS_CLUSTER' \
   --set 'feast-online-serving.application-override\.yaml.feast.stores[0].name=online' \
