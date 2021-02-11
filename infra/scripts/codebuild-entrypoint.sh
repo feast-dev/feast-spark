@@ -35,19 +35,19 @@ kubectl get pods
 
 case $STAGE in
     core-docker)
-        wait_for_image "${DOCKER_REPOSITORY}" feast-core "${GIT_TAG}"
+        wait_for_image "${DOCKER_REPOSITORY}" feast-core "latest"
         ;;
     serving-docker)
-        wait_for_image "${DOCKER_REPOSITORY}" feast-serving "${GIT_TAG}"
+        wait_for_image "${DOCKER_REPOSITORY}" feast-serving "latest"
         ;;
     jupyter-docker)
-        wait_for_image "${DOCKER_REPOSITORY}" feast-jupyter "${GIT_TAG}"
+        wait_for_image "${DOCKER_REPOSITORY}" feast-jupyter "latest"
         ;;
     jobservice-docker)
         wait_for_image "${DOCKER_REPOSITORY}" feast-jobservice "${GIT_TAG}"
         ;;
     ci-docker)
-        wait_for_image "${DOCKER_REPOSITORY}" feast-ci "${GIT_TAG}"
+        wait_for_image "${DOCKER_REPOSITORY}" feast-ci "latest"
         ;;
     e2e-test-emr)
         # EMR test - runs in default namespace.
@@ -121,7 +121,7 @@ case $STAGE in
         echo "${STEP_BREADCRUMB} Running the test suite"
         if ! time kubectl run --rm -n "$NAMESPACE" -i ci-test-runner  \
             --restart=Never \
-            --image="${DOCKER_REPOSITORY}/feast-ci:${GIT_TAG}" \
+            --image="${DOCKER_REPOSITORY}/feast-ci:latest" \
             --env="STAGING_PATH=$STAGING_PATH" \
             --  \
             bash -c "mkdir src && cd src && git clone --recursive $CODEBUILD_SOURCE_REPO_URL && cd feast* && git config remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pull/*' && git fetch -q && git checkout $CODEBUILD_RESOLVED_SOURCE_VERSION && git submodule update --init --recursive && ./infra/scripts/setup-e2e-env-sparkop.sh && ./infra/scripts/test-end-to-end-sparkop.sh" ; then
