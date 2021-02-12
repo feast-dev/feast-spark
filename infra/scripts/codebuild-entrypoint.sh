@@ -46,12 +46,13 @@ case $STAGE in
         ;;
     e2e-test-emr)
         # EMR test - runs in default namespace.
+        export FEAST_RELEASE_NAME="cicd-core"
 
         # Copy cluster config template generated for us by terraform.
         aws s3 cp "${EMR_TEMPLATE_YML}" emr_cluster.yaml
 
         # Delete old helm release and PVCs
-        k8s_cleanup feast-release default
+        k8s_cleanup $FEAST_RELEASE_NAME default
         k8s_cleanup cicd default
 
         # Create cluster OR get existing EMR cluster id. In the latter case, clean up any steps
@@ -84,7 +85,7 @@ case $STAGE in
         echo "${STEP_BREADCRUMB} Running the test suite"
         time kubectl run --rm -i ci-test-runner  \
             --restart=Never \
-            --image="${DOCKER_REPOSITORY}/feast-ci:${GIT_TAG}" \
+            --image="${DOCKER_REPOSITORY}/feast-ci:latest" \
             --env="CLUSTER_ID=$CLUSTER_ID" \
             --env="STAGING_PATH=$STAGING_PATH" \
             --env="NODE_IP=$NODE_IP" \
@@ -97,9 +98,10 @@ case $STAGE in
         # running EMR test).
         NAMESPACE=sparkop
         RELEASE=sparkop
+        export FEAST_RELEASE_NAME="${RELEASE}-core"
 
         # Clean up old release
-        k8s_cleanup "feast-release" "$NAMESPACE"
+        k8s_cleanup "$FEAST_RELEASE_NAME" "$NAMESPACE"
         k8s_cleanup "$RELEASE" "$NAMESPACE"
 
         # Helm install everything in a namespace

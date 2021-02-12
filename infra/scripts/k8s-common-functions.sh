@@ -67,7 +67,8 @@ function helm_install {
 
     helm repo add feast-charts https://feast-charts.storage.googleapis.com
     helm repo update
-    if ! time helm install feast-release feast-charts/feast "$@" \
+    if ! time helm install --wait "${FEAST_RELEASE_NAME:-feast-release}" feast-charts/feast "$@" \
+        --timeout 5m \
         --set "prometheus-statsd-exporter.enabled=false" \
         --set "feast-jobservice.enabled=false" \
         --set "prometheus.enabled=false" \
@@ -79,7 +80,7 @@ function helm_install {
     fi
 
     if ! time helm install --wait "$RELEASE" "${HELM_CHART_LOCATION:-./infra/charts/feast-spark}" \
-        --timeout 15m \
+        --timeout 5m \
         --set "feast-jobservice.image.repository=${DOCKER_REPOSITORY}/feast-jobservice" \
         --set "feast-jobservice.image.tag=${JOBSERVICE_GIT_TAG:-$GIT_TAG}" \
         --set "prometheus-statsd-exporter.enabled=false" \
