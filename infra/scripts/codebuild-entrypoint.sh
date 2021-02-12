@@ -35,19 +35,14 @@ kubectl get pods
 
 case $STAGE in
     core-docker)
-        wait_for_image "${DOCKER_REPOSITORY}" feast-core "latest"
         ;;
     serving-docker)
-        wait_for_image "${DOCKER_REPOSITORY}" feast-serving "latest"
         ;;
     jupyter-docker)
-        wait_for_image "${DOCKER_REPOSITORY}" feast-jupyter "latest"
         ;;
     jobservice-docker)
-        wait_for_image "${DOCKER_REPOSITORY}" feast-jobservice "${GIT_TAG}"
         ;;
     ci-docker)
-        wait_for_image "${DOCKER_REPOSITORY}" feast-ci "latest"
         ;;
     e2e-test-emr)
         # EMR test - runs in default namespace.
