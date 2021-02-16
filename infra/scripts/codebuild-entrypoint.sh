@@ -51,8 +51,8 @@ case $STAGE in
         aws s3 cp "${EMR_TEMPLATE_YML}" emr_cluster.yaml
 
         # Delete old helm release and PVCs
+        helm uninstall cicd -n default || true
         k8s_cleanup "feast-release" default
-        k8s_cleanup cicd default
 
         # Create cluster OR get existing EMR cluster id. In the latter case, clean up any steps
         # already running there from previous test runs.
@@ -99,8 +99,8 @@ case $STAGE in
         RELEASE=sparkop
 
         # Clean up old release
+        helm uninstall sparkop -n $NAMESPACE || true
         k8s_cleanup "feast-release" "$NAMESPACE"
-        k8s_cleanup "$RELEASE" "$NAMESPACE"
 
         # Helm install everything in a namespace
         helm_install "$RELEASE" "${DOCKER_REPOSITORY}" "${GIT_TAG}" "$NAMESPACE"
