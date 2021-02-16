@@ -109,7 +109,7 @@ presubmits:
           resources:
             requests:
               cpu: "2"
-              memory: "2048Mi"
+              memory: "2Gi"
           env:
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: /etc/gcloud/service-account.json
@@ -147,7 +147,7 @@ presubmits:
           resources:
             requests:
               cpu: "2"
-              memory: "2048Mi"
+              memory: "2Gi"
           env:
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: /etc/gcloud/service-account.json
