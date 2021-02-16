@@ -12,13 +12,12 @@ exclude = '''
     | \.tox
     | \.venv
     | _build
+    | api
     | buck-out
     | build
     | dist
     | pb2.py
     | \.pyi
-    | core
-    | serving
     | storage
     | types
     | third_party

@@ -15,11 +15,11 @@
 //
 
 syntax = "proto3";
-package feast.core;
+package feast_spark.api;
 
-option go_package = "github.com/feast-dev/feast/sdk/go/protos/feast/core";
+option go_package = "github.com/feast-dev/feast-spark/sdk/go/protos/feast_spark/api";
 option java_outer_classname = "JobServiceProto";
-option java_package = "feast.proto.core";
+option java_package = "feast_spark.proto.jobservice";
 
 import "google/protobuf/timestamp.proto";
 import "feast/core/DataSource.proto";
@@ -135,7 +135,7 @@ message GetHistoricalFeaturesRequest {
   // For each entity value, a feature value will be retrieved for that value/timestamp
   // Only 'BATCH_*' source types are supported.
   // Currently only BATCH_FILE source type is supported.
-  DataSource entity_source = 2;
+  feast.core.DataSource entity_source = 2;
 
   // Optional field to specify project name override. If specified, uses the
   // given project for retrieval. Overrides the projects specified in
