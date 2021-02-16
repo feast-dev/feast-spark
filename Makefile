@@ -3,7 +3,6 @@ ROOT_DIR 	:= $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 PROTO_TYPE_SUBDIRS = api
 PROTO_SERVICE_SUBDIRS = api
-FEAST_PATH=$(shell python -c "import feast; import os; print(os.path.dirname(feast.__file__))")
 
 # Make sure env vars are available to submakes
 export
@@ -31,6 +30,7 @@ install-python-ci-dependencies:
 	pip install --no-cache-dir -r python/requirements-ci.txt
 
 compile-protos-python: install-python-ci-dependencies
+	@$(eval FEAST_PATH=`python -c "import feast; import os; print(os.path.dirname(feast.__file__))"`)
 	@$(foreach dir,$(PROTO_TYPE_SUBDIRS),cd ${ROOT_DIR}/protos; python -m grpc_tools.protoc -I. -I$(FEAST_PATH)/protos/ --python_out=../python/ --mypy_out=../python/ feast_spark/$(dir)/*.proto;)
 	@$(foreach dir,$(PROTO_SERVICE_SUBDIRS),cd ${ROOT_DIR}/protos; python -m grpc_tools.protoc -I. -I$(FEAST_PATH)/protos/ --grpc_python_out=../python/ feast_spark/$(dir)/*.proto;)
 	cd ${ROOT_DIR}/protos; python -m grpc_tools.protoc -I. --python_out=../python/ --grpc_python_out=../python/ --mypy_out=../python/ feast_spark/third_party/grpc/health/v1/*.proto

@@ -1,9 +1,10 @@
 FROM jupyter/pyspark-notebook:399cbb986c6b
 
 USER root
-WORKDIR /feast
+WORKDIR /app
 
 COPY python python
+COPY protos protos
 COPY Makefile Makefile
 
 # Install necessary tools for later steps
@@ -12,7 +13,7 @@ RUN apt-get update && apt-get -y install make git wget
 # Install Feast SDK
 RUN git init .
 COPY README.md README.md
-RUN pip install -U -e python
+RUN make install-python
 RUN pip install "s3fs" "boto3" "urllib3>=1.25.4"
 
 #
