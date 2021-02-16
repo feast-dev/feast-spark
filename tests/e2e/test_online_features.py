@@ -21,10 +21,10 @@ from feast import (
     ValueType,
 )
 from feast.data_format import AvroFormat, ParquetFormat
-from feast_spark.pyspark.abc import SparkJobStatus
 from feast.wait import wait_retry_backoff
+from feast_spark import Client as SparkClient
+from feast_spark.pyspark.abc import SparkJobStatus
 from tests.e2e.utils.kafka import check_consumer_exist, ingest_and_retrieve
-import feast_spark
 
 
 def generate_data():
@@ -40,7 +40,9 @@ def generate_data():
 
 
 def test_offline_ingestion(
-    feast_client: Client, batch_source: Union[BigQuerySource, FileSource]
+    feast_client: Client,
+    feast_spark_client: SparkClient,
+    batch_source: Union[BigQuerySource, FileSource],
 ):
     entity = Entity(name="s2id", description="S2id", value_type=ValueType.INT64,)
 
@@ -57,11 +59,13 @@ def test_offline_ingestion(
     original = generate_data()
     feast_client.ingest(feature_table, original)  # write to batch (offline) storage
 
-    ingest_and_verify(feast_client, feature_table, original)
+    ingest_and_verify(feast_client, feast_spark_client, feature_table, original)
 
 
 @pytest.mark.env("gcloud")
-def test_offline_ingestion_from_bq_view(pytestconfig, bq_dataset, feast_client: Client):
+def test_offline_ingestion_from_bq_view(
+    pytestconfig, bq_dataset, feast_client: Client, feast_spark_client: SparkClient
+):
     original = generate_data()
     bq_project = pytestconfig.getoption("bq_project")
 
@@ -94,11 +98,15 @@ def test_offline_ingestion_from_bq_view(pytestconfig, bq_dataset, feast_client: 
     feast_client.apply(entity)
     feast_client.apply(feature_table)
 
-    ingest_and_verify(feast_client, feature_table, original)
+    ingest_and_verify(feast_client, feast_spark_client, feature_table, original)
 
 
 def test_streaming_ingestion(
-    feast_client: Client, local_staging_path: str, kafka_server, pytestconfig
+    feast_client: Client,
+    feast_spark_client: SparkClient,
+    local_staging_path: str,
+    kafka_server,
+    pytestconfig,
 ):
     entity = Entity(name="s2id", description="S2id", value_type=ValueType.INT64,)
     kafka_broker = f"{kafka_server[0]}:{kafka_server[1]}"
@@ -126,7 +134,7 @@ def test_streaming_ingestion(
     feast_client.apply(feature_table)
 
     if not pytestconfig.getoption("scheduled_streaming_job"):
-        job = feast_spark.Client(feast_client).start_stream_to_online_ingestion(feature_table)
+        job = feast_spark_client.start_stream_to_online_ingestion(feature_table)
         assert job.get_feature_table() == feature_table.name
         wait_retry_backoff(
             lambda: (None, job.get_status() == SparkJobStatus.IN_PROGRESS), 180
@@ -165,9 +173,12 @@ def test_streaming_ingestion(
 
 
 def ingest_and_verify(
-    feast_client: Client, feature_table: FeatureTable, original: pd.DataFrame
+    feast_client: Client,
+    feast_spark_client: SparkClient,
+    feature_table: FeatureTable,
+    original: pd.DataFrame,
 ):
-    job = feast_spark.Client(feast_client).start_offline_to_online_ingestion(
+    job = feast_spark_client.start_offline_to_online_ingestion(
         feature_table,
         original.event_timestamp.min().to_pydatetime(),
         original.event_timestamp.max().to_pydatetime() + timedelta(seconds=1),
@@ -193,7 +204,9 @@ def ingest_and_verify(
 
 
 def test_list_jobs_long_table_name(
-    feast_client: Client, batch_source: Union[BigQuerySource, FileSource]
+    feast_client: Client,
+    feast_spark_client: SparkClient,
+    batch_source: Union[BigQuerySource, FileSource],
 ):
     entity = Entity(name="s2id", description="S2id", value_type=ValueType.INT64,)
 
@@ -210,7 +223,7 @@ def test_list_jobs_long_table_name(
     data_sample = generate_data()
     feast_client.ingest(feature_table, data_sample)
 
-    job = feast_spark.Client(feast_client).start_offline_to_online_ingestion(
+    job = feast_spark_client.start_offline_to_online_ingestion(
         feature_table,
         data_sample.event_timestamp.min().to_pydatetime(),
         data_sample.event_timestamp.max().to_pydatetime() + timedelta(seconds=1),
@@ -221,7 +234,7 @@ def test_list_jobs_long_table_name(
     )
     all_job_ids = [
         job.get_id()
-        for job in feast_spark.Client(feast_client).list_jobs(
+        for job in feast_spark_client.list_jobs(
             include_terminated=True, table_name=feature_table.name
         )
     ]

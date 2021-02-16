@@ -7,6 +7,7 @@ import pytest
 from pytest_redis.executor import RedisExecutor
 
 from feast import Client
+from feast_spark import Client as SparkClient
 from tests.e2e.fixtures.statsd_stub import StatsDServer
 
 
@@ -106,6 +107,11 @@ def feast_client(
 
     c.set_project(pytestconfig.getoption("feast_project"))
     return c
+
+
+@pytest.fixture
+def feast_spark_client(feast_client: Client) -> SparkClient:
+    return SparkClient(feast_client)
 
 
 @pytest.fixture

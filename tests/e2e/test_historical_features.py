@@ -13,8 +13,8 @@ from pyarrow import parquet
 from feast import Client, Entity, Feature, FeatureTable, ValueType
 from feast.constants import ConfigOptions as opt
 from feast.data_source import BigQuerySource, FileSource
+from feast_spark import Client as SparkClient
 from feast_spark.pyspark.abc import SparkJobStatus
-import feast_spark
 
 np.random.seed(0)
 
@@ -96,6 +96,7 @@ def _get_azure_creds(feast_client: Client):
 
 def test_historical_features(
     feast_client: Client,
+    feast_spark_client: SparkClient,
     tfrecord_feast_client: Client,
     batch_source: Union[BigQuerySource, FileSource],
 ):
@@ -127,7 +128,7 @@ def test_historical_features(
 
     # remove microseconds because job.get_start_time() does not contain microseconds
     job_submission_time = datetime.utcnow().replace(microsecond=0)
-    job = feast_spark.Client(feast_client).get_historical_features(feature_refs, customers_df)
+    job = feast_spark_client.get_historical_features(feature_refs, customers_df)
     assert job.get_start_time() >= job_submission_time
     assert job.get_start_time() <= job_submission_time + timedelta(hours=1)
 
@@ -156,6 +157,6 @@ def test_historical_features(
         ),
     )
 
-    job = feast_spark.Client(tfrecord_feast_client).get_historical_features(feature_refs, customers_df)
+    job = feast_spark_client.get_historical_features(feature_refs, customers_df)
     job.get_output_file_uri()
     assert job.get_status() == SparkJobStatus.COMPLETED
