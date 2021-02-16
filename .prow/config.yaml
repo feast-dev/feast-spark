@@ -7,7 +7,7 @@ in_repo_config:
 
 plank:
   job_url_prefix_config:
-    "*": https://prow.feast.ai/view/gcs
+    "*": https://prow.feast.dev/view/gcs
   pod_pending_timeout: 60m
   report_templates:
     '*': >-
