@@ -8,12 +8,12 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Tuple, cast
 
 import grpc
-from feast.constants import ConfigOptions as opt
-from feast.data_source import DataSource
 from google.api_core.exceptions import FailedPrecondition
 from google.protobuf.timestamp_pb2 import Timestamp
 
 from feast import Client as FeastClient
+from feast.constants import ConfigOptions as opt
+from feast.data_source import DataSource
 from feast_spark import Client as Client
 from feast_spark.api import JobService_pb2_grpc
 from feast_spark.api.JobService_pb2 import (

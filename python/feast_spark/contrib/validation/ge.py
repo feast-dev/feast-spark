@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 import pandas as pd
+
 from feast.constants import ConfigOptions
 from feast.staging.storage_client import get_staging_client
-
 from feast_spark.contrib.validation.base import serialize_udf
 
 try:

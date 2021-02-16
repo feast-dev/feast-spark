@@ -5,9 +5,9 @@ from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
-from feast.staging.storage_client import get_staging_client
 from google.cloud.dataproc_v1 import Job, JobControllerClient, JobStatus
 
+from feast.staging.storage_client import get_staging_client
 from feast_spark.pyspark.abc import (
     BatchIngestionJob,
     BatchIngestionJobParameters,

@@ -9,9 +9,9 @@ from typing import Any, Dict, List, Optional, cast
 from urllib.parse import urlparse, urlunparse
 
 import yaml
-from feast.staging.storage_client import AbstractStagingClient
 from kubernetes.client.api import CustomObjectsApi
 
+from feast.staging.storage_client import AbstractStagingClient
 from feast_spark.pyspark.abc import (
     BQ_SPARK_PACKAGE,
     BatchIngestionJob,
