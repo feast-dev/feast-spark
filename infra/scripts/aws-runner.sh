@@ -1,3 +1,7 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
 GIT_TAG=$PULL_PULL_SHA
 
 source infra/scripts/k8s-common-functions.sh
