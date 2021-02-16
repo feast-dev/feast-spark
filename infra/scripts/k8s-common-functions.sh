@@ -20,17 +20,11 @@ function k8s_cleanup {
     # Create namespace if it doesn't exist.
     kubectl create namespace "$NAMESPACE" || true
 
-    echo "helm uninstall"
-
     # Uninstall previous feast release if there is any.
     helm uninstall "$RELEASE" -n "$NAMESPACE" || true
 
-    echo "kubectl delete pvc"
-
     # `helm uninstall` doesn't remove PVCs, delete them manually.
     time kubectl delete pvc --all -n "$NAMESPACE" || true
-
-    echo "kubectl get service"
 
     kubectl get service -n "$NAMESPACE"
 
@@ -76,7 +70,7 @@ function helm_install {
     helm repo add feast-charts https://feast-charts.storage.googleapis.com
     helm repo update
     if ! time helm install --wait "${FEAST_RELEASE_NAME:-feast-release}" feast-charts/feast "$@" \
-        --timeout 5m \
+        --timeout 10m \
         --set "prometheus-statsd-exporter.enabled=false" \
         --set "feast-jobservice.enabled=false" \
         --set "prometheus.enabled=false" \

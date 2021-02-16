@@ -89,7 +89,7 @@ case $STAGE in
             --env="STAGING_PATH=$STAGING_PATH" \
             --env="NODE_IP=$NODE_IP" \
             --  \
-            bash -c "mkdir src && cd src && git clone --recursive $CODEBUILD_SOURCE_REPO_URL && cd feast* && git config remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pull/*' && git fetch -q && git checkout $CODEBUILD_RESOLVED_SOURCE_VERSION && git submodule update --init --recursive && ./infra/scripts/setup-e2e-env-aws.sh && ./infra/scripts/test-end-to-end-aws.sh"
+            bash -c "mkdir src && cd src && git clone --recursive $CODEBUILD_SOURCE_REPO_URL && cd feast* && git config remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pull/*' && git fetch -q && git checkout $CODEBUILD_RESOLVED_SOURCE_VERSION && ./infra/scripts/setup-e2e-env-aws.sh && ./infra/scripts/test-end-to-end-aws.sh"
 
         ;;
     e2e-test-sparkop)
@@ -121,7 +121,7 @@ case $STAGE in
             --image="${DOCKER_REPOSITORY}/feast-ci:latest" \
             --env="STAGING_PATH=$STAGING_PATH" \
             --  \
-            bash -c "mkdir src && cd src && git clone --recursive $CODEBUILD_SOURCE_REPO_URL && cd feast* && git config remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pull/*' && git fetch -q && git checkout $CODEBUILD_RESOLVED_SOURCE_VERSION && git submodule update --init --recursive && ./infra/scripts/setup-e2e-env-sparkop.sh && ./infra/scripts/test-end-to-end-sparkop.sh" ; then
+            bash -c "mkdir src && cd src && git clone --recursive $CODEBUILD_SOURCE_REPO_URL && cd feast* && git config remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pull/*' && git fetch -q && git checkout $CODEBUILD_RESOLVED_SOURCE_VERSION && ./infra/scripts/setup-e2e-env-sparkop.sh && ./infra/scripts/test-end-to-end-sparkop.sh" ; then
 
             readarray -t CRASHED_PODS < <(kubectl get pods --no-headers=true --namespace sparkop | grep Error | awk '{ print $1 }')
 

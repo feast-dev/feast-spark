@@ -11,8 +11,8 @@ plank:
   pod_pending_timeout: 60m
   report_templates:
     '*': >-
-        [Full PR test history](https://prow.feast.ai/pr-history?org={{.Spec.Refs.Org}}&repo={{.Spec.Refs.Repo}}&pr={{with index .Spec.Refs.Pulls 0}}{{.Number}}{{end}}).
-        [Your PR dashboard](https://prow.feast.ai/pr?query=is:pr+state:open+author:{{with
+        [Full PR test history](https://prow.feast.dev/pr-history?org={{.Spec.Refs.Org}}&repo={{.Spec.Refs.Repo}}&pr={{with index .Spec.Refs.Pulls 0}}{{.Number}}{{end}}).
+        [Your PR dashboard](https://prow.feast.dev/pr?query=is:pr+state:open+author:{{with
         index .Spec.Refs.Pulls 0}}{{.Author}}{{end}}).
   default_decoration_configs:
     "*":

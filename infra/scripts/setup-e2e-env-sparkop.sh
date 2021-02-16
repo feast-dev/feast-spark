@@ -1,11 +1,9 @@
 #!/bin/bash
 
-make install-ci-dependencies
-make install-python
-
 python -m pip install --upgrade pip==20.2 setuptools wheel
 
-python -m pip install -qr sdk/python/requirements-dev.txt
+make install-python
+
 python -m pip install -qr tests/requirements.txt
 
 # Using mvn -q to make it less verbose. This step happens after docker containers were

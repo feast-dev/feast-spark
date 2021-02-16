@@ -10,8 +10,8 @@ export FEAST_TELEMETRY="False"
 
 PYTHONPATH=sdk/python pytest tests/e2e/ \
       --feast-version develop \
-      --core-url cicd-feast-core:6565 \
-      --serving-url cicd-feast-online-serving:6566 \
+      --core-url feast-release-feast-core:6565 \
+      --serving-url feast-release-feast-online-serving:6566 \
       --env aws \
       --emr-cluster-id $CLUSTER_ID \
       --staging-path $STAGING_PATH \

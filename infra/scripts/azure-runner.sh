@@ -66,7 +66,7 @@ echo "${STEP_BREADCRUMB} Running the test suite"
 kubectl run -n "$NAMESPACE" -i ci-test-runner  \
     --pod-running-timeout=5m \
     --restart=Never \
-    --image="${DOCKER_REPOSITORY}/feast-ci:latest" \
+    --image="${DOCKER_REPOSITORY}/feast-ci:${CI_GIT_TAG}" \
     --env="STAGING_PATH=${STAGING_PATH}" \
     --env="FEAST_AZURE_BLOB_ACCOUNT_NAME=${AZURE_BLOB_ACCOUNT_NAME}" \
     --env="FEAST_AZURE_BLOB_ACCOUNT_ACCESS_KEY=${AZURE_BLOB_ACCOUNT_ACCESS_KEY}" \
