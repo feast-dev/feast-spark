@@ -35,6 +35,10 @@ lint-python:
 	cd ${ROOT_DIR}/python ; isort feast_spark/ --check-only
 	cd ${ROOT_DIR}/python ; flake8 feast_spark/
 	cd ${ROOT_DIR}/python ; black --check feast_spark
+	cd ${ROOT_DIR}/tests; mypy e2e
+	cd ${ROOT_DIR}/tests; isort e2e --check-only
+	cd ${ROOT_DIR}/tests; flake8 e2e
+	cd ${ROOT_DIR}/tests; black --check e2e
 
 build-local-test-docker:
 	docker build -t feast:local -f infra/docker/tests/Dockerfile .

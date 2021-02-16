@@ -7,8 +7,9 @@ import pytest
 from great_expectations.dataset import PandasDataset
 
 from feast import Client
-from feast_spark.contrib.validation.ge import apply_validation, create_validation_udf
 from feast.wait import wait_retry_backoff
+from feast_spark import Client as SparkClient
+from feast_spark.contrib.validation.ge import apply_validation, create_validation_udf
 from tests.e2e.fixtures.statsd_stub import StatsDServer
 from tests.e2e.utils.common import avro_schema, create_schema, start_job, stop_job
 from tests.e2e.utils.kafka import check_consumer_exist, ingest_and_retrieve
@@ -34,7 +35,9 @@ def generate_test_data():
     return df
 
 
-def test_validation_with_ge(feast_client: Client, kafka_server, pytestconfig):
+def test_validation_with_ge(
+    feast_client: Client, feast_spark_client: SparkClient, kafka_server, pytestconfig
+):
     kafka_broker = f"{kafka_server[0]}:{kafka_server[1]}"
     topic_name = f"avro-{uuid.uuid4()}"
 
@@ -51,7 +54,7 @@ def test_validation_with_ge(feast_client: Client, kafka_server, pytestconfig):
     udf = create_validation_udf("testUDF", expectations, feature_table)
     apply_validation(feast_client, feature_table, udf, validation_window_secs=1)
 
-    job = start_job(feast_client, feature_table, pytestconfig)
+    job = start_job(feast_spark_client, feature_table, pytestconfig)
 
     wait_retry_backoff(
         lambda: (None, check_consumer_exist(kafka_broker, topic_name)), 300
@@ -82,7 +85,7 @@ def test_validation_with_ge(feast_client: Client, kafka_server, pytestconfig):
             expected_ingested_count=test_data.shape[0] - len(invalid_idx),
         )
     finally:
-        stop_job(job, feast_client, feature_table)
+        stop_job(job, feast_spark_client, feature_table)
 
     test_data["num"] = test_data["num"].astype(np.float64)
     test_data["num"].iloc[invalid_idx] = np.nan
@@ -98,7 +101,11 @@ def test_validation_with_ge(feast_client: Client, kafka_server, pytestconfig):
 
 @pytest.mark.env("local")
 def test_validation_reports_metrics(
-    feast_client: Client, kafka_server, statsd_server: StatsDServer, pytestconfig
+    feast_client: Client,
+    feast_spark_client: SparkClient,
+    kafka_server,
+    statsd_server: StatsDServer,
+    pytestconfig,
 ):
     kafka_broker = f"{kafka_server[0]}:{kafka_server[1]}"
     topic_name = f"avro-{uuid.uuid4()}"
@@ -118,7 +125,7 @@ def test_validation_reports_metrics(
     udf = create_validation_udf("testUDF", expectations, feature_table)
     apply_validation(feast_client, feature_table, udf, validation_window_secs=10)
 
-    job = start_job(feast_client, feature_table, pytestconfig)
+    job = start_job(feast_spark_client, feature_table, pytestconfig)
 
     wait_retry_backoff(
         lambda: (None, check_consumer_exist(kafka_broker, topic_name)), 300
@@ -157,7 +164,7 @@ def test_validation_reports_metrics(
             expected_ingested_count=test_data.shape[0] - len(invalid_idx),
         )
     finally:
-        stop_job(job, feast_client, feature_table)
+        stop_job(job, feast_spark_client, feature_table)
 
     expected_metrics = [
         (
@@ -178,4 +185,3 @@ def test_validation_reports_metrics(
         + "\n"
         "Actual received metrics" + str(statsd_server.metrics),
     )
-

@@ -1,18 +1,10 @@
 import json
 
-from feast import (
-    Client,
-    Entity,
-    Feature,
-    FeatureTable,
-    FileSource,
-    KafkaSource,
-    ValueType,
-)
+from feast import Client as SparkClient
+from feast import Entity, Feature, FeatureTable, FileSource, KafkaSource, ValueType
 from feast.data_format import AvroFormat, ParquetFormat
-from feast_spark.pyspark.abc import SparkJobStatus
 from feast.wait import wait_retry_backoff
-import feast_spark
+from feast_spark.pyspark.abc import SparkJobStatus
 
 
 def create_schema(kafka_broker, topic_name, feature_table_name):
@@ -36,22 +28,25 @@ def create_schema(kafka_broker, topic_name, feature_table_name):
     return entity, feature_table
 
 
-def start_job(feast_client: Client, feature_table: FeatureTable, pytestconfig):
+def start_job(
+    feast_spark_client: SparkClient, feature_table: FeatureTable, pytestconfig
+):
     if pytestconfig.getoption("scheduled_streaming_job"):
         return
 
-    job = feast_spark.Client(feast_client).start_stream_to_online_ingestion(feature_table)
+    job = feast_spark_client.start_stream_to_online_ingestion(feature_table)
     wait_retry_backoff(
         lambda: (None, job.get_status() == SparkJobStatus.IN_PROGRESS), 180
     )
     return job
 
 
-def stop_job(job, feast_client: Client, feature_table: FeatureTable):
+def stop_job(job, feast_spark_client: SparkClient, feature_table: FeatureTable):
     if job:
         job.cancel()
     else:
-        feast_client.delete_feature_table(feature_table.name)
+        feast_spark_client.delete_feature_table(feature_table.name)
+
 
 def avro_schema():
     return json.dumps(
