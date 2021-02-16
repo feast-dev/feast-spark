@@ -5,8 +5,6 @@ from itertools import groupby
 from typing import List, Optional, Union, cast
 
 import pandas as pd
-
-import feast
 from feast.config import Config
 from feast.constants import ConfigOptions as opt
 from feast.data_source import BigQuerySource, FileSource
@@ -16,6 +14,8 @@ from feast.staging.entities import (
     stage_entities_to_fs,
     table_reference_from_string,
 )
+
+import feast
 from feast_spark.api.JobService_pb2 import (
     GetHistoricalFeaturesRequest,
     GetJobRequest,

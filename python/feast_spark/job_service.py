@@ -8,12 +8,12 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Tuple, cast
 
 import grpc
+from feast.constants import ConfigOptions as opt
+from feast.data_source import DataSource
 from google.api_core.exceptions import FailedPrecondition
 from google.protobuf.timestamp_pb2 import Timestamp
 
 from feast import Client as FeastClient
-from feast.constants import ConfigOptions as opt
-from feast.data_source import DataSource
 from feast_spark import Client as Client
 from feast_spark.api import JobService_pb2_grpc
 from feast_spark.api.JobService_pb2 import (
@@ -47,10 +47,13 @@ from feast_spark.pyspark.launcher import (
     start_offline_to_online_ingestion,
     start_stream_to_online_ingestion,
 )
-from feast_spark.third_party.grpc.health.v1 import HealthService_pb2_grpc
 from feast_spark.third_party.grpc.health.v1.HealthService_pb2 import (
     HealthCheckResponse,
     ServingStatus,
+)
+from feast_spark.third_party.grpc.health.v1.HealthService_pb2_grpc import (
+    HealthServicer,
+    add_HealthServicer_to_server,
 )
 
 
@@ -231,7 +234,7 @@ def start_control_loop() -> None:
         os.kill(os.getpid(), signal.SIGINT)
 
 
-class HealthServicer(HealthService_pb2_grpc.HealthServicer):
+class HealthServicerImpl(HealthServicer):
     def Check(self, request, context):
         return HealthCheckResponse(status=ServingStatus.SERVING)
 
@@ -262,7 +265,7 @@ def start_job_service() -> None:
     JobService_pb2_grpc.add_JobServiceServicer_to_server(
         JobServiceServicer(client), server
     )
-    HealthService_pb2_grpc.add_HealthServicer_to_server(HealthServicer(), server)
+    add_HealthServicer_to_server(HealthServicerImpl(), server)
     server.add_insecure_port("[::]:6568")
     server.start()
     logging.info("Feast Job Service is listening on port :6568")

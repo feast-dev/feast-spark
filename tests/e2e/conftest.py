@@ -45,7 +45,7 @@ def pytest_runtest_setup(item):
             pytest.skip(f"test requires env in {env_names}")
 
 
-from .fixtures.base import java_project_root, project_root, project_version  # noqa
+from .fixtures.base import project_root, project_version  # noqa
 from .fixtures.client import (  # noqa
     feast_client,
     feast_spark_client,
