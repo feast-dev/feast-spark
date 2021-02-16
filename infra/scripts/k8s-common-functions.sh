@@ -15,14 +15,22 @@ function k8s_cleanup {
     local RELEASE=$1
     local NAMESPACE=$2
 
+    echo "${STEP_BREADCRUMB:-} K8S Cleanup Release=$RELEASE Namespace=$NAMESPACE"
+
     # Create namespace if it doesn't exist.
     kubectl create namespace "$NAMESPACE" || true
+
+    echo "helm uninstall"
 
     # Uninstall previous feast release if there is any.
     helm uninstall "$RELEASE" -n "$NAMESPACE" || true
 
+    echo "kubectl delete pvc"
+
     # `helm uninstall` doesn't remove PVCs, delete them manually.
     time kubectl delete pvc --all -n "$NAMESPACE" || true
+
+    echo "kubectl get service"
 
     kubectl get service -n "$NAMESPACE"
 
