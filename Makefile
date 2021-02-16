@@ -1,6 +1,5 @@
 MVN := mvn ${MAVEN_EXTRA_OPTS}
 ROOT_DIR 	:= $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
-SUBMODULE_DIR := deps/feast
 
 # Make sure env vars are available to submakes
 export
@@ -29,7 +28,6 @@ install-python-ci-dependencies:
 
 # Supports feast-dev repo master branch
 install-python: install-python-ci-dependencies
-	cd ${SUBMODULE_DIR}; make install-python
 	cd ${ROOT_DIR}; python -m pip install -e python
 
 lint-python:
@@ -57,11 +55,3 @@ push-spark-docker:
 	docker push $(REGISTRY)/feast-spark:$(VERSION)
 
 install-ci-dependencies: install-python-ci-dependencies
-
-# Forward all other build-X and push-X targets to the Makefile that knows how to build docker
-# containers
-build-%:
-	cd ${SUBMODULE_DIR} && $(MAKE) $@
-
-push-%:
-	cd ${SUBMODULE_DIR} && $(MAKE) $@

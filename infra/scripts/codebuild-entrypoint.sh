@@ -2,24 +2,11 @@
 
 set -euo pipefail
 
-export HELM_CHART_LOCATION=deps/feast/infra/charts/feast
+export DOCKER_REPOSITORY=gcr.io/kf-feast
 
 STEP_BREADCRUMB='~~~~~~~~'
 SECONDS=0
 TIMEFORMAT="${STEP_BREADCRUMB} took %R seconds"
-
-function maybe_build_push_docker {
-    # Build and push docker image, tagged with SHA tag, if it doesn't exist already.
-    NAME=$1
-    TARGET=$NAME-docker
-    SUFFIX=feast-$NAME
-
-    if ! aws ecr describe-images --repository-name "feast-ci/feast/$SUFFIX" "--image-ids=imageTag=${GIT_TAG}" >/dev/null ; then
-        make "build-$TARGET" "push-$TARGET" REGISTRY="${DOCKER_REPOSITORY}" VERSION="${GIT_TAG}"
-    else
-        echo "Image ${DOCKER_REPOSITORY}/$SUFFIX:$GIT_TAG already exists, skipping docker build"
-    fi
-}
 
 source infra/scripts/k8s-common-functions.sh
 
@@ -48,19 +35,14 @@ kubectl get pods
 
 case $STAGE in
     core-docker)
-        maybe_build_push_docker core
         ;;
     serving-docker)
-        maybe_build_push_docker serving
         ;;
     jupyter-docker)
-        maybe_build_push_docker jupyter
         ;;
     jobservice-docker)
-        maybe_build_push_docker jobservice
         ;;
     ci-docker)
-        maybe_build_push_docker ci
         ;;
     e2e-test-emr)
         # EMR test - runs in default namespace.
@@ -69,7 +51,8 @@ case $STAGE in
         aws s3 cp "${EMR_TEMPLATE_YML}" emr_cluster.yaml
 
         # Delete old helm release and PVCs
-        k8s_cleanup cicd default
+        helm uninstall cicd -n default || true
+        k8s_cleanup "feast-release" default
 
         # Create cluster OR get existing EMR cluster id. In the latter case, clean up any steps
         # already running there from previous test runs.
@@ -101,12 +84,12 @@ case $STAGE in
         echo "${STEP_BREADCRUMB} Running the test suite"
         time kubectl run --rm -i ci-test-runner  \
             --restart=Never \
-            --image="${DOCKER_REPOSITORY}/feast-ci:${GIT_TAG}" \
+            --image="${DOCKER_REPOSITORY}/feast-ci:latest" \
             --env="CLUSTER_ID=$CLUSTER_ID" \
             --env="STAGING_PATH=$STAGING_PATH" \
             --env="NODE_IP=$NODE_IP" \
             --  \
-            bash -c "mkdir src && cd src && git clone --recursive $CODEBUILD_SOURCE_REPO_URL && cd feast* && git config remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pull/*' && git fetch -q && git checkout $CODEBUILD_RESOLVED_SOURCE_VERSION && git submodule update --init --recursive && ./infra/scripts/setup-e2e-env-aws.sh && ./infra/scripts/test-end-to-end-aws.sh"
+            bash -c "mkdir src && cd src && git clone --recursive $CODEBUILD_SOURCE_REPO_URL && cd feast* && git config remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pull/*' && git fetch -q && git checkout $CODEBUILD_RESOLVED_SOURCE_VERSION && ./infra/scripts/setup-e2e-env-aws.sh && ./infra/scripts/test-end-to-end-aws.sh"
 
         ;;
     e2e-test-sparkop)
@@ -116,7 +99,8 @@ case $STAGE in
         RELEASE=sparkop
 
         # Clean up old release
-        k8s_cleanup "$RELEASE" "$NAMESPACE"
+        helm uninstall $RELEASE -n $NAMESPACE || true
+        k8s_cleanup "feast-release" "$NAMESPACE"
 
         # Helm install everything in a namespace
         helm_install "$RELEASE" "${DOCKER_REPOSITORY}" "${GIT_TAG}" "$NAMESPACE"
@@ -134,10 +118,10 @@ case $STAGE in
         echo "${STEP_BREADCRUMB} Running the test suite"
         if ! time kubectl run --rm -n "$NAMESPACE" -i ci-test-runner  \
             --restart=Never \
-            --image="${DOCKER_REPOSITORY}/feast-ci:${GIT_TAG}" \
+            --image="${DOCKER_REPOSITORY}/feast-ci:latest" \
             --env="STAGING_PATH=$STAGING_PATH" \
             --  \
-            bash -c "mkdir src && cd src && git clone --recursive $CODEBUILD_SOURCE_REPO_URL && cd feast* && git config remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pull/*' && git fetch -q && git checkout $CODEBUILD_RESOLVED_SOURCE_VERSION && git submodule update --init --recursive && ./infra/scripts/setup-e2e-env-sparkop.sh && ./infra/scripts/test-end-to-end-sparkop.sh" ; then
+            bash -c "mkdir src && cd src && git clone --recursive $CODEBUILD_SOURCE_REPO_URL && cd feast* && git config remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pull/*' && git fetch -q && git checkout $CODEBUILD_RESOLVED_SOURCE_VERSION && ./infra/scripts/setup-e2e-env-sparkop.sh && ./infra/scripts/test-end-to-end-sparkop.sh" ; then
 
             readarray -t CRASHED_PODS < <(kubectl get pods --no-headers=true --namespace sparkop | grep Error | awk '{ print $1 }')
 

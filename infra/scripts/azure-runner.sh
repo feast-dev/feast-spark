@@ -2,7 +2,6 @@
 
 set -euo pipefail
 
-export HELM_CHART_LOCATION=deps/feast/infra/charts/feast
 
 STEP_BREADCRUMB='~~~~~~~~'
 SECONDS=0
@@ -17,12 +16,7 @@ echo "########## Starting e2e tests for ${GIT_REMOTE_URL} ${GIT_TAG} ###########
 source infra/scripts/k8s-common-functions.sh
 
 # Figure out docker image versions
-
-# Those are build from submodule, but tagged with the sha tag of this repo.
-export JUPYTER_GIT_TAG=$GIT_TAG
-export SERVING_GIT_TAG=$GIT_TAG
-export CORE_GIT_TAG=$GIT_TAG
-export CI_GIT_TAG=$GIT_TAG
+export CI_GIT_TAG=latest
 
 # Jobservice is built by this repo
 export JOBSERVICE_GIT_TAG=$GIT_TAG
@@ -45,6 +39,7 @@ NAMESPACE=sparkop
 RELEASE=sparkop
 
 # Delete old helm release and PVCs
+k8s_cleanup "feast-release" "$NAMESPACE"
 k8s_cleanup "$RELEASE" "$NAMESPACE"
 
 # Wait for CI and jobservice image to be built
@@ -68,10 +63,10 @@ setup_sparkop_role
 
 # Run the test suite as a one-off pod.
 echo "${STEP_BREADCRUMB} Running the test suite"
-time kubectl run -n "$NAMESPACE" -i ci-test-runner  \
+kubectl run -n "$NAMESPACE" -i ci-test-runner  \
     --pod-running-timeout=5m \
     --restart=Never \
-    --image="${DOCKER_REPOSITORY}/feast-ci:${GIT_TAG}" \
+    --image="${DOCKER_REPOSITORY}/feast-ci:${CI_GIT_TAG}" \
     --env="STAGING_PATH=${STAGING_PATH}" \
     --env="FEAST_AZURE_BLOB_ACCOUNT_NAME=${AZURE_BLOB_ACCOUNT_NAME}" \
     --env="FEAST_AZURE_BLOB_ACCOUNT_ACCESS_KEY=${AZURE_BLOB_ACCOUNT_ACCESS_KEY}" \
