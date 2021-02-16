@@ -99,7 +99,7 @@ case $STAGE in
         RELEASE=sparkop
 
         # Clean up old release
-        helm uninstall sparkop -n $NAMESPACE || true
+        helm uninstall $RELEASE -n $NAMESPACE || true
         k8s_cleanup "feast-release" "$NAMESPACE"
 
         # Helm install everything in a namespace

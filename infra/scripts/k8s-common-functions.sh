@@ -84,6 +84,16 @@ function helm_install {
         --namespace "$NAMESPACE" ; then
 
           echo "Error during helm install (Feast Main). "
+
+          kubectl -n "$NAMESPACE" get pods
+
+          readarray -t CRASHED_PODS < <(kubectl -n "$NAMESPACE" get pods --no-headers=true | grep "$RELEASE" | awk '{if ($2 == "0/1") { print $1 } }')
+          echo "Crashed pods: ${CRASHED_PODS[*]}"
+
+          for POD in "${CRASHED_PODS[@]}"; do
+              echo "Logs from pod error $POD:"
+              kubectl -n "$NAMESPACE" logs "$POD" --previous
+          done
           exit 1
     fi
 
