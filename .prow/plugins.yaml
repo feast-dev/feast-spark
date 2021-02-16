@@ -1,5 +1,5 @@
 plugins:
-  feast-dev/feast:
+  feast-dev/feast-spark:
   - approve      
   - assign
   - help
@@ -21,7 +21,7 @@ config_updater:
       name: config
 
 external_plugins:
-  feast-dev/feast:
+  feast-dev/feast-spark:
   - name: needs-rebase
     events:
     - pull_request
