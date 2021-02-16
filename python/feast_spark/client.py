@@ -2,20 +2,13 @@ import os
 import uuid
 from datetime import datetime
 from itertools import groupby
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import List, Optional, Union, cast
 
 import pandas as pd
 
 import feast
+from feast.config import Config
 from feast.constants import ConfigOptions as opt
-from feast.core.JobService_pb2 import (
-    GetHistoricalFeaturesRequest,
-    GetJobRequest,
-    ListJobsRequest,
-    StartOfflineToOnlineIngestionJobRequest,
-    StartStreamToOnlineIngestionJobRequest,
-)
-from feast.core.JobService_pb2_grpc import JobServiceStub
 from feast.data_source import BigQuerySource, FileSource
 from feast.grpc.grpc import create_grpc_channel
 from feast.staging.entities import (
@@ -23,6 +16,14 @@ from feast.staging.entities import (
     stage_entities_to_fs,
     table_reference_from_string,
 )
+from feast_spark.api.JobService_pb2 import (
+    GetHistoricalFeaturesRequest,
+    GetJobRequest,
+    ListJobsRequest,
+    StartOfflineToOnlineIngestionJobRequest,
+    StartStreamToOnlineIngestionJobRequest,
+)
+from feast_spark.api.JobService_pb2_grpc import JobServiceStub
 from feast_spark.pyspark.abc import RetrievalJob, SparkJob
 from feast_spark.pyspark.launcher import (
     get_job_by_id,
@@ -39,9 +40,6 @@ from feast_spark.remote_job import (
     get_remote_job_from_proto,
 )
 
-if TYPE_CHECKING:
-    from feast.config import Config
-
 
 class Client:
     _feast: feast.Client
@@ -51,7 +49,7 @@ class Client:
         self._job_service_stub: Optional[JobServiceStub] = None
 
     @property
-    def config(self) -> "Config":
+    def config(self) -> Config:
         return self._feast._config
 
     @property
@@ -332,7 +330,7 @@ class Client:
             return list_jobs(include_terminated, self, table_name)
         else:
             request = ListJobsRequest(
-                include_terminated=include_terminated, table_name=table_name
+                include_terminated=include_terminated, table_name=cast(str, table_name)
             )
             response = self._job_service.ListJobs(request)
             return [
