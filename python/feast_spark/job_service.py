@@ -11,18 +11,20 @@ import grpc
 from google.api_core.exceptions import FailedPrecondition
 from google.protobuf.timestamp_pb2 import Timestamp
 
-import feast
-import feast_spark
+from feast import Client as FeastClient
 from feast.constants import ConfigOptions as opt
-from feast.core import JobService_pb2_grpc
-from feast.core.JobService_pb2 import (
+from feast.core import JobService_pb2_grpc as LegacyJobService_pb2_grpc
+from feast.data_source import DataSource
+from feast_spark import Client as Client
+from feast_spark.api import JobService_pb2_grpc
+from feast_spark.api.JobService_pb2 import (
     CancelJobResponse,
     GetHistoricalFeaturesRequest,
     GetHistoricalFeaturesResponse,
     GetJobResponse,
 )
-from feast.core.JobService_pb2 import Job as JobProto
-from feast.core.JobService_pb2 import (
+from feast_spark.api.JobService_pb2 import Job as JobProto
+from feast_spark.api.JobService_pb2 import (
     JobStatus,
     JobType,
     ListJobsResponse,
@@ -30,12 +32,6 @@ from feast.core.JobService_pb2 import (
     StartOfflineToOnlineIngestionJobResponse,
     StartStreamToOnlineIngestionJobRequest,
     StartStreamToOnlineIngestionJobResponse,
-)
-from feast.data_source import DataSource
-from feast.third_party.grpc.health.v1 import HealthService_pb2_grpc
-from feast.third_party.grpc.health.v1.HealthService_pb2 import (
-    HealthCheckResponse,
-    ServingStatus,
 )
 from feast_spark.pyspark.abc import (
     BatchIngestionJob,
@@ -51,6 +47,14 @@ from feast_spark.pyspark.launcher import (
     start_historical_feature_retrieval_job,
     start_offline_to_online_ingestion,
     start_stream_to_online_ingestion,
+)
+from feast_spark.third_party.grpc.health.v1.HealthService_pb2 import (
+    HealthCheckResponse,
+    ServingStatus,
+)
+from feast_spark.third_party.grpc.health.v1.HealthService_pb2_grpc import (
+    HealthServicer,
+    add_HealthServicer_to_server,
 )
 
 
@@ -88,7 +92,7 @@ def _job_to_proto(spark_job: SparkJob) -> JobProto:
 
 
 class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
-    def __init__(self, client: feast_spark.Client):
+    def __init__(self, client: Client):
         self.client = client
 
     def StartOfflineToOnlineIngestionJob(
@@ -113,7 +117,7 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
             id=job.get_id(),
             job_start_time=job_start_timestamp,
             table_name=request.table_name,
-            log_uri=job.get_log_uri(),
+            log_uri=job.get_log_uri(),  # type: ignore
         )
 
     def GetHistoricalFeatures(self, request: GetHistoricalFeaturesRequest, context):
@@ -163,7 +167,7 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
                         id=job.get_id(),
                         job_start_time=job_start_timestamp,
                         table_name=job.get_feature_table(),
-                        log_uri=job.get_log_uri(),
+                        log_uri=job.get_log_uri(),  # type: ignore
                     )
             raise RuntimeError(
                 "Feast Job Service has control loop enabled, but couldn't find the existing stream ingestion job for the given FeatureTable"
@@ -183,7 +187,7 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
             id=job.get_id(),
             job_start_time=job_start_timestamp,
             table_name=request.table_name,
-            log_uri=job.get_log_uri(),
+            log_uri=job.get_log_uri(),  # type: ignore
         )
 
     def ListJobs(self, request, context):
@@ -219,8 +223,8 @@ def start_control_loop() -> None:
         "which will ensure that stream ingestion jobs are successfully running."
     )
     try:
-        feature_store = feast.Client()
-        client = feast_spark.Client(feature_store)
+        feature_store = FeastClient()
+        client = Client(feature_store)
         while True:
             ensure_stream_ingestion_jobs(client, all_projects=True)
             time.sleep(1)
@@ -231,7 +235,7 @@ def start_control_loop() -> None:
         os.kill(os.getpid(), signal.SIGINT)
 
 
-class HealthServicer(HealthService_pb2_grpc.HealthServicer):
+class HealthServicerImpl(HealthServicer):
     def Check(self, request, context):
         return HealthCheckResponse(status=ServingStatus.SERVING)
 
@@ -250,8 +254,8 @@ def start_job_service() -> None:
     log_fmt = "%(asctime)s %(levelname)s %(message)s"
     logging.basicConfig(level=logging.INFO, format=log_fmt)
 
-    feast_client = feast.Client()
-    client = feast_spark.Client(feast_client)
+    feast_client = FeastClient()
+    client = Client(feast_client)
 
     if client.config.getboolean(opt.JOB_SERVICE_ENABLE_CONTROL_LOOP):
         # Start the control loop thread only if it's enabled from configs
@@ -262,7 +266,10 @@ def start_job_service() -> None:
     JobService_pb2_grpc.add_JobServiceServicer_to_server(
         JobServiceServicer(client), server
     )
-    HealthService_pb2_grpc.add_HealthServicer_to_server(HealthServicer(), server)
+    LegacyJobService_pb2_grpc.add_JobServiceServicer_to_server(
+        JobServiceServicer(client), server
+    )
+    add_HealthServicer_to_server(HealthServicerImpl(), server)
     server.add_insecure_port("[::]:6568")
     server.start()
     logging.info("Feast Job Service is listening on port :6568")
@@ -270,7 +277,7 @@ def start_job_service() -> None:
 
 
 def _get_expected_job_hash_to_table_refs(
-    client: feast_spark.Client, projects: List[str]
+    client: Client, projects: List[str]
 ) -> Dict[str, Tuple[str, str]]:
     """
     Checks all feature tables for the requires project(s) and determines all required stream
@@ -298,7 +305,7 @@ def _get_expected_job_hash_to_table_refs(
     return job_hash_to_table_refs
 
 
-def ensure_stream_ingestion_jobs(client: feast_spark.Client, all_projects: bool):
+def ensure_stream_ingestion_jobs(client: Client, all_projects: bool):
     """Ensures all required stream ingestion jobs are running and cleans up the unnecessary jobs.
 
     More concretely, it will determine
