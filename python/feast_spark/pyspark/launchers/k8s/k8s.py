@@ -1,4 +1,3 @@
-import hashlib
 import random
 import string
 import time
@@ -37,6 +36,7 @@ from .k8s_utils import (
     STREAM_TO_ONLINE_JOB_TYPE,
     JobInfo,
     _cancel_job_by_id,
+    _generate_project_table_hash,
     _get_api,
     _get_job_by_id,
     _list_jobs,
@@ -58,10 +58,6 @@ def _generate_job_id() -> str:
 
 def _truncate_label(label: str) -> str:
     return label[:63]
-
-
-def _generate_project_table_hash(project: str, table_name: str) -> str:
-    return hashlib.md5(f"{project}:{table_name}".encode()).hexdigest()
 
 
 class KubernetesJobMixin:
