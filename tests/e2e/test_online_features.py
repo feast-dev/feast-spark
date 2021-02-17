@@ -234,7 +234,7 @@ def test_list_jobs_long_table_name(
     )
     all_job_ids = [
         job.get_id()
-        for job in feast_spark.Client(feast_client).list_jobs(
+        for job in feast_spark_client.list_jobs(
             include_terminated=True, project="default", table_name=feature_table.name
         )
     ]

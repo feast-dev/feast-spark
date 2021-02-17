@@ -342,7 +342,9 @@ class Client:
             return list_jobs(include_terminated, self, project, table_name)
         else:
             request = ListJobsRequest(
-                include_terminated=include_terminated, project=project, table_name=cast(str, table_name)
+                include_terminated=include_terminated,
+                project=project,
+                table_name=cast(str, table_name),
             )
             response = self._job_service.ListJobs(request)
             return [
