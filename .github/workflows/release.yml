@@ -48,7 +48,7 @@ jobs:
     needs: get-version
     strategy:
       matrix:
-        component: [spark]
+        component: [jobservice, spark]
     steps:
       - uses: actions/checkout@v2
         with:
