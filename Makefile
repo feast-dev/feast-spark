@@ -36,12 +36,7 @@ compile-protos-python: install-python-ci-dependencies
 	cd ${ROOT_DIR}/protos; python -m grpc_tools.protoc -I. --python_out=../python/ --grpc_python_out=../python/ --mypy_out=../python/ feast_spark/third_party/grpc/health/v1/*.proto
 
 # Supports feast-dev repo master branch
-<<<<<<< HEAD
 install-python: compile-protos-python
-=======
-install-python: install-python-ci-dependencies
-	cd ${SUBMODULE_DIR}; make install-python
->>>>>>> Revert command
 	cd ${ROOT_DIR}; python -m pip install -e python
 
 lint-python:
