@@ -13,6 +13,7 @@ from google.protobuf.timestamp_pb2 import Timestamp
 
 from feast import Client as FeastClient
 from feast.constants import ConfigOptions as opt
+from feast.core import JobService_pb2_grpc as LegacyJobService_pb2_grpc
 from feast.data_source import DataSource
 from feast_spark import Client as Client
 from feast_spark.api import JobService_pb2_grpc
@@ -263,6 +264,9 @@ def start_job_service() -> None:
 
     server = grpc.server(ThreadPoolExecutor(), interceptors=(LoggingInterceptor(),))
     JobService_pb2_grpc.add_JobServiceServicer_to_server(
+        JobServiceServicer(client), server
+    )
+    LegacyJobService_pb2_grpc.add_JobServiceServicer_to_server(
         JobServiceServicer(client), server
     )
     add_HealthServicer_to_server(HealthServicerImpl(), server)
