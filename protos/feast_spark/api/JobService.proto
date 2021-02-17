@@ -15,11 +15,11 @@
 //
 
 syntax = "proto3";
-package feast_spark.api;
+package feast.core;
 
-option go_package = "github.com/feast-dev/feast-spark/sdk/go/protos/feast_spark/api";
+option go_package = "github.com/feast-dev/feast-spark/sdk/go/protos/feast/jobservice";
 option java_outer_classname = "JobServiceProto";
-option java_package = "feast_spark.proto.jobservice";
+option java_package = "feast.proto.jobservice";
 
 import "google/protobuf/timestamp.proto";
 import "feast/core/DataSource.proto";
