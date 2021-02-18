@@ -322,11 +322,14 @@ def start_stream_to_online_ingestion(
 
 
 def list_jobs(
-    include_terminated: bool, client: "Client", table_name: Optional[str] = None
+    include_terminated: bool,
+    client: "Client",
+    project: Optional[str] = None,
+    table_name: Optional[str] = None,
 ) -> List[SparkJob]:
     launcher = resolve_launcher(client.config)
     return launcher.list_jobs(
-        include_terminated=include_terminated, table_name=table_name
+        include_terminated=include_terminated, table_name=table_name, project=project
     )
 
 

@@ -1,4 +1,3 @@
-import hashlib
 import random
 import string
 import time
@@ -37,6 +36,7 @@ from .k8s_utils import (
     STREAM_TO_ONLINE_JOB_TYPE,
     JobInfo,
     _cancel_job_by_id,
+    _generate_project_table_hash,
     _get_api,
     _get_job_by_id,
     _list_jobs,
@@ -58,10 +58,6 @@ def _generate_job_id() -> str:
 
 def _truncate_label(label: str) -> str:
     return label[:63]
-
-
-def _generate_table_hash(table_name: str) -> str:
-    return hashlib.md5(table_name.encode()).hexdigest()
 
 
 class KubernetesJobMixin:
@@ -340,8 +336,9 @@ class KubernetesJobLauncher(JobLauncher):
                 LABEL_FEATURE_TABLE: _truncate_label(
                     ingestion_job_params.get_feature_table_name()
                 ),
-                LABEL_FEATURE_TABLE_HASH: _generate_table_hash(
-                    ingestion_job_params.get_feature_table_name()
+                LABEL_FEATURE_TABLE_HASH: _generate_project_table_hash(
+                    ingestion_job_params.get_project(),
+                    ingestion_job_params.get_feature_table_name(),
                 ),
             },
         )
@@ -391,8 +388,9 @@ class KubernetesJobLauncher(JobLauncher):
                 LABEL_FEATURE_TABLE: _truncate_label(
                     ingestion_job_params.get_feature_table_name()
                 ),
-                LABEL_FEATURE_TABLE_HASH: _generate_table_hash(
-                    ingestion_job_params.get_feature_table_name()
+                LABEL_FEATURE_TABLE_HASH: _generate_project_table_hash(
+                    ingestion_job_params.get_project(),
+                    ingestion_job_params.get_feature_table_name(),
                 ),
             },
         )
@@ -411,11 +409,14 @@ class KubernetesJobLauncher(JobLauncher):
             return self._job_from_job_info(job_info)
 
     def list_jobs(
-        self, include_terminated: bool, table_name: Optional[str] = None
+        self,
+        include_terminated: bool,
+        project: Optional[str] = None,
+        table_name: Optional[str] = None,
     ) -> List[SparkJob]:
         return [
             self._job_from_job_info(job)
-            for job in _list_jobs(self._api, self._namespace, table_name)
+            for job in _list_jobs(self._api, self._namespace, project, table_name)
             if include_terminated
             or job.state not in (SparkJobStatus.COMPLETED, SparkJobStatus.FAILED)
         ]

@@ -14,6 +14,7 @@ __all__ = [
     "_prepare_job_resource",
     "_list_jobs",
     "_get_job_by_id",
+    "_generate_project_table_hash",
     "STREAM_TO_ONLINE_JOB_TYPE",
     "OFFLINE_TO_ONLINE_JOB_TYPE",
     "HISTORICAL_RETRIEVAL_JOB_TYPE",
@@ -100,6 +101,10 @@ def _add_keys(resource: Dict[str, Any], path: Tuple[str, ...], items: Dict[str, 
         if v is not None:
             obj[k] = v
     return resource
+
+
+def _generate_project_table_hash(project: str, table_name: str) -> str:
+    return hashlib.md5(f"{project}:{table_name}".encode()).hexdigest()
 
 
 def _job_id_to_resource_name(job_id: str) -> str:
@@ -225,13 +230,16 @@ def _submit_job(api: CustomObjectsApi, resource, namespace: str) -> JobInfo:
 
 
 def _list_jobs(
-    api: CustomObjectsApi, namespace: str, table_name: Optional[str] = None
+    api: CustomObjectsApi,
+    namespace: str,
+    project: Optional[str] = None,
+    table_name: Optional[str] = None,
 ) -> List[JobInfo]:
     result = []
 
     # Batch, Streaming Ingestion jobs
-    if table_name:
-        table_name_hash = hashlib.md5(table_name.encode()).hexdigest()
+    if project and table_name:
+        table_name_hash = _generate_project_table_hash(project, table_name)
         response = api.list_namespaced_custom_object(
             **_crd_args(namespace),
             label_selector=f"{LABEL_FEATURE_TABLE_HASH}={table_name_hash}",
