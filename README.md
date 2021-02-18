@@ -1,4 +1,9 @@
-# Spark ingestion jobs for [Feast](https://github.com/feast-dev/feast)
+# Feast Spark
+
+Contains
+* Spark ingestion jobs for [Feast](https://github.com/feast-dev/feast)
+* Feast Job Service
+* Feast Python SDK Spark extensions 
 
 Usage:
 
