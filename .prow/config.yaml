@@ -4,6 +4,8 @@ pod_namespace: test-pods
 in_repo_config:
   enabled:
     "*": true
+  allowed_clusters:
+    "*": ["default"]
 
 plank:
   job_url_prefix_config:
