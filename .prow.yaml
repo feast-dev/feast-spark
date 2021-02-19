@@ -1,5 +1,5 @@
 presubmits:
-- name: test-end-to-end
+- name: test-end-to-end-presubmit
   decorate: true
   always_run: true
   spec:
@@ -22,7 +22,7 @@ presubmits:
       - name: service-account
         secret:
           secretName: feast-service-account
-- name: test-end-to-end-gcp
+- name: test-end-to-end-gcp-presubmit
   decorate: true
   always_run: true
   max_concurrency: 1
@@ -46,7 +46,7 @@ presubmits:
       - name: service-account
         secret:
           secretName: feast-service-account
-- name: test-end-to-end-aws
+- name: test-end-to-end-aws-presubmit
   decorate: true
   always_run: true
   max_concurrency: 1
@@ -71,7 +71,7 @@ presubmits:
                 key: AWS_SECRET_ACCESS_KEY
           - name: AWS_DEFAULT_REGION
             value: us-west-2
-- name: test-end-to-end-sparkop
+- name: test-end-to-end-sparkop-presubmit
   decorate: true
   always_run: true
   max_concurrency: 1
@@ -96,7 +96,7 @@ presubmits:
                 key: AWS_SECRET_ACCESS_KEY
           - name: AWS_DEFAULT_REGION
             value: us-west-2
-- name: test-end-to-end-azure
+- name: test-end-to-end-azure-presubmit
   decorate: true
   always_run: true
   max_concurrency: 1
