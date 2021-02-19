@@ -155,7 +155,7 @@ presubmits:
           secretName: feast-service-account
 
 postsubmits:
-- name: test-end-to-end
+- name: test-end-to-end-postsubmit
   decorate: true
   always_run: true
   branches:
@@ -181,7 +181,7 @@ postsubmits:
         secret:
           secretName: feast-service-account
 
-- name: test-end-to-end-gcp
+- name: test-end-to-end-gcp-postsubmit
   decorate: true
   always_run: true
   max_concurrency: 1
@@ -208,7 +208,7 @@ postsubmits:
         secret:
           secretName: feast-service-account
 
-- name: test-end-to-end-aws
+- name: test-end-to-end-aws-postsubmit
   decorate: true
   always_run: true
   max_concurrency: 1
@@ -236,7 +236,7 @@ postsubmits:
           - name: AWS_DEFAULT_REGION
             value: us-west-2
 
-- name: test-end-to-end-sparkop
+- name: test-end-to-end-sparkop-postsubmit
   decorate: true
   always_run: true
   max_concurrency: 1
@@ -264,7 +264,7 @@ postsubmits:
           - name: AWS_DEFAULT_REGION
             value: us-west-2
 
-- name: test-end-to-end-azure
+- name: test-end-to-end-azure-postsubmit
   decorate: true
   always_run: true
   max_concurrency: 1
