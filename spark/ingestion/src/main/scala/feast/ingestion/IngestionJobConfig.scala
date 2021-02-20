@@ -28,12 +28,12 @@ abstract class StoreConfig
 
 case class RedisConfig(host: String, port: Int, ssl: Boolean) extends StoreConfig
 
-abstract class MetricConfig
+sealed trait MetricConfig
 
 case class StatsDConfig(host: String, port: Int) extends MetricConfig
 
 abstract class DataFormat
-case class ParquetFormat()                extends DataFormat
+case object ParquetFormat                 extends DataFormat
 case class ProtoFormat(classPath: String) extends DataFormat
 case class AvroFormat(schemaJson: String) extends DataFormat
 
