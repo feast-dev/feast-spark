@@ -1,27 +1,4 @@
 presubmits:
-- name: test-end-to-end-presubmit
-  decorate: true
-  always_run: true
-  spec:
-    containers:
-    - image: gcr.io/kf-feast/feast-ci:latest
-      command: ["infra/scripts/test-end-to-end.sh"]
-      resources:
-        requests:
-          cpu: "6"
-          memory: "6144Mi"
-      env:
-        - name: GOOGLE_APPLICATION_CREDENTIALS
-          value: /etc/gcloud/service-account.json
-      volumeMounts:
-        - mountPath: /etc/gcloud/service-account.json
-          name: service-account
-          readOnly: true
-          subPath: service-account.json
-    volumes:
-      - name: service-account
-        secret:
-          secretName: feast-service-account
 - name: test-end-to-end-gcp-presubmit
   decorate: true
   always_run: true
@@ -53,12 +30,16 @@ presubmits:
   spec:
     containers:
       - image: gcr.io/kf-feast/feast-ci:latest
-        command: [ "infra/scripts/codebuild_runner.py", "--location-from-prow", "--project-name", "feast-ci-project"  ]
+        command: [ "infra/scripts/aws-runner.sh", "--location-from-prow", "--project-name", "feast-ci-project"  ]
         resources:
           requests:
             cpu: "2"
-            memory: "2048Mi"
+            memory: "2Gi"
         env:
+          - name: GOOGLE_APPLICATION_CREDENTIALS
+            value: /etc/gcloud/service-account.json
+          - name: DOCKER_REPOSITORY
+            value: gcr.io/kf-feast
           - name: AWS_ACCESS_KEY_ID
             valueFrom:
               secretKeyRef:
@@ -71,6 +52,15 @@ presubmits:
                 key: AWS_SECRET_ACCESS_KEY
           - name: AWS_DEFAULT_REGION
             value: us-west-2
+        volumeMounts:
+          - mountPath: /etc/gcloud/service-account.json
+            name: service-account
+            readOnly: true
+            subPath: service-account.json
+    volumes:
+      - name: service-account
+        secret:
+          secretName: feast-service-account
 - name: test-end-to-end-sparkop-presubmit
   decorate: true
   always_run: true
@@ -78,12 +68,16 @@ presubmits:
   spec:
     containers:
       - image: gcr.io/kf-feast/feast-ci:latest
-        command: [ "infra/scripts/codebuild_runner.py", "--location-from-prow", "--project-name", "feast-ci-sparkop-project" ]
+        command: [ "infra/scripts/aws-runner.sh", "--location-from-prow", "--project-name", "feast-ci-sparkop-project" ]
         resources:
           requests:
             cpu: "2"
-            memory: "2048Mi"
+            memory: "2Gi"
         env:
+          - name: GOOGLE_APPLICATION_CREDENTIALS
+            value: /etc/gcloud/service-account.json
+          - name: DOCKER_REPOSITORY
+            value: gcr.io/kf-feast
           - name: AWS_ACCESS_KEY_ID
             valueFrom:
               secretKeyRef:
@@ -96,6 +90,17 @@ presubmits:
                 key: AWS_SECRET_ACCESS_KEY
           - name: AWS_DEFAULT_REGION
             value: us-west-2
+        volumeMounts:
+          - mountPath: /etc/gcloud/service-account.json
+            name: service-account
+            readOnly: true
+            subPath: service-account.json
+    volumes:
+      - name: service-account
+        secret:
+          secretName: feast-service-account
+
+
 - name: test-end-to-end-azure-presubmit
   decorate: true
   always_run: true
@@ -155,32 +160,6 @@ presubmits:
           secretName: feast-service-account
 
 postsubmits:
-- name: test-end-to-end-postsubmit
-  decorate: true
-  always_run: true
-  branches:
-    - ^master$
-  spec:
-    containers:
-    - image: gcr.io/kf-feast/feast-ci:latest
-      command: ["infra/scripts/test-end-to-end.sh"]
-      resources:
-        requests:
-          cpu: "6"
-          memory: "6144Mi"
-      env:
-        - name: GOOGLE_APPLICATION_CREDENTIALS
-          value: /etc/gcloud/service-account.json
-      volumeMounts:
-        - mountPath: /etc/gcloud/service-account.json
-          name: service-account
-          readOnly: true
-          subPath: service-account.json
-    volumes:
-      - name: service-account
-        secret:
-          secretName: feast-service-account
-
 - name: test-end-to-end-gcp-postsubmit
   decorate: true
   always_run: true
@@ -217,12 +196,16 @@ postsubmits:
   spec:
     containers:
       - image: gcr.io/kf-feast/feast-ci:latest
-        command: [ "infra/scripts/codebuild_runner.py", "--location-from-prow", "--project-name", "feast-ci-project"  ]
+        command: [ "infra/scripts/aws-runner.sh", "--location-from-prow", "--project-name", "feast-ci-project" ]
         resources:
           requests:
             cpu: "2"
             memory: "2048Mi"
         env:
+          - name: GOOGLE_APPLICATION_CREDENTIALS
+            value: /etc/gcloud/service-account.json
+          - name: DOCKER_REPOSITORY
+            value: gcr.io/kf-feast
           - name: AWS_ACCESS_KEY_ID
             valueFrom:
               secretKeyRef:
@@ -235,6 +218,15 @@ postsubmits:
                 key: AWS_SECRET_ACCESS_KEY
           - name: AWS_DEFAULT_REGION
             value: us-west-2
+        volumeMounts:
+          - mountPath: /etc/gcloud/service-account.json
+            name: service-account
+            readOnly: true
+            subPath: service-account.json
+    volumes:
+      - name: service-account
+        secret:
+          secretName: feast-service-account
 
 - name: test-end-to-end-sparkop-postsubmit
   decorate: true
@@ -245,12 +237,16 @@ postsubmits:
   spec:
     containers:
       - image: gcr.io/kf-feast/feast-ci:latest
-        command: [ "infra/scripts/codebuild_runner.py", "--location-from-prow", "--project-name", "feast-ci-sparkop-project" ]
+        command: [ "infra/scripts/aws-runner.sh", "--location-from-prow", "--project-name", "feast-ci-sparkop-project" ]
         resources:
           requests:
             cpu: "2"
             memory: "2048Mi"
         env:
+          - name: GOOGLE_APPLICATION_CREDENTIALS
+            value: /etc/gcloud/service-account.json
+          - name: DOCKER_REPOSITORY
+            value: gcr.io/kf-feast
           - name: AWS_ACCESS_KEY_ID
             valueFrom:
               secretKeyRef:
@@ -263,6 +259,15 @@ postsubmits:
                 key: AWS_SECRET_ACCESS_KEY
           - name: AWS_DEFAULT_REGION
             value: us-west-2
+        volumeMounts:
+          - mountPath: /etc/gcloud/service-account.json
+            name: service-account
+            readOnly: true
+            subPath: service-account.json
+    volumes:
+      - name: service-account
+        secret:
+          secretName: feast-service-account
 
 - name: test-end-to-end-azure-postsubmit
   decorate: true
