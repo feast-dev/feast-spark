@@ -17,7 +17,6 @@ from feast.staging.entities import (
     stage_entities_to_fs,
     table_reference_from_string,
 )
-
 from feast_spark.api.JobService_pb2 import (
     GetHistoricalFeaturesRequest,
     GetJobRequest,
