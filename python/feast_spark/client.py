@@ -9,6 +9,7 @@ import pandas as pd
 
 import feast
 from feast.config import Config
+from feast.constants import ConfigOptions as feast_opt
 from feast.data_source import BigQuerySource, FileSource
 from feast.grpc.grpc import create_grpc_channel
 from feast.staging.entities import (
@@ -16,6 +17,7 @@ from feast.staging.entities import (
     stage_entities_to_fs,
     table_reference_from_string,
 )
+
 from feast_spark.api.JobService_pb2 import (
     GetHistoricalFeaturesRequest,
     GetJobRequest,
@@ -84,10 +86,10 @@ class Client:
             channel = create_grpc_channel(
                 url=self.config.get(opt.JOB_SERVICE_URL),
                 enable_ssl=self.config.getboolean(opt.JOB_SERVICE_ENABLE_SSL),
-                enable_auth=self.config.getboolean(opt.ENABLE_AUTH),
+                enable_auth=self.config.getboolean(feast_opt.ENABLE_AUTH),
                 ssl_server_cert_path=self.config.get(opt.JOB_SERVICE_SERVER_SSL_CERT),
                 auth_metadata_plugin=self._feast._auth_metadata,
-                timeout=self.config.getint(opt.GRPC_CONNECTION_TIMEOUT),
+                timeout=self.config.getint(feast_opt.GRPC_CONNECTION_TIMEOUT),
             )
             self._job_service_service_stub = JobServiceStub(channel)
         return self._job_service_service_stub
