@@ -14,7 +14,6 @@ __all__ = [
     "_prepare_job_resource",
     "_list_jobs",
     "_get_job_by_id",
-    "_generate_project_hash",
     "_generate_project_table_hash",
     "STREAM_TO_ONLINE_JOB_TYPE",
     "OFFLINE_TO_ONLINE_JOB_TYPE",
@@ -32,7 +31,7 @@ LABEL_JOBID = "feast.dev/jobid"
 LABEL_JOBTYPE = "feast.dev/type"
 LABEL_FEATURE_TABLE = "feast.dev/table"
 LABEL_FEATURE_TABLE_HASH = "feast.dev/tablehash"
-LABEL_PROJECT_HASH = "feast.dev/projecthash"
+LABEL_PROJECT = "feast.dev/project"
 
 # Can't store these bits of info in k8s labels due to 64-character limit, so we store them as
 # sparkConf
@@ -103,10 +102,6 @@ def _add_keys(resource: Dict[str, Any], path: Tuple[str, ...], items: Dict[str, 
         if v is not None:
             obj[k] = v
     return resource
-
-
-def _generate_project_hash(project: str) -> str:
-    return hashlib.md5(project.encode()).hexdigest()
 
 
 def _generate_project_table_hash(project: str, table_name: str) -> str:
@@ -251,10 +246,8 @@ def _list_jobs(
             label_selector=f"{LABEL_FEATURE_TABLE_HASH}={table_name_hash}",
         )
     elif project:
-        project_hash = _generate_project_hash(project)
         response = api.list_namespaced_custom_object(
-            **_crd_args(namespace),
-            label_selector=f"{LABEL_PROJECT_HASH}={project_hash}",
+            **_crd_args(namespace), label_selector=f"{LABEL_PROJECT}={project}",
         )
     else:
         # Retrieval jobs
