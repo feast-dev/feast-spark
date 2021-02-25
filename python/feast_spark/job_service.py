@@ -12,7 +12,7 @@ from google.api_core.exceptions import FailedPrecondition
 from google.protobuf.timestamp_pb2 import Timestamp
 
 from feast import Client as FeastClient
-from feast.constants import ConfigOptions as opt
+from feast import FeatureTable
 from feast.core import JobService_pb2_grpc as LegacyJobService_pb2_grpc
 from feast.data_source import DataSource
 from feast_spark import Client as Client
@@ -33,6 +33,7 @@ from feast_spark.api.JobService_pb2 import (
     StartStreamToOnlineIngestionJobRequest,
     StartStreamToOnlineIngestionJobResponse,
 )
+from feast_spark.constants import ConfigOptions as opt
 from feast_spark.pyspark.abc import (
     BatchIngestionJob,
     RetrievalJob,
@@ -56,6 +57,8 @@ from feast_spark.third_party.grpc.health.v1.HealthService_pb2_grpc import (
     HealthServicer,
     add_HealthServicer_to_server,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _job_to_proto(spark_job: SparkJob) -> JobProto:
@@ -170,7 +173,8 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
                         log_uri=job.get_log_uri(),  # type: ignore
                     )
             raise RuntimeError(
-                "Feast Job Service has control loop enabled, but couldn't find the existing stream ingestion job for the given FeatureTable"
+                "Feast Job Service has control loop enabled, "
+                "but couldn't find the existing stream ingestion job for the given FeatureTable"
             )
 
         # TODO: add extra_jars to request
@@ -219,7 +223,7 @@ def start_control_loop() -> None:
     ensure_stream_ingestion_jobs for full documentation on how the check works.
 
     """
-    logging.info(
+    logger.info(
         "Feast Job Service is starting a control loop in a background thread, "
         "which will ensure that stream ingestion jobs are successfully running."
     )
@@ -243,7 +247,7 @@ class HealthServicerImpl(HealthServicer):
 
 class LoggingInterceptor(grpc.ServerInterceptor):
     def intercept_service(self, continuation, handler_call_details):
-        logging.info(handler_call_details)
+        logger.info(handler_call_details)
         return continuation(handler_call_details)
 
 
@@ -251,10 +255,6 @@ def start_job_service() -> None:
     """
     Start Feast Job Service
     """
-
-    log_fmt = "%(asctime)s %(levelname)s %(message)s"
-    logging.basicConfig(level=logging.INFO, format=log_fmt)
-
     feast_client = FeastClient()
     client = Client(feast_client)
 
@@ -273,13 +273,13 @@ def start_job_service() -> None:
     add_HealthServicer_to_server(HealthServicerImpl(), server)
     server.add_insecure_port("[::]:6568")
     server.start()
-    logging.info("Feast Job Service is listening on port :6568")
+    logger.info("Feast Job Service is listening on port :6568")
     server.wait_for_termination()
 
 
-def _get_expected_job_hash_to_table_refs(
+def _get_expected_job_hash_to_tables(
     client: Client, projects: List[str]
-) -> Dict[str, Tuple[str, str]]:
+) -> Dict[str, Tuple[str, FeatureTable]]:
     """
     Checks all feature tables for the requires project(s) and determines all required stream
     ingestion jobs from them. Outputs a map of the expected job_hash to a tuple of (project, table_name).
@@ -301,7 +301,7 @@ def _get_expected_job_hash_to_table_refs(
                     client, project, feature_table, []
                 )
                 job_hash = params.get_job_hash()
-                job_hash_to_table_refs[job_hash] = (project, feature_table.name)
+                job_hash_to_table_refs[job_hash] = (project, feature_table)
 
     return job_hash_to_table_refs
 
@@ -327,15 +327,22 @@ def ensure_stream_ingestion_jobs(client: Client, all_projects: bool):
         else [client.feature_store.project]
     )
 
-    expected_job_hash_to_table_refs = _get_expected_job_hash_to_table_refs(
-        client, projects
-    )
+    expected_job_hash_to_tables = _get_expected_job_hash_to_tables(client, projects)
 
-    expected_job_hashes = set(expected_job_hash_to_table_refs.keys())
+    expected_job_hashes = set(expected_job_hash_to_tables.keys())
 
     jobs_by_hash: Dict[str, StreamIngestionJob] = {}
-    for job in client.list_jobs(include_terminated=False):
-        if isinstance(job, StreamIngestionJob):
+    # when we want to retry failed jobs, we shouldn't include terminated jobs here
+    # thus, Control Loop will behave like no job exists and will spawn new one
+    for job in client.list_jobs(
+        include_terminated=not client.config.getboolean(
+            opt.JOB_SERVICE_RETRY_FAILED_JOBS
+        )
+    ):
+        if (
+            isinstance(job, StreamIngestionJob)
+            and job.get_status() != SparkJobStatus.COMPLETED
+        ):
             jobs_by_hash[job.get_hash()] = job
 
     existing_job_hashes = set(jobs_by_hash.keys())
@@ -343,27 +350,35 @@ def ensure_stream_ingestion_jobs(client: Client, all_projects: bool):
     job_hashes_to_cancel = existing_job_hashes - expected_job_hashes
     job_hashes_to_start = expected_job_hashes - existing_job_hashes
 
-    logging.debug(
-        f"existing_job_hashes = {sorted(list(existing_job_hashes))} expected_job_hashes = {sorted(list(expected_job_hashes))}"
+    logger.debug(
+        f"existing_job_hashes = {sorted(list(existing_job_hashes))} "
+        f"expected_job_hashes = {sorted(list(expected_job_hashes))}"
     )
+
+    for job_hash in job_hashes_to_start:
+        # Any job that we wish to start should be among expected table refs map
+        project, feature_table = expected_job_hash_to_tables[job_hash]
+        logger.warning(
+            f"Starting a stream ingestion job for project={project}, "
+            f"table_name={feature_table.name} with job_hash={job_hash}"
+        )
+        client.start_stream_to_online_ingestion(feature_table, [], project=project)
+
+        # prevent scheduler from peak load
+        time.sleep(client.config.getint(opt.JOB_SERVICE_PAUSE_BETWEEN_JOBS))
 
     for job_hash in job_hashes_to_cancel:
         job = jobs_by_hash[job_hash]
-        logging.info(
+        if job.get_status() != SparkJobStatus.IN_PROGRESS:
+            logger.warning(
+                f"Can't cancel job with job_hash={job_hash} job_id={job.get_id()} status={job.get_status()}"
+            )
+            continue
+
+        logger.warning(
             f"Cancelling a stream ingestion job with job_hash={job_hash} job_id={job.get_id()} status={job.get_status()}"
         )
         try:
             job.cancel()
         except FailedPrecondition as exc:
-            logging.warning(f"Job canceling failed with exception {exc}")
-
-    for job_hash in job_hashes_to_start:
-        # Any job that we wish to start should be among expected table refs map
-        project, table_name = expected_job_hash_to_table_refs[job_hash]
-        logging.info(
-            f"Starting a stream ingestion job for project={project}, table_name={table_name} with job_hash={job_hash}"
-        )
-        feature_table = client.feature_store.get_feature_table(
-            name=table_name, project=project
-        )
-        client.start_stream_to_online_ingestion(feature_table, [], project=project)
+            logger.error(f"Job canceling failed with exception {exc}")

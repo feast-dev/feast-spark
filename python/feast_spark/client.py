@@ -1,3 +1,4 @@
+import configparser
 import os
 import uuid
 from datetime import datetime
@@ -8,7 +9,7 @@ import pandas as pd
 
 import feast
 from feast.config import Config
-from feast.constants import ConfigOptions as opt
+from feast.constants import ConfigOptions as feast_opt
 from feast.data_source import BigQuerySource, FileSource
 from feast.grpc.grpc import create_grpc_channel
 from feast.staging.entities import (
@@ -24,6 +25,7 @@ from feast_spark.api.JobService_pb2 import (
     StartStreamToOnlineIngestionJobRequest,
 )
 from feast_spark.api.JobService_pb2_grpc import JobServiceStub
+from feast_spark.constants import ConfigOptions as opt
 from feast_spark.pyspark.abc import RetrievalJob, SparkJob
 from feast_spark.pyspark.launcher import (
     get_job_by_id,
@@ -45,6 +47,10 @@ class Client:
     _feast: feast.Client
 
     def __init__(self, feast_client: feast.Client):
+        feast_client._config._config.read_dict(
+            {configparser.DEFAULTSECT: opt().defaults()}
+        )
+
         self._feast = feast_client
         self._job_service_stub: Optional[JobServiceStub] = None
 
@@ -79,10 +85,10 @@ class Client:
             channel = create_grpc_channel(
                 url=self.config.get(opt.JOB_SERVICE_URL),
                 enable_ssl=self.config.getboolean(opt.JOB_SERVICE_ENABLE_SSL),
-                enable_auth=self.config.getboolean(opt.ENABLE_AUTH),
+                enable_auth=self.config.getboolean(feast_opt.ENABLE_AUTH),
                 ssl_server_cert_path=self.config.get(opt.JOB_SERVICE_SERVER_SSL_CERT),
                 auth_metadata_plugin=self._feast._auth_metadata,
-                timeout=self.config.getint(opt.GRPC_CONNECTION_TIMEOUT),
+                timeout=self.config.getint(feast_opt.GRPC_CONNECTION_TIMEOUT),
             )
             self._job_service_service_stub = JobServiceStub(channel)
         return self._job_service_service_stub
@@ -343,7 +349,7 @@ class Client:
         else:
             request = ListJobsRequest(
                 include_terminated=include_terminated,
-                project=project,
+                project=cast(str, project),
                 table_name=cast(str, table_name),
             )
             response = self._job_service.ListJobs(request)

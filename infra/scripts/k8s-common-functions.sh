@@ -81,7 +81,7 @@ function helm_install {
 
           kubectl -n "$NAMESPACE" get pods
 
-          readarray -t CRASHED_PODS < <(kubectl -n "$NAMESPACE" get pods --no-headers=true | grep "$RELEASE" | awk '{if ($2 == "0/1") { print $1 } }')
+          readarray -t CRASHED_PODS < <(kubectl -n "$NAMESPACE" get pods --no-headers=true | grep "${FEAST_RELEASE_NAME:-feast-release}" | awk '{if ($2 == "0/1") { print $1 } }')
           echo "Crashed pods: ${CRASHED_PODS[*]}"
 
           for POD in "${CRASHED_PODS[@]}"; do
