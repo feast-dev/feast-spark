@@ -31,6 +31,7 @@ LABEL_JOBID = "feast.dev/jobid"
 LABEL_JOBTYPE = "feast.dev/type"
 LABEL_FEATURE_TABLE = "feast.dev/table"
 LABEL_FEATURE_TABLE_HASH = "feast.dev/tablehash"
+LABEL_PROJECT = "feast.dev/project"
 
 # Can't store these bits of info in k8s labels due to 64-character limit, so we store them as
 # sparkConf
@@ -243,6 +244,10 @@ def _list_jobs(
         response = api.list_namespaced_custom_object(
             **_crd_args(namespace),
             label_selector=f"{LABEL_FEATURE_TABLE_HASH}={table_name_hash}",
+        )
+    elif project:
+        response = api.list_namespaced_custom_object(
+            **_crd_args(namespace), label_selector=f"{LABEL_PROJECT}={project}",
         )
     else:
         # Retrieval jobs
