@@ -15,6 +15,9 @@ format-java:
 lint-java:
 	cd spark/ingestion && ${MVN} --no-transfer-progress spotless:check
 
+test-java:
+	${MVN} --no-transfer-progress clean verify
+
 # Python
 
 format-python:
