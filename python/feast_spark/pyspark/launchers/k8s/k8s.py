@@ -30,12 +30,14 @@ from .k8s_utils import (
     HISTORICAL_RETRIEVAL_JOB_TYPE,
     LABEL_FEATURE_TABLE,
     LABEL_FEATURE_TABLE_HASH,
+    LABEL_PROJECT_HASH,
     METADATA_JOBHASH,
     METADATA_OUTPUT_URI,
     OFFLINE_TO_ONLINE_JOB_TYPE,
     STREAM_TO_ONLINE_JOB_TYPE,
     JobInfo,
     _cancel_job_by_id,
+    _generate_project_hash,
     _generate_project_table_hash,
     _get_api,
     _get_job_by_id,
@@ -340,6 +342,9 @@ class KubernetesJobLauncher(JobLauncher):
                     ingestion_job_params.get_project(),
                     ingestion_job_params.get_feature_table_name(),
                 ),
+                LABEL_PROJECT_HASH: _generate_project_hash(
+                    ingestion_job_params.get_project(),
+                ),
             },
         )
 
@@ -391,6 +396,9 @@ class KubernetesJobLauncher(JobLauncher):
                 LABEL_FEATURE_TABLE_HASH: _generate_project_table_hash(
                     ingestion_job_params.get_project(),
                     ingestion_job_params.get_feature_table_name(),
+                ),
+                LABEL_PROJECT_HASH: _generate_project_hash(
+                    ingestion_job_params.get_project(),
                 ),
             },
         )
