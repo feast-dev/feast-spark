@@ -146,3 +146,21 @@ jobs:
         run: ./infra/scripts/validate-helm-chart-versions.sh $VERSION_WITHOUT_PREFIX
       - name: Publish Helm charts
         run: ./infra/scripts/push-helm-charts.sh $VERSION_WITHOUT_PREFIX
+
+  publish-python-sdk:
+    runs-on: ubuntu-latest
+    env:
+      TWINE_USERNAME: __token__
+      TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+          architecture: 'x64'
+      - name: Publish Python Package
+        run: |
+          cd python/
+          python3 -m pip install --user --upgrade setuptools wheel twine
+          python3 setup.py sdist bdist_wheel
+          python3 -m twine upload --verbose dist/*
