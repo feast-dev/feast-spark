@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 export DISABLE_SERVICE_FIXTURES=1
-export GIT_TAG=$PULL_PULL_SHA
+export GIT_TAG=${PULL_PULL_SHA:-${PULL_BASE_SHA}}
 export GIT_REMOTE_URL=https://github.com/feast-dev/feast-spark.git
 
 export MAVEN_OPTS="-Dmaven.repo.local=/tmp/.m2/repository -DdependencyLocationsEnabled=false -Dmaven.wagon.httpconnectionManager.ttlSeconds=25 -Dmaven.wagon.http.retryHandler.count=3 -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false"
