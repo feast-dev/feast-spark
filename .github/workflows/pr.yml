@@ -1,7 +1,15 @@
 name: complete
 
-on: [pull_request]
-
+on:
+  # triggers workflow on dispatch event sent by 'trigger-github-actions-pr-workflow' Prow job
+  workflow_dispatch:
+    inputs:
+      gcp_project_id:
+        description: "ID of the Project to use when accessing resources in GCP"
+        required: true
+      gcp_sa_key:
+        description: "Service Account Key/Credentials in JSON format to authenticate with GCP"
+        required: true
 jobs:
   build-push-docker-images-for-e2e-tests:
     runs-on: [ubuntu-latest]
