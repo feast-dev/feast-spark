@@ -14,6 +14,6 @@ helm plugin install https://github.com/hayorov/helm-gcs.git --version 0.2.2  || 
 
 helm repo add feast-helm-chart-repo $bucket
 
-helm package infra/charts/feast-spark
+helm package infra/charts/feast-spark --version ${1}
 
 helm gcs push --force feast-spark-${1}.tgz feast-helm-chart-repo
