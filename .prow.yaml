@@ -13,7 +13,7 @@ presubmits:
         - name: GCP_SA_KEY
           valueFrom:
             secretKeyRef:
-              name: service-account
+              name: feast-service-account
               key: service-account.json
 
 - name: test-end-to-end-gcp-presubmit
