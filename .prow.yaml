@@ -1,21 +1,4 @@
 presubmits:
-- name: trigger-github-action-pr-workflow
-  decorate: true
-  always_run: true
-  max_concurrency: 1
-  spec:
-    containers:
-    - image: gcr.io/kf-feast/feast-ci:latest
-      command: [ "infra/scripts/trigger-github-action-pr-workflow.sh" ]
-      env:
-        - name: GCP_PROJECT_ID
-          value: kf-feast
-        - name: GCP_SA_KEY
-          valueFrom:
-            secretKeyRef:
-              name: feast-service-account
-              key: service-account.json
-
 - name: test-end-to-end-gcp-presubmit
   decorate: true
   always_run: true
