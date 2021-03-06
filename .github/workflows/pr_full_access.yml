@@ -1,5 +1,6 @@
 # contains additional jobs to run for 'complete' workflow that involve secrets
-name: complete (with secrets)
+name: pull request (full access)
+
 on:
   # 'pull_request_target' required to make secrets available for jobs
   pull_request_target:
@@ -7,13 +8,12 @@ on:
       - opened
       - synchronize
       - labeled
-      - unlabeled
 
 jobs:
   # all jobs should have a if check for 'ok-to-test' label in order to be gated by the label.
   # otherwise secrets might be unintentionally exposed to malicious forks.
   build-push-docker-images-for-e2e-tests:
-    if: ${{ contains(github.event.pull_request.labels.*.name, 'ok-to-test') }}
+    if: contains(github.event.pull_request.labels.*.name, 'ok-to-test') || contains(github.event.pull_request.labels.*.name, 'approved')
     runs-on: [ubuntu-latest]
     strategy:
       matrix:
