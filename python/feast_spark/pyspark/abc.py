@@ -465,6 +465,7 @@ class StreamIngestionJobParameters(IngestionJobParameters):
         statsd_host: Optional[str] = None,
         statsd_port: Optional[int] = None,
         deadletter_path: Optional[str] = None,
+        checkpoint_path: Optional[str] = None,
         stencil_url: Optional[str] = None,
         drop_invalid_rows: bool = False,
     ):
@@ -482,6 +483,7 @@ class StreamIngestionJobParameters(IngestionJobParameters):
             drop_invalid_rows,
         )
         self._extra_jars = extra_jars
+        self._checkpoint_path = checkpoint_path
 
     def get_name(self) -> str:
         return f"{self.get_job_type().to_pascal_case()}-{self.get_feature_table_name()}"
@@ -493,10 +495,11 @@ class StreamIngestionJobParameters(IngestionJobParameters):
         return self._extra_jars
 
     def get_arguments(self) -> List[str]:
-        return super().get_arguments() + [
-            "--mode",
-            "online",
-        ]
+        args = super().get_arguments()
+        args.extend(["--mode", "online"])
+        if self._checkpoint_path:
+            args.extend(["--checkpoint-path", self._checkpoint_path])
+        return args
 
     def get_job_hash(self) -> str:
         job_json = json.dumps(

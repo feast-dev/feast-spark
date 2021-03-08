@@ -92,6 +92,9 @@ object IngestionJob {
 
     opt[Unit](name = "drop-invalid")
       .action((_, c) => c.copy(doNotIngestInvalidRows = true))
+
+    opt[String](name = "checkpoint-path")
+      .action((x, c) => c.copy(checkpointPath = Some(x)))
   }
 
   def main(args: Array[String]): Unit = {
