@@ -21,21 +21,21 @@ import java.util.concurrent.TimeUnit
 
 import feast.ingestion.metrics.IngestionPipelineMetrics
 import feast.ingestion.registry.proto.ProtoRegistryFactory
-import org.apache.spark.sql.{DataFrame, Encoder, Row, SaveMode, SparkSession}
-import org.apache.spark.sql.functions.{expr, struct, udf}
 import feast.ingestion.utils.ProtoReflection
 import feast.ingestion.utils.testing.MemoryStreamingSource
 import feast.ingestion.validation.{RowValidator, TypeCheck}
 import org.apache.commons.io.FileUtils
 import org.apache.commons.lang.StringUtils
-import org.apache.spark.{SparkEnv, SparkFiles}
 import org.apache.spark.api.python.DynamicPythonFunction
-import org.apache.spark.sql.streaming.StreamingQuery
 import org.apache.spark.sql.avro._
+import org.apache.spark.sql.catalyst.encoders.RowEncoder
 import org.apache.spark.sql.execution.python.UserDefinedPythonFunction
 import org.apache.spark.sql.execution.streaming.ProcessingTimeTrigger
+import org.apache.spark.sql.functions.{expr, struct, udf}
+import org.apache.spark.sql.streaming.StreamingQuery
 import org.apache.spark.sql.types.BooleanType
-import org.apache.spark.sql.catalyst.encoders.RowEncoder
+import org.apache.spark.sql._
+import org.apache.spark.{SparkEnv, SparkFiles}
 
 /**
   * Streaming pipeline (currently in micro-batches mode only, since we need to have multiple sinks: redis & deadletters).
@@ -92,7 +92,7 @@ object StreamingPipeline extends BasePipeline with Serializable {
       case _ => ()
     }
 
-    val query = projected.writeStream
+    val sink = projected.writeStream
       .foreachBatch { (batchDF: DataFrame, batchID: Long) =>
         val rowsAfterValidation = if (validationUDF.nonEmpty) {
           val columns = batchDF.columns.map(batchDF(_))
@@ -104,6 +104,7 @@ object StreamingPipeline extends BasePipeline with Serializable {
           batchDF.withColumn("_isValid", rowValidator.allChecks)
         }
         rowsAfterValidation.persist()
+
         implicit def rowEncoder: Encoder[Row] = RowEncoder(rowsAfterValidation.schema)
 
         rowsAfterValidation
@@ -138,10 +139,19 @@ object StreamingPipeline extends BasePipeline with Serializable {
         rowsAfterValidation.unpersist()
         () // return Unit to avoid compile error with overloaded foreachBatch
       }
-      .trigger(ProcessingTimeTrigger.create(config.streamingTriggeringSecs, TimeUnit.SECONDS))
-      .start()
 
-    Some(query)
+    val query = config.checkpointPath match {
+      case Some(checkpointPath) =>
+        sink
+          .option("checkpointLocation", checkpointPath)
+      case _ => sink
+    }
+
+    Some(
+      query
+        .trigger(ProcessingTimeTrigger.create(config.streamingTriggeringSecs, TimeUnit.SECONDS))
+        .start()
+    )
   }
 
   private def protoParser(sparkSession: SparkSession, className: String) = {

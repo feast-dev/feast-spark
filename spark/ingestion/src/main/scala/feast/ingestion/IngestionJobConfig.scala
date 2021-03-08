@@ -117,5 +117,6 @@ case class IngestionJobConfig(
     stencilURL: Option[String] = None,
     streamingTriggeringSecs: Int = 0,
     validationConfig: Option[ValidationConfig] = None,
-    doNotIngestInvalidRows: Boolean = false
+    doNotIngestInvalidRows: Boolean = false,
+    checkpointPath: Option[String] = None
 )

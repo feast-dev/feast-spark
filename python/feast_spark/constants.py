@@ -122,6 +122,9 @@ class ConfigOptions(metaclass=ConfigMeta):
     #: Eg. gs://some-bucket/output/, s3://some-bucket/output/, file:///data/subfolder/
     DEADLETTER_PATH: str = ""
 
+    #: Ingestion Job Checkpoint Location. Format same as for DeadLetter path
+    CHECKPOINT_PATH: str = ""
+
     #: ProtoRegistry Address (currently only Stencil Server is supported as registry)
     #: https://github.com/gojekfarm/stencil
     STENCIL_URL: str = ""
