@@ -16,4 +16,4 @@ helm repo add feast-helm-chart-repo $bucket
 
 helm package infra/charts/feast-spark --version ${1}
 
-helm gcs push --force feast-spark-${1}.tgz feast-helm-chart-repo
+helm gcs push --public --force feast-spark-${1}.tgz feast-helm-chart-repo
