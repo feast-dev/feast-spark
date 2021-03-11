@@ -1,9 +1,9 @@
 import json
 
-from feast import Client as SparkClient
 from feast import Entity, Feature, FeatureTable, FileSource, KafkaSource, ValueType
 from feast.data_format import AvroFormat, ParquetFormat
 from feast.wait import wait_retry_backoff
+from feast_spark import Client as SparkClient
 from feast_spark.pyspark.abc import SparkJobStatus
 
 
@@ -45,7 +45,7 @@ def stop_job(job, feast_spark_client: SparkClient, feature_table: FeatureTable):
     if job:
         job.cancel()
     else:
-        feast_spark_client.delete_feature_table(feature_table.name)
+        feast_spark_client._feast.delete_feature_table(feature_table.name)
 
 
 def avro_schema():
