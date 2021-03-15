@@ -128,6 +128,7 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
         }
       }
     }
+    dataToStore.unpersist()
   }
 
   private def compactRowsToLatestTimestamp(rows: Seq[(RedisKeyV2, Row)]) = rows

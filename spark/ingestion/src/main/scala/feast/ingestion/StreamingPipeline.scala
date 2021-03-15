@@ -136,7 +136,7 @@ object StreamingPipeline extends BasePipeline with Serializable {
               })
         }
 
-        rowsAfterValidation.unpersist()
+        sparkSession.sharedState.cacheManager.uncacheQuery(batchDF, cascade = true)
         () // return Unit to avoid compile error with overloaded foreachBatch
       }
 
