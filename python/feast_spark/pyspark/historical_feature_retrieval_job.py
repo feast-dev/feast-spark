@@ -593,9 +593,15 @@ def _read_and_verify_feature_table_df_from_source(
         column_type = feature_table_dtypes.get(field.name)
 
         if column_type != field.spark_type:
-            mapped_source_df = mapped_source_df.withColumn(
-                field.name, col(field.name).cast(field.spark_type)
-            )
+            # For batch sources that does not have a float type, such as BigQuery
+            if column_type == "double" and field.spark_type == "float":
+                mapped_source_df = mapped_source_df.withColumn(
+                    field.name, col(field.name).cast(field.spark_type)
+                )
+            else:
+                raise SchemaError(
+                    f"{field.name} should be of {field.spark_type} type, but is {column_type} instead"
+                )
 
     for timestamp_column in [
         source.event_timestamp_column,
@@ -694,16 +700,9 @@ def retrieve_historical_features(
 
     entity_dtypes = dict(entity_df.dtypes)
     for expected_entity in expected_entities:
-        actual_spark_type = entity_dtypes.get(expected_entity.name)
-        if actual_spark_type is None:
+        if entity_dtypes.get(expected_entity.name) != expected_entity.spark_type:
             raise SchemaError(
                 f"{expected_entity.name} ({expected_entity.spark_type}) is not present in the entity dataframe."
-            )
-
-        if actual_spark_type != expected_entity.spark_type:
-            entity_df = entity_df.withColumn(
-                expected_entity.name,
-                col(expected_entity.name).cast(expected_entity.spark_type),
             )
 
     feature_table_dfs = [
