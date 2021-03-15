@@ -560,6 +560,22 @@ def _read_and_verify_entity_df_from_source(
     return mapped_entity_df
 
 
+def _type_casting_allowed(feature_type: str, source_col_type):
+    allowed_casting_for_source_col = {"double": ["float"]}
+
+    if feature_type == source_col_type:
+        return True
+
+    allowed_feature_type_for_casting = allowed_casting_for_source_col.get(
+        source_col_type
+    )
+
+    return (
+        allowed_feature_type_for_casting is not None
+        and feature_type in allowed_feature_type_for_casting
+    )
+
+
 def _read_and_verify_feature_table_df_from_source(
     spark: SparkSession, feature_table: FeatureTable, source: Source,
 ) -> DataFrame:
@@ -593,8 +609,7 @@ def _read_and_verify_feature_table_df_from_source(
         column_type = feature_table_dtypes.get(field.name)
 
         if column_type != field.spark_type:
-            # For batch sources that does not have a float type, such as BigQuery
-            if column_type == "double" and field.spark_type == "float":
+            if _type_casting_allowed(field.spark_type, column_type):
                 mapped_source_df = mapped_source_df.withColumn(
                     field.name, col(field.name).cast(field.spark_type)
                 )
