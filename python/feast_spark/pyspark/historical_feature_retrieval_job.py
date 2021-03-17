@@ -76,7 +76,7 @@ class FileSource(Source):
         created_timestamp_column (str): Column representing the creation timestamp. Required
             only if the source corresponds to a feature table.
         field_mapping (Dict[str, str]): Optional. If present, the source column will be renamed
-            based on the mapping.
+            based on the mapping. The key would be the final result and the value would be the source column.
         options (Optional[Dict[str, str]]): Options to be passed to spark while reading the file source.
     """
 
@@ -124,7 +124,7 @@ class BigQuerySource(Source):
         dataset (str): BQ dataset.
         table (str): BQ table.
         field_mapping (Dict[str, str]): Optional. If present, the source column will be renamed
-            based on the mapping.
+            based on the mapping. The key would be the final result and value would be the source column.
         event_timestamp_column (str): Column representing the event timestamp.
         created_timestamp_column (str): Column representing the creation timestamp. Required
             only if the source corresponds to a feature table.
@@ -279,8 +279,9 @@ class FileDestination(NamedTuple):
 
 
 def _map_column(df: DataFrame, col_mapping: Dict[str, str]):
+    source_to_alias_map = {v: k for k, v in col_mapping.items()}
     projection = [
-        col(col_name).alias(col_mapping.get(col_name, col_name))
+        col(col_name).alias(source_to_alias_map.get(col_name, col_name))
         for col_name in df.columns
     ]
     return df.select(projection)
@@ -667,14 +668,14 @@ def retrieve_historical_features(
                 "format": {"jsonClass": "ParquetFormat"},
                 "path": "file:///some_dir/customer_driver_pairs.csv"),
                 "options": {"inferSchema": "true", "header": "true"},
-                "field_mapping": {"id": "driver_id"}
+                "field_mapping": {"driver_id": "id"}
             }
 
         >>> feature_tables_sources_conf = [
                 {
                     "format": {"json_class": "ParquetFormat"},
                     "path": "gs://some_bucket/bookings.parquet"),
-                    "field_mapping": {"id": "driver_id"}
+                    "field_mapping": {"driver_id": "id"}
                 },
                 {
                     "format": {"json_class": "AvroFormat", schema_json: "..avro schema.."},

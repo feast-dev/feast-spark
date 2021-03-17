@@ -647,7 +647,7 @@ def test_historical_feature_retrieval_with_mapping(spark: SparkSession):
             "format": {"json_class": "CSVFormat"},
             "path": f"file://{path.join(test_data_dir,  'column_mapping_test_entity.csv')}",
             "event_timestamp_column": "event_timestamp",
-            "field_mapping": {"id": "customer_id"},
+            "field_mapping": {"customer_id": "id"},
             "options": {"inferSchema": "true", "header": "true"},
         }
     }
@@ -717,7 +717,7 @@ def test_large_historical_feature_retrieval(
             "format": {"json_class": "CSVFormat"},
             "path": f"file://{large_entity_csv_file}",
             "event_timestamp_column": "event_timestamp",
-            "field_mapping": {"id": "customer_id"},
+            "field_mapping": {"customer_id": "id"},
             "options": {"inferSchema": "true", "header": "true"},
         }
     }
