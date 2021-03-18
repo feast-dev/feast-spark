@@ -77,7 +77,10 @@ object BatchPipeline extends BasePipeline {
       .filter(rowValidator.allChecks)
 
     validRows.write
-      .format("feast.ingestion.stores.redis")
+      .format(config.store match {
+        case _:RedisConfig => "feast.ingestion.stores.redis"
+        case _:BigTableConfig => "feast.ingestion.stored.bigtable"
+      })
       .option("entity_columns", featureTable.entities.map(_.name).mkString(","))
       .option("namespace", featureTable.name)
       .option("project_name", featureTable.project)

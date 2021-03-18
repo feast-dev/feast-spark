@@ -20,8 +20,17 @@ import java.nio.file.{Files, Paths}
 
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions.to_date
+import org.joda.time.{DateTime, Seconds}
 import org.scalacheck.Gen
+
 import scala.reflect.runtime.universe.TypeTag
+
+case class TestRow(
+                    customer: String,
+                    feature1: Int,
+                    feature2: Float,
+                    eventTimestamp: java.sql.Timestamp
+                  )
 
 object DataHelper {
   def generateRows[A](gen: Gen[A], N: Int): Seq[A] =
@@ -47,4 +56,19 @@ object DataHelper {
 
     tempPath
   }
+
+  def rowGenerator(start: DateTime, end: DateTime, customerGen: Option[Gen[String]] = None): Gen[TestRow] =
+    for {
+      customer <- customerGen.getOrElse(Gen.asciiPrintableStr)
+      feature1 <- Gen.choose(0, 100)
+      feature2 <- Gen.choose[Float](0, 1)
+      eventTimestamp <- Gen
+        .choose(0, Seconds.secondsBetween(start, end).getSeconds - 1)
+        .map(start.withMillisOfSecond(0).plusSeconds)
+    } yield TestRow(
+      customer,
+      feature1,
+      feature2,
+      new java.sql.Timestamp(eventTimestamp.getMillis)
+    )
 }
