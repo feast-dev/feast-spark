@@ -41,7 +41,12 @@ class DefaultSource extends CreatableRelationProvider {
     }
 
     val rel =
-      new BigTableSinkRelation(sqlContext, new AvroSerializer, SparkBigtableConfig.parse(parameters), bigtableConf)
+      new BigTableSinkRelation(
+        sqlContext,
+        new AvroSerializer,
+        SparkBigtableConfig.parse(parameters),
+        bigtableConf
+      )
     rel.createTable()
     rel.saveWriteSchema(data)
     rel.insert(data, overwrite = false)
