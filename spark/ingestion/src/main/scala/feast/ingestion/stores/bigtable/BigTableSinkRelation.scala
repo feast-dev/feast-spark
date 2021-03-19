@@ -1,128 +1,170 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright 2018-2021 The Feast Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package feast.ingestion.stores.bigtable
 
 import com.google.cloud.bigtable.hbase.BigtableConfiguration
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.hbase.{HColumnDescriptor, HTableDescriptor, TableName}
+import org.apache.hadoop.hbase.{
+  HColumnDescriptor,
+  HTableDescriptor,
+  TableExistsException,
+  TableName
+}
 import org.apache.hadoop.hbase.client.Put
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import org.apache.hadoop.hbase.mapred.TableOutputFormat
 import org.apache.hadoop.mapred.JobConf
-import org.apache.spark.sql.avro.SchemaConverters
-import org.apache.spark.sql.avro.functions.to_avro
 import org.apache.spark.sql.expressions.UserDefinedFunction
-import org.apache.spark.sql.functions.{col, struct, udf}
+import org.apache.spark.sql.functions.{col, length, struct, udf}
 import org.apache.spark.sql.{DataFrame, Row, SQLContext}
 import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
 import org.apache.spark.sql.types.StructType
+import feast.ingestion.stores.bigtable.serialization.Serializer
+import org.apache.hadoop.security.UserGroupInformation
 
-import com.google.common.hash.Hashing
+class BigTableSinkRelation(
+    override val sqlContext: SQLContext,
+    val serializer: Serializer,
+    val config: SparkBigtableConfig,
+    val hadoopConfig: Configuration
+) extends BaseRelation
+    with InsertableRelation
+    with Serializable {
 
-class BigTableSinkRelation(override val sqlContext: SQLContext,
-                           val config: SparkBigtableConfig,
-                           val hadoopConfig: Configuration)
-  extends BaseRelation with InsertableRelation with Serializable {
+  import BigTableSinkRelation._
 
   override def schema: StructType = ???
 
   def createTable(): Unit = {
     val btConn = BigtableConfiguration.connect(hadoopConfig)
-    val admin = btConn.getAdmin
-    if (!admin.isTableAvailable(TableName.valueOf(tableName))) {
-      val tableDesc = new HTableDescriptor(TableName.valueOf(tableName))
+    try {
+      val admin = btConn.getAdmin
 
-      val featuresCF = new HColumnDescriptor(featureColumnFamily)
-      featuresCF.setTimeToLive(config.maxAge.toInt)
-      featuresCF.setVersions(0, 1)
-      tableDesc.addFamily(featuresCF)
+      val table = if (!admin.isTableAvailable(TableName.valueOf(tableName))) {
+        val t          = new HTableDescriptor(TableName.valueOf(tableName))
+        val metadataCF = new HColumnDescriptor(metadataColumnFamily)
+        t.addFamily(metadataCF)
+        t
+      } else {
+        admin.getTableDescriptor(TableName.valueOf(tableName))
+      }
 
-      val metadataCF = new HColumnDescriptor(metadataColumnFamily)
-      tableDesc.addFamily(metadataCF)
+      if (!table.getColumnFamilyNames.contains(config.namespace.getBytes)) {
+        val featuresCF = new HColumnDescriptor(config.namespace)
+        featuresCF.setTimeToLive(config.maxAge.toInt)
+        featuresCF.setMaxVersions(1)
+        table.addFamily(featuresCF)
+      }
 
-      admin.createTable(tableDesc)
+      try {
+        admin.createTable(table)
+      } catch {
+        case _: TableExistsException => admin.modifyTable(table)
+      }
+    } finally {
+      btConn.close()
     }
   }
 
   override def insert(data: DataFrame, overwrite: Boolean): Unit = {
-    val jobConfig: JobConf = new JobConf(hadoopConfig, this.getClass)
+    val jobConfig = new JobConf(hadoopConfig, this.getClass)
+    val jobCreds  = jobConfig.getCredentials()
+    UserGroupInformation.setConfiguration(data.sqlContext.sparkContext.hadoopConfiguration)
+    jobCreds.mergeAll(UserGroupInformation.getCurrentUser().getCredentials())
+
     jobConfig.setOutputFormat(classOf[TableOutputFormat])
     jobConfig.set(TableOutputFormat.OUTPUT_TABLE, tableName)
 
-    val featureColumns = data.schema.fields.map(_.name).filterNot(
-      isSystemColumn
-    ).map(col)
+    val featureFields = data.schema.fields
+      .filterNot(f => isSystemColumn(f.name))
 
-    val entityColumns = config.entityColumns.map(col)
-    val schemaReference = writeSchemaReference(data.schema)
+    val featureColumns = featureFields.map(f => col(f.name))
+
+    val entityColumns   = config.entityColumns.map(col)
+    val schemaReference = serializer.schemaReference(StructType(featureFields))
 
     data
       .select(
-        convertToPut(schemaReference)(
-          joinEntityKey(struct(entityColumns:_*)),
-          to_avro(struct(featureColumns:_*)),
-          col(config.timestampColumn)
-        )
-      ).rdd
-      .map{ r: Row => (r.get(0), r.get(1))}
+        joinEntityKey(struct(entityColumns: _*)).alias("key"),
+        serializer.serializeData(struct(featureColumns: _*)).alias("value"),
+        col(config.timestampColumn).alias("ts")
+      )
+      .where(length(col("key")) > 0)
+      .rdd
+      .map(convertToPut(config.namespace.getBytes, emptyQualifier.getBytes, schemaReference))
       .saveAsHadoopDataset(jobConfig)
 
   }
 
-  private def writeSchema(schema: StructType): String = {
-    val avroSchema = SchemaConverters.toAvroType(
-      StructType(
-        // excluding entities & timestamp, so the schema would match to what we actually write as value
-        schema.fields.filterNot(f => isSystemColumn(f.name))
-      )
-    )
-    avroSchema.toString
-  }
-
-  private def writeSchemaReference(schema: StructType): Array[Byte] = {
-    Hashing.murmur3_32().hashBytes(writeSchema(schema).getBytes).asBytes()
-  }
-
   def saveWriteSchema(data: DataFrame): Unit = {
-    val btConn = BigtableConfiguration.connect(hadoopConfig)
-    val table = btConn.getTable(TableName.valueOf(tableName))
-    val key = s"schema#".getBytes ++ writeSchemaReference(data.schema)
+    val featureFields = data.schema.fields
+      .filterNot(f => isSystemColumn(f.name))
+    val featureSchema = StructType(featureFields)
+
+    val key              = schemaKeyPrefix.getBytes ++ serializer.schemaReference(featureSchema)
+    val serializedSchema = serializer.serializeSchema(featureSchema).getBytes
 
     val put = new Put(key)
-    put.addColumn(metadataColumnFamily.getBytes, "json".getBytes, writeSchema(data.schema).getBytes)
+    put.addColumn(metadataColumnFamily.getBytes, emptyQualifier.getBytes, serializedSchema)
 
-    table.checkAndPut(
-      key,
-      metadataColumnFamily.getBytes,
-      "json".getBytes,
-      null,
-      put
-    )
-
+    val btConn = BigtableConfiguration.connect(hadoopConfig)
+    try {
+      val table = btConn.getTable(TableName.valueOf(tableName))
+      table.checkAndPut(
+        key,
+        metadataColumnFamily.getBytes,
+        "json".getBytes,
+        null,
+        put
+      )
+    } finally {
+      btConn.close()
+    }
   }
-
 
   private def tableName: String = {
     val entities = config.entityColumns.mkString("_")
     s"${config.projectName}_${entities}"
   }
 
-  private def joinEntityKey: UserDefinedFunction = udf {
-    r: Row => ((0 until r.size)).map(r.getString).mkString("#")
+  private def joinEntityKey: UserDefinedFunction = udf { r: Row =>
+    ((0 until r.size)).map(r.getString).mkString("#").getBytes
   }
 
-  private def convertToPut(schemaReference: Array[Byte]): UserDefinedFunction = udf {
-    (key: Array[Byte], value: Array[Byte], ts: java.sql.Timestamp) =>
-      val put = new Put(key, ts.getTime)
-      put.addColumn(
-        featureColumnFamily.getBytes,
-        config.namespace.getBytes,
-        schemaReference ++ value
-      )
-      (new ImmutableBytesWritable, put)
-  }
-
-  private val featureColumnFamily = "features"
   private val metadataColumnFamily = "metadata"
+  private val schemaKeyPrefix      = "schema#"
+  private val emptyQualifier       = ""
 
   private def isSystemColumn(name: String) =
     (config.entityColumns ++ Seq(config.timestampColumn)).contains(name)
+}
+
+object BigTableSinkRelation {
+  def convertToPut(
+      columnFamily: Array[Byte],
+      column: Array[Byte],
+      schemaReference: Array[Byte]
+  ): Row => (Null, Put) =
+    (r: Row) => {
+      val put = new Put(r.getAs[Array[Byte]]("key"), r.getAs[java.sql.Timestamp]("ts").getTime)
+      put.addColumn(
+        columnFamily,
+        column,
+        schemaReference ++ r.getAs[Array[Byte]]("value")
+      )
+      (null, put)
+    }
 }

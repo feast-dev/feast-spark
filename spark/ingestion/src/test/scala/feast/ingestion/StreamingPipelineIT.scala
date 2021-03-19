@@ -19,7 +19,12 @@ package feast.ingestion
 import java.nio.file.Paths
 import java.util.Properties
 
-import com.dimafeng.testcontainers.{ForAllTestContainer, GenericContainer, KafkaContainer, MultipleContainers}
+import com.dimafeng.testcontainers.{
+  ForAllTestContainer,
+  GenericContainer,
+  KafkaContainer,
+  MultipleContainers
+}
 import feast.proto.types.ValueProto.ValueType
 import org.apache.spark.SparkConf
 import org.joda.time.DateTime
@@ -40,7 +45,6 @@ import org.apache.spark.sql.Encoder
 import org.apache.spark.sql.avro.to_avro
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.functions.{col, struct}
-
 
 class StreamingPipelineIT extends SparkSpec with ForAllTestContainer {
   val redisContainer = GenericContainer("redis:6.0.8", exposedPorts = Seq(6379))

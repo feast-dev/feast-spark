@@ -26,11 +26,11 @@ import org.scalacheck.Gen
 import scala.reflect.runtime.universe.TypeTag
 
 case class TestRow(
-                    customer: String,
-                    feature1: Int,
-                    feature2: Float,
-                    eventTimestamp: java.sql.Timestamp
-                  )
+    customer: String,
+    feature1: Int,
+    feature2: Float,
+    eventTimestamp: java.sql.Timestamp
+)
 
 object DataHelper {
   def generateRows[A](gen: Gen[A], N: Int): Seq[A] =
@@ -57,7 +57,11 @@ object DataHelper {
     tempPath
   }
 
-  def rowGenerator(start: DateTime, end: DateTime, customerGen: Option[Gen[String]] = None): Gen[TestRow] =
+  def rowGenerator(
+      start: DateTime,
+      end: DateTime,
+      customerGen: Option[Gen[String]] = None
+  ): Gen[TestRow] =
     for {
       customer <- customerGen.getOrElse(Gen.asciiPrintableStr)
       feature1 <- Gen.choose(0, 100)

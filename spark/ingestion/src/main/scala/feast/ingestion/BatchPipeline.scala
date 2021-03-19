@@ -78,8 +78,8 @@ object BatchPipeline extends BasePipeline {
 
     validRows.write
       .format(config.store match {
-        case _:RedisConfig => "feast.ingestion.stores.redis"
-        case _:BigTableConfig => "feast.ingestion.stored.bigtable"
+        case _: RedisConfig    => "feast.ingestion.stores.redis"
+        case _: BigTableConfig => "feast.ingestion.stores.bigtable"
       })
       .option("entity_columns", featureTable.entities.map(_.name).mkString(","))
       .option("namespace", featureTable.name)

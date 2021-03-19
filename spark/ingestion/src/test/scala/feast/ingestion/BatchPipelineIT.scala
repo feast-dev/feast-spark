@@ -37,8 +37,6 @@ import feast.proto.types.ValueProto
 import org.apache.spark.sql.Encoder
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 
-
-
 class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
 
   override val container = GenericContainer("redis:6.0.8", exposedPorts = Seq(6379))

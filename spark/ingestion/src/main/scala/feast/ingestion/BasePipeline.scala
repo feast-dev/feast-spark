@@ -38,6 +38,10 @@ object BasePipeline {
           .set("spark.redis.host", host)
           .set("spark.redis.port", port.toString)
           .set("spark.redis.ssl", ssl.toString)
+      case BigTableConfig(projectId, instanceId) =>
+        conf
+          .set("spark.bigtable.projectId", projectId)
+          .set("spark.bigtable.instanceId", instanceId)
     }
 
     jobConfig.metrics match {

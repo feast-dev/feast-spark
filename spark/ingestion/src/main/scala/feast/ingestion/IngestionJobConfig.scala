@@ -26,8 +26,8 @@ object Modes extends Enumeration {
 
 abstract class StoreConfig
 
-case class RedisConfig(host: String, port: Int, ssl: Boolean) extends StoreConfig
-case class BigTableConfig(projectId: String, intanceId: String) extends StoreConfig
+case class RedisConfig(host: String, port: Int, ssl: Boolean)    extends StoreConfig
+case class BigTableConfig(projectId: String, instanceId: String) extends StoreConfig
 
 sealed trait MetricConfig
 
