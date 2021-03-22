@@ -10,5 +10,5 @@ python:
   version: 3.7
   install:
       - requirements: python/requirements-ci.txt
-      - path: sdk/python/
+      - path: python/
         method: setuptools
