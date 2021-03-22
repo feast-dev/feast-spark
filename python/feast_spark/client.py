@@ -118,7 +118,7 @@ class Client:
                 The user needs to make sure that the source (or staging location, if entity_source is
                 a Panda DataFrame) is accessible from the Spark cluster that will be used for the
                 retrieval job.
-            destination_path: Specifies the path in a bucket to write the exported feature data files
+            output_location: Specifies the path in a bucket to write the exported feature data files
 
         Returns:
                 Returns a retrieval job object that can be used to monitor retrieval
@@ -126,13 +126,14 @@ class Client:
                 results.
 
         Examples:
-            >>> from feast import Client
+            >>> import feast
+            >>> import feast_spark
             >>> from feast.data_format import ParquetFormat
             >>> from datetime import datetime
-            >>> feast_client = Client(core_url="localhost:6565")
+            >>> feast_client = feast.Client(core_url="localhost:6565")
             >>> feature_refs = ["bookings:bookings_7d", "bookings:booking_14d"]
             >>> entity_source = FileSource("event_timestamp", ParquetFormat(), "gs://some-bucket/customer")
-            >>> feature_retrieval_job = feast_client.get_historical_features(
+            >>> feature_retrieval_job = feast_spark.Client(feast_client).get_historical_features(
             >>>     feature_refs, entity_source)
             >>> output_file_uri = feature_retrieval_job.get_output_file_uri()
                 "gs://some-bucket/output/
@@ -225,15 +226,16 @@ class Client:
                 Returns the historical feature retrieval result in the form of Spark dataframe.
 
         Examples:
-            >>> from feast import Client
+            >>> import feast
+            >>> import feast_spark
             >>> from feast.data_format import ParquetFormat
             >>> from datetime import datetime
             >>> from pyspark.sql import SparkSession
             >>> spark = SparkSession.builder.getOrCreate()
-            >>> feast_client = Client(core_url="localhost:6565")
+            >>> feast_client = feast.Client(core_url="localhost:6565")
             >>> feature_refs = ["bookings:bookings_7d", "bookings:booking_14d"]
             >>> entity_source = FileSource("event_timestamp", ParquetFormat, "gs://some-bucket/customer")
-            >>> df = feast_client.get_historical_features(
+            >>> df = feast_spark.Client(feast_client).get_historical_features(
             >>>     feature_refs, entity_source)
         """
         feature_tables = self._get_feature_tables_from_feature_refs(
@@ -270,13 +272,14 @@ class Client:
         self, feature_table: feast.FeatureTable, start: datetime, end: datetime,
     ) -> SparkJob:
         """
+        Launch Ingestion Job from Batch Source to Online Store for given feature table
 
-        Launch Ingestion Job from Batch Source to Online Store for given featureTable
+        Args:
+            feature_table:  FeatureTable that will be ingested into the online store
+            start: lower datetime boundary on which to filter the source
+            end: upper datetime boundary on which to filter the source
 
-        :param feature_table: FeatureTable which will be ingested
-        :param start: lower datetime boundary
-        :param end: upper datetime boundary
-        :return: Spark Job Proxy object
+        Returns: Spark Job Proxy object
         """
         if not self._use_job_service:
             return start_offline_to_online_ingestion(
@@ -337,6 +340,7 @@ class Client:
     ) -> List[SparkJob]:
         """
         List ingestion jobs currently running in Feast.
+
         Args:
             include_terminated: Flag to include terminated jobs or not
             project: Optionally specify the project to use as filter when retrieving jobs

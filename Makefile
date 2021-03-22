@@ -32,7 +32,8 @@ format-python:
 install-python-ci-dependencies:
 	pip install --no-cache-dir -r python/requirements-ci.txt
 
-compile-protos-python: install-python-ci-dependencies
+compile-protos-python:
+	$(MAKE) install-python-ci-dependencies || true
 	@$(eval FEAST_PATH=`python -c "import feast; import os; print(os.path.dirname(feast.__file__))"`)
 	@$(foreach dir,$(PROTO_TYPE_SUBDIRS),cd ${ROOT_DIR}/protos; python -m grpc_tools.protoc -I. -I$(FEAST_PATH)/protos/ --python_out=../python/ --mypy_out=../python/ feast_spark/$(dir)/*.proto;)
 	@$(foreach dir,$(PROTO_SERVICE_SUBDIRS),cd ${ROOT_DIR}/protos; python -m grpc_tools.protoc -I. -I$(FEAST_PATH)/protos/ --grpc_python_out=../python/ feast_spark/$(dir)/*.proto;)
