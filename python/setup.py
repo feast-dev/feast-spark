@@ -18,6 +18,17 @@ import subprocess
 
 from setuptools import find_packages, setup
 
+try:
+    from setuptools import setup
+    from setuptools.command.install import install
+    from setuptools.command.develop import develop
+    from setuptools.command.egg_info import egg_info
+    from setuptools.command.sdist import sdist
+
+except ImportError:
+    from distutils.core import setup
+    from distutils.command.install import install
+
 NAME = "feast-spark"
 DESCRIPTION = "Spark extensions for Feast"
 URL = "https://github.com/feast-dev/feast-spark"
@@ -40,9 +51,9 @@ REQUIRED = [
 # README file from Feast repo root directory
 repo_root = (
     subprocess.Popen(["git", "rev-parse", "--show-toplevel"], stdout=subprocess.PIPE)
-    .communicate()[0]
-    .rstrip()
-    .decode("utf-8")
+        .communicate()[0]
+        .rstrip()
+        .decode("utf-8")
 )
 README_FILE = os.path.join(repo_root, "README.md")
 with open(os.path.join(README_FILE), "r") as f:
@@ -54,6 +65,29 @@ with open(os.path.join(README_FILE), "r") as f:
 TAG_REGEX = re.compile(
     r"^(?:[\/\w-]+)?(?P<version>[vV]?\d+(?:\.\d+){0,2}[^\+]*)(?:\+.*)?$"
 )
+
+
+def pre_install_build():
+    subprocess.check_call("make compile-protos-python", shell=True, cwd=f"{repo_root}")
+
+
+class CustomInstallCommand(install):
+    def do_egg_install(self):
+        pre_install_build()
+        install.do_egg_install(self)
+
+
+class CustomDevelopCommand(develop):
+    def run(self):
+        pre_install_build()
+        develop.run(self)
+
+
+class CustomEggInfoCommand(egg_info):
+    def run(self):
+        pre_install_build()
+        egg_info.run(self)
+
 
 setup(
     name=NAME,
@@ -84,4 +118,9 @@ setup(
     entry_points={"console_scripts": ["feast-spark=feast_spark.cli:cli"]},
     use_scm_version={"root": "../", "relative_to": __file__, "tag_regex": TAG_REGEX},
     setup_requires=["setuptools_scm"],
+    cmdclass={
+        "install": CustomInstallCommand,
+        "develop": CustomDevelopCommand,
+        "egg_info": CustomEggInfoCommand,
+    },
 )
