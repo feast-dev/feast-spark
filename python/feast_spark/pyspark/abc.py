@@ -357,7 +357,9 @@ class IngestionJobParameters(SparkJobParameters):
         return dict(host=self._redis_host, port=self._redis_port, ssl=self._redis_ssl)
 
     def _get_bigtable_config(self):
-        return dict(project_id=self._bigtable_project, instance_id=self._bigtable_instance)
+        return dict(
+            project_id=self._bigtable_project, instance_id=self._bigtable_instance
+        )
 
     def _get_statsd_config(self):
         return (
