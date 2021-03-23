@@ -97,7 +97,7 @@ class BigTableIngestionSpec extends SparkSpec with ForAllTestContainer {
 
       BatchPipeline.createPipeline(sparkSession, configWithOfflineSource)
 
-      val table       = btConn.getTable(TableName.valueOf("default_customer"))
+      val table       = btConn.getTable(TableName.valueOf("default__customer"))
       val allRowsInBT = table.getScanner(new Scan).asScala.toList
 
       val schema = allRowsInBT
@@ -136,7 +136,7 @@ class BigTableIngestionSpec extends SparkSpec with ForAllTestContainer {
 
       BatchPipeline.createPipeline(sparkSession, configWithOfflineSource)
 
-      val table = btConn.getAdmin.getDescriptor(TableName.valueOf("default_customer"))
+      val table = btConn.getAdmin.getDescriptor(TableName.valueOf("default__customer"))
       val cf    = table.getColumnFamily(configWithOfflineSource.featureTable.name.getBytes)
       cf.getTimeToLive should be(600)
       cf.getMaxVersions should be(1)

@@ -100,13 +100,19 @@ class ConfigOptions(metaclass=ConfigMeta):
     HISTORICAL_FEATURE_OUTPUT_LOCATION: Optional[str] = None
 
     #: Default Redis host
-    REDIS_HOST: str = "localhost"
+    REDIS_HOST: Optional[str] = "localhost"
 
     #: Default Redis port
-    REDIS_PORT: str = "6379"
+    REDIS_PORT: Optional[str] = "6379"
 
     #: Enable or disable TLS/SSL to Redis
-    REDIS_SSL: str = "False"
+    REDIS_SSL: Optional[str] = "False"
+
+    #: BigTable Project ID
+    BIGTABLE_PROJECT: Optional[str] = None
+
+    #: BigTable Instance ID
+    BIGTABLE_INSTANCE: Optional[str] = None
 
     #: Enable or disable StatsD
     STATSD_ENABLED: str = "False"

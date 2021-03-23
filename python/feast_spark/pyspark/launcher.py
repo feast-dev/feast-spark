@@ -273,6 +273,8 @@ def start_offline_to_online_ingestion(
             redis_host=client.config.get(opt.REDIS_HOST),
             redis_port=client.config.getint(opt.REDIS_PORT),
             redis_ssl=client.config.getboolean(opt.REDIS_SSL),
+            bigtable_project=client.config.get(opt.BIGTABLE_PROJECT),
+            bigtable_instance=client.config.get(opt.BIGTABLE_INSTANCE),
             statsd_host=(
                 client.config.getboolean(opt.STATSD_ENABLED)
                 and client.config.get(opt.STATSD_HOST)
@@ -298,6 +300,8 @@ def get_stream_to_online_ingestion_params(
         redis_host=client.config.get(opt.REDIS_HOST),
         redis_port=client.config.getint(opt.REDIS_PORT),
         redis_ssl=client.config.getboolean(opt.REDIS_SSL),
+        bigtable_project=client.config.get(opt.BIGTABLE_PROJECT),
+        bigtable_instance=client.config.get(opt.BIGTABLE_INSTANCE),
         statsd_host=client.config.getboolean(opt.STATSD_ENABLED)
         and client.config.get(opt.STATSD_HOST),
         statsd_port=client.config.getboolean(opt.STATSD_ENABLED)

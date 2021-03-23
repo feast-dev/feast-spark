@@ -287,6 +287,7 @@ class KubernetesJobLauncher(JobLauncher):
             jar_path.startswith("s3://")
             or jar_path.startswith("s3a://")
             or jar_path.startswith("https://")
+            or jar_path.startswith("local://")
         ):
             return jar_path
         elif jar_path.startswith("file://"):

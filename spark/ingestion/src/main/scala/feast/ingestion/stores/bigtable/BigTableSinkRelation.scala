@@ -31,7 +31,7 @@ import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions.{col, length, struct, udf}
 import org.apache.spark.sql.{DataFrame, Row, SQLContext}
 import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
-import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.types.{StringType, StructType}
 import feast.ingestion.stores.bigtable.serialization.Serializer
 import org.apache.hadoop.security.UserGroupInformation
 
@@ -64,7 +64,10 @@ class BigTableSinkRelation(
 
       if (!table.getColumnFamilyNames.contains(config.namespace.getBytes)) {
         val featuresCF = new HColumnDescriptor(config.namespace)
-        featuresCF.setTimeToLive(config.maxAge.toInt)
+        if (config.maxAge > 0) {
+          featuresCF.setTimeToLive(config.maxAge.toInt)
+        }
+
         featuresCF.setMaxVersions(1)
         table.addFamily(featuresCF)
       }
@@ -80,7 +83,7 @@ class BigTableSinkRelation(
   }
 
   override def insert(data: DataFrame, overwrite: Boolean): Unit = {
-    val jobConfig = new JobConf(hadoopConfig, this.getClass)
+    val jobConfig = new JobConf(hadoopConfig)
     val jobCreds  = jobConfig.getCredentials()
     UserGroupInformation.setConfiguration(data.sqlContext.sparkContext.hadoopConfiguration)
     jobCreds.mergeAll(UserGroupInformation.getCurrentUser().getCredentials())
@@ -93,7 +96,7 @@ class BigTableSinkRelation(
 
     val featureColumns = featureFields.map(f => col(f.name))
 
-    val entityColumns   = config.entityColumns.map(col)
+    val entityColumns   = config.entityColumns.map(c => col(c).cast(StringType))
     val schemaReference = serializer.schemaReference(StructType(featureFields))
 
     data
@@ -126,7 +129,7 @@ class BigTableSinkRelation(
       table.checkAndPut(
         key,
         metadataColumnFamily.getBytes,
-        "json".getBytes,
+        "avro".getBytes,
         null,
         put
       )
@@ -136,8 +139,8 @@ class BigTableSinkRelation(
   }
 
   private def tableName: String = {
-    val entities = config.entityColumns.mkString("_")
-    s"${config.projectName}_${entities}"
+    val entities = config.entityColumns.mkString("__")
+    s"${config.projectName}__${entities}"
   }
 
   private def joinEntityKey: UserDefinedFunction = udf { r: Row =>
