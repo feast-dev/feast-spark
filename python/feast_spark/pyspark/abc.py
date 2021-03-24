@@ -388,7 +388,7 @@ class IngestionJobParameters(SparkJobParameters):
             json.dumps(self._source),
         ]
 
-        if self._redis_host and self._redis_host:
+        if self._redis_host and self._redis_port:
             args.extend(["--redis", json.dumps(self._get_redis_config())])
 
         if self._bigtable_project and self._bigtable_instance:

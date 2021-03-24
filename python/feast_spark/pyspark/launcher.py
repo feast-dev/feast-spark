@@ -298,7 +298,7 @@ def get_stream_to_online_ingestion_params(
         source=_source_to_argument(feature_table.stream_source, client.config),
         feature_table=_feature_table_to_argument(client, project, feature_table),
         redis_host=client.config.get(opt.REDIS_HOST),
-        redis_port=client.config.getint(opt.REDIS_PORT),
+        redis_port=bool(client.config.get(opt.REDIS_HOST)) and client.config.getint(opt.REDIS_PORT),
         redis_ssl=client.config.getboolean(opt.REDIS_SSL),
         bigtable_project=client.config.get(opt.BIGTABLE_PROJECT),
         bigtable_instance=client.config.get(opt.BIGTABLE_INSTANCE),
