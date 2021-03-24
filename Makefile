@@ -30,7 +30,7 @@ format-python:
 	#cd ${ROOT_DIR}/tests/e2e; black --target-version py37 .
 
 install-python-ci-dependencies:
-	pip install --no-cache-dir -r python/requirements-ci.txt
+	pip install --no-cache-dir -r -U python/requirements-ci.txt
 
 compile-protos-python:
 	$(MAKE) install-python-ci-dependencies || true
