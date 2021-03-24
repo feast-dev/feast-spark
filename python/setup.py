@@ -16,6 +16,10 @@ import os
 import re
 import subprocess
 
+from distutils.cmd import Command
+from distutils.command.build import build  # pylint: disable=g-importing-member
+from distutils.spawn import find_executable
+
 from setuptools import find_packages, setup
 
 try:
@@ -67,27 +71,36 @@ TAG_REGEX = re.compile(
 )
 
 
-def pre_install_build():
-    subprocess.check_call("make compile-protos-python", shell=True, cwd=f"{repo_root}", executable='/bin/bash')
+class BuildProtoCommand(Command):
+    description = "Builds the proto files into python files."
 
+    def initialize_options(self):
+        self.protoc = find_executable("protoc")
+        self.proto_folder = os.path.join(repo_root, "protos")
+        self.this_package = os.path.dirname(__file__)
+        self.sub_folders = ["api"]
 
-class CustomInstallCommand(install):
-    def do_egg_install(self):
-        pre_install_build()
-        install.do_egg_install(self)
+    def finalize_options(self):
+        pass
 
-
-class CustomDevelopCommand(develop):
     def run(self):
-        pre_install_build()
-        develop.run(self)
+        for sub_folder in self.sub_folders:
+            subprocess.check_call([self.protoc,
+                                   '-I', '.',
+                                   '--python_out', self.this_package,
+                                   '--grpc_python_our', self.this_package,
+                                   '--mypy_out', self.this_package,
+                                   f'feast_spark/{sub_folder}/*.proto'], cwd=self.proto_folder)
+
+        subprocess.check_call([self.protoc,
+                               '-I', '.',
+                               '--python_out', self.this_package,
+                               '--grpc_python_our', self.this_package,
+                               '--mypy_out', self.this_package,
+                               'feast_spark/third_party/grpc/health/v1/*.proto'], cwd=self.proto_folder)
 
 
-class CustomEggInfoCommand(egg_info):
-    def run(self):
-        pre_install_build()
-        egg_info.run(self)
-
+build.sub_commands.insert(0, ('build_proto', None))
 
 setup(
     name=NAME,
@@ -119,8 +132,6 @@ setup(
     use_scm_version={"root": "../", "relative_to": __file__, "tag_regex": TAG_REGEX},
     setup_requires=["setuptools_scm", "grpcio-tools", "feast", "mypy-protobuf"],
     cmdclass={
-        "install": CustomInstallCommand,
-        "develop": CustomDevelopCommand,
-        "egg_info": CustomEggInfoCommand,
+        "build_proto": BuildProtoCommand,
     },
 )
