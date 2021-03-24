@@ -11,16 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import glob
 import os
 import re
 import subprocess
 
 from distutils.cmd import Command
-from distutils.command.build import build  # pylint: disable=g-importing-member
-from distutils.spawn import find_executable
-
-from setuptools import find_packages, setup
+from setuptools import find_packages
 
 try:
     from setuptools import setup
@@ -28,10 +25,12 @@ try:
     from setuptools.command.develop import develop
     from setuptools.command.egg_info import egg_info
     from setuptools.command.sdist import sdist
+    from setuptools.command.build_py import build_py
 
 except ImportError:
     from distutils.core import setup
     from distutils.command.install import install
+    from distutils.command.build_py import build_py
 
 NAME = "feast-spark"
 DESCRIPTION = "Spark extensions for Feast"
@@ -75,32 +74,48 @@ class BuildProtoCommand(Command):
     description = "Builds the proto files into python files."
 
     def initialize_options(self):
-        self.protoc = find_executable("protoc")
+        import feast
+
+        self.protoc = ["python", "-m", "grpc_tools.protoc"]  # find_executable("protoc")
         self.proto_folder = os.path.join(repo_root, "protos")
-        self.this_package = os.path.dirname(__file__)
+        self.this_package = os.path.dirname(__file__) or os.getcwd()
+        self.feast_protos = os.path.join(os.path.dirname(feast.__file__), 'protos')
         self.sub_folders = ["api"]
 
     def finalize_options(self):
         pass
 
+    def _generate_protos(self, path):
+        proto_files = glob.glob(os.path.join(self.proto_folder, path))
+
+        subprocess.check_call(self.protoc + [
+                               '-I', self.proto_folder,
+                               '-I', self.feast_protos,
+                               '--python_out', self.this_package,
+                               '--grpc_python_out', self.this_package,
+                               '--mypy_out', self.this_package] + proto_files)
+
     def run(self):
         for sub_folder in self.sub_folders:
-            subprocess.check_call([self.protoc,
-                                   '-I', '.',
-                                   '--python_out', self.this_package,
-                                   '--grpc_python_our', self.this_package,
-                                   '--mypy_out', self.this_package,
-                                   f'feast_spark/{sub_folder}/*.proto'], cwd=self.proto_folder)
+            self._generate_protos(f'feast_spark/{sub_folder}/*.proto')
 
-        subprocess.check_call([self.protoc,
-                               '-I', '.',
-                               '--python_out', self.this_package,
-                               '--grpc_python_our', self.this_package,
-                               '--mypy_out', self.this_package,
-                               'feast_spark/third_party/grpc/health/v1/*.proto'], cwd=self.proto_folder)
+        self._generate_protos('feast_spark/third_party/grpc/health/v1/*.proto')
 
 
-build.sub_commands.insert(0, ('build_proto', None))
+class DevelopCommand(develop):
+    """Custom develop command."""
+
+    def run(self):
+        self.run_command('build_proto')
+        develop.run(self)
+
+
+class DistWheelCommand(sdist):
+    """Custom sdist command."""
+
+    def run(self):
+        self.run_command('build_proto')
+        sdist.run(self)
 
 setup(
     name=NAME,
@@ -133,5 +148,7 @@ setup(
     setup_requires=["setuptools_scm", "grpcio-tools", "feast", "mypy-protobuf"],
     cmdclass={
         "build_proto": BuildProtoCommand,
+        "sdist": DistWheelCommand,
+        "develop": DevelopCommand,
     },
 )
