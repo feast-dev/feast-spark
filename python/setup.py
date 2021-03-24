@@ -68,7 +68,7 @@ TAG_REGEX = re.compile(
 
 
 def pre_install_build():
-    subprocess.check_call("make compile-protos-python", shell=True, cwd=f"{repo_root}")
+    subprocess.check_call("make compile-protos-python", shell=True, cwd=f"{repo_root}", executable='/bin/bash')
 
 
 class CustomInstallCommand(install):
@@ -97,7 +97,7 @@ setup(
     long_description_content_type="text/markdown",
     python_requires=REQUIRES_PYTHON,
     url=URL,
-    packages=find_packages(exclude=("tests",)),
+    packages=find_packages(exclude=("tests",)) + ['.'],
     install_requires=REQUIRED,
     # https://stackoverflow.com/questions/28509965/setuptools-development-requirements
     # Install dev requirements with: pip install -e .[dev]
@@ -117,7 +117,7 @@ setup(
     ],
     entry_points={"console_scripts": ["feast-spark=feast_spark.cli:cli"]},
     use_scm_version={"root": "../", "relative_to": __file__, "tag_regex": TAG_REGEX},
-    setup_requires=["setuptools_scm"],
+    setup_requires=["setuptools_scm", "grpcio-tools", "feast", "mypy-protobuf"],
     cmdclass={
         "install": CustomInstallCommand,
         "develop": CustomDevelopCommand,
