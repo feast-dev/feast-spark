@@ -30,7 +30,6 @@ jobs:
           # code from the PR. 
           ref: ${{ github.event.pull_request.merge_commit_sha }}
           submodules: recursive
-      - uses: actions/checkout@v2
       - uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
