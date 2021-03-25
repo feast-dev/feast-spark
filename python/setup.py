@@ -49,6 +49,8 @@ REQUIRED = [
     "google-cloud-bigquery-storage==0.7.*",
     "google-cloud-dataproc==2.0.2",
     "kubernetes==12.0.*",
+    "grpcio-tools==1.31.0",
+    "mypy-protobuf"
 ]
 
 # README file from Feast repo root directory
@@ -102,6 +104,14 @@ class BuildProtoCommand(Command):
         self._generate_protos('feast_spark/third_party/grpc/health/v1/*.proto')
 
 
+class BuildCommand(build_py):
+    """Custom build command."""
+
+    def run(self):
+        self.run_command('build_proto')
+        build_py.run(self)
+
+
 class DevelopCommand(develop):
     """Custom develop command."""
 
@@ -109,13 +119,6 @@ class DevelopCommand(develop):
         self.run_command('build_proto')
         develop.run(self)
 
-
-class DistWheelCommand(sdist):
-    """Custom sdist command."""
-
-    def run(self):
-        self.run_command('build_proto')
-        sdist.run(self)
 
 setup(
     name=NAME,
@@ -145,10 +148,10 @@ setup(
     ],
     entry_points={"console_scripts": ["feast-spark=feast_spark.cli:cli"]},
     use_scm_version={"root": "../", "relative_to": __file__, "tag_regex": TAG_REGEX},
-    setup_requires=["setuptools_scm", "grpcio-tools", "feast", "mypy-protobuf"],
+    setup_requires=["setuptools_scm", "grpcio-tools==1.31.0", "feast", "mypy-protobuf"],
     cmdclass={
         "build_proto": BuildProtoCommand,
-        "sdist": DistWheelCommand,
+        "build_py": BuildCommand,
         "develop": DevelopCommand,
     },
 )
