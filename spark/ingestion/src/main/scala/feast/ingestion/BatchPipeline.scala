@@ -24,6 +24,7 @@ import org.apache.commons.lang.StringUtils
 import org.apache.spark.SparkEnv
 import org.apache.spark.sql.catalyst.encoders.RowEncoder
 import org.apache.spark.sql.streaming.StreamingQuery
+import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{Encoder, Row, SaveMode, SparkSession}
 
 /**
@@ -76,14 +77,69 @@ object BatchPipeline extends BasePipeline {
       .map(metrics.incrementRead)
       .filter(rowValidator.allChecks)
 
-    validRows.write
-      .format("feast.ingestion.stores.redis")
-      .option("entity_columns", featureTable.entities.map(_.name).mkString(","))
-      .option("namespace", featureTable.name)
-      .option("project_name", featureTable.project)
-      .option("timestamp_column", config.source.eventTimestampColumn)
-      .option("max_age", config.featureTable.maxAge.getOrElse(0L))
-      .save()
+    config.store match {
+      case _: RedisConfig =>
+        validRows.write
+          .format("feast.ingestion.stores.redis")
+          .option("entity_columns", featureTable.entities.map(_.name).mkString(","))
+          .option("namespace", featureTable.name)
+          .option("project_name", featureTable.project)
+          .option("timestamp_column", config.source.eventTimestampColumn)
+          .option("max_age", config.featureTable.maxAge.getOrElse(0L))
+          .save()
+      case c: CassandraConfig =>
+        val feastTypeToSpark = Map(
+          "BYTES"       -> "BINARY",
+          "STRING"      -> "STRING",
+          "INT32"       -> "INT",
+          "INT64"       -> "BIGINT",
+          "DOUBLE"      -> "DOUBLE",
+          "FLOAT"       -> "FLOAT",
+          "BOOL"        -> "BOOLEAN",
+          "BYTES_LIST"  -> "ARRAY<BINARY>",
+          "STRING_LIST" -> "ARRAY<STRING>",
+          "INT32_LIST"  -> "ARRAY<INT>",
+          "INT64_LIST"  -> "ARRAY<BIGINT>",
+          "DOUBLE_LIST" -> "ARRAY<DOUBLE>",
+          "FLOAT_LIST"  -> "ARRAY<FLOAT>",
+          "BOOL_LIST"   -> "ARRAY<BOOLEAN>"
+        )
+
+        def sanitizedForCassandra(expr: String) = expr.replace("-", "_")
+
+        val tableName = sanitizedForCassandra(
+          s"${featureTable.project}_${featureTable.entities.map(_.name).sorted.mkString("_")}"
+        )
+        val entityColumnType = featureTable.entities
+          .map(e => s"${e.name} ${feastTypeToSpark(e.`type`.name())}")
+          .map(sanitizedForCassandra)
+        val featureColumnType = featureTable.features
+          .map(f => s"${featureTable.name}_${f.name} ${feastTypeToSpark(f.`type`.name())}")
+          .map(sanitizedForCassandra)
+
+        sparkSession.sql(s"""
+             |CREATE TABLE IF NOT EXISTS feast.${c.keyspace}.`${tableName}`
+             |(${(entityColumnType ++ featureColumnType).mkString(", ")})
+             |USING cassandra
+             |PARTITIONED BY (${featureTable.entities
+          .map(_.name)
+          .map(sanitizedForCassandra)
+          .mkString(", ")})
+             |""".stripMargin)
+
+        val prefixProjection = validRows.columns.map(c =>
+          if (featureTable.features.map(_.name).contains(c))
+            col(c).as(sanitizedForCassandra(s"${featureTable.name}_${c}"))
+          else col(c).as(sanitizedForCassandra(c))
+        )
+
+        validRows
+          .select(prefixProjection: _*)
+          .writeTo(s"feast.${c.keyspace}.`${tableName}`")
+          .option("writeTime", config.source.eventTimestampColumn)
+          .append()
+
+    }
 
     config.deadLetterPath foreach { path =>
       projected

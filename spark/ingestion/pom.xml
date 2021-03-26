@@ -142,10 +142,17 @@
         </dependency>
 
         <dependency>
+            <groupId>com.datastax.spark</groupId>
+            <artifactId>spark-cassandra-connector_${scala.version}</artifactId>
+            <version>3.0.0</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.redislabs</groupId>
             <artifactId>spark-redis_${scala.version}</artifactId>
             <version>2.5.0</version>
         </dependency>
+
 
         <dependency>
             <groupId>io.netty</groupId>
@@ -189,6 +196,13 @@
         <dependency>
             <groupId>com.dimafeng</groupId>
             <artifactId>testcontainers-scala-kafka_${scala.version}</artifactId>
+            <version>0.38.8</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.dimafeng</groupId>
+            <artifactId>testcontainers-scala-cassandra_${scala.version}</artifactId>
             <version>0.38.8</version>
             <scope>test</scope>
         </dependency>

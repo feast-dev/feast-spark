@@ -38,6 +38,17 @@ object BasePipeline {
           .set("spark.redis.host", host)
           .set("spark.redis.port", port.toString)
           .set("spark.redis.ssl", ssl.toString)
+      case CassandraConfig(connection, _, properties) =>
+        conf
+          .set("spark.sql.extensions", "com.datastax.spark.connector.CassandraSparkExtensions")
+          .set("spark.cassandra.connection.host", connection.host)
+          .set("spark.cassandra.connection.port", connection.port.toString)
+          .set("spark.cassandra.output.batch.size.bytes", properties.batchSize.toString)
+          .set("spark.cassandra.output.concurrent.writes", properties.concurrentWrite.toString)
+          .set(
+            s"spark.sql.catalog.feast",
+            "com.datastax.spark.connector.datasource.CassandraCatalog"
+          )
     }
 
     jobConfig.metrics match {

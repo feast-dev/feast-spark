@@ -28,6 +28,14 @@ abstract class StoreConfig
 
 case class RedisConfig(host: String, port: Int, ssl: Boolean) extends StoreConfig
 
+case class CassandraConfig(
+    connection: CassandraConnection,
+    keyspace: String,
+    properties: CassandraWriteProperties
+) extends StoreConfig
+case class CassandraConnection(host: String, port: Int)
+case class CassandraWriteProperties(batchSize: Int, concurrentWrite: Int)
+
 sealed trait MetricConfig
 
 case class StatsDConfig(host: String, port: Int) extends MetricConfig

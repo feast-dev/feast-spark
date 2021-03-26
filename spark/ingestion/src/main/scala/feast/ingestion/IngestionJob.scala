@@ -81,6 +81,9 @@ object IngestionJob {
     opt[String](name = "redis")
       .action((x, c) => c.copy(store = parseJSON(x).extract[RedisConfig]))
 
+    opt[String](name = "cassandra")
+      .action((x, c) => c.copy(store = parseJSON(x).extract[CassandraConfig]))
+
     opt[String](name = "statsd")
       .action((x, c) => c.copy(metrics = Some(parseJSON(x).extract[StatsDConfig])))
 
