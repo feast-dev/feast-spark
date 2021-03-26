@@ -23,6 +23,7 @@ import feast.ingestion.validation.{RowValidator, TypeCheck}
 import org.apache.commons.lang.StringUtils
 import org.apache.spark.SparkEnv
 import org.apache.spark.sql.catalyst.encoders.RowEncoder
+import org.apache.spark.sql.streaming.StreamingQuery
 import org.apache.spark.sql.{Encoder, Row, SaveMode, SparkSession}
 
 /**
@@ -34,10 +35,13 @@ import org.apache.spark.sql.{Encoder, Row, SaveMode, SparkSession}
   * 5. Store invalid rows in parquet format at `deadletter` destination
   */
 object BatchPipeline extends BasePipeline {
-  override def createPipeline(sparkSession: SparkSession, config: IngestionJobConfig) = {
+  override def createPipeline(
+      sparkSession: SparkSession,
+      config: IngestionJobConfig
+  ): Option[StreamingQuery] = {
     val featureTable = config.featureTable
     val projection =
-      inputProjection(config.source, featureTable.features, featureTable.entities)
+      BasePipeline.inputProjection(config.source, featureTable.features, featureTable.entities)
     val rowValidator = new RowValidator(featureTable, config.source.eventTimestampColumn)
     val metrics      = new IngestionPipelineMetrics
 
@@ -60,13 +64,13 @@ object BatchPipeline extends BasePipeline {
 
     val projected = input.select(projection: _*).cache()
 
-    implicit def rowEncoder: Encoder[Row] = RowEncoder(projected.schema)
-
     TypeCheck.allTypesMatch(projected.schema, featureTable) match {
       case Some(error) =>
         throw new RuntimeException(s"Dataframe columns don't match expected feature types: $error")
       case _ => ()
     }
+
+    implicit val rowEncoder: Encoder[Row] = RowEncoder(projected.schema)
 
     val validRows = projected
       .map(metrics.incrementRead)
@@ -81,16 +85,14 @@ object BatchPipeline extends BasePipeline {
       .option("max_age", config.featureTable.maxAge.getOrElse(0L))
       .save()
 
-    config.deadLetterPath match {
-      case Some(path) =>
-        projected
-          .filter(!rowValidator.allChecks)
-          .map(metrics.incrementDeadLetters)
-          .write
-          .format("parquet")
-          .mode(SaveMode.Append)
-          .save(StringUtils.stripEnd(path, "/") + "/" + SparkEnv.get.conf.getAppId)
-      case _ => None
+    config.deadLetterPath foreach { path =>
+      projected
+        .filter(!rowValidator.allChecks)
+        .map(metrics.incrementDeadLetters)
+        .write
+        .format("parquet")
+        .mode(SaveMode.Append)
+        .save(StringUtils.stripEnd(path, "/") + "/" + SparkEnv.get.conf.getAppId)
     }
 
     None

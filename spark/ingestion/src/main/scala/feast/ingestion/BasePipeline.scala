@@ -22,7 +22,7 @@ import org.apache.spark.sql.{Column, SparkSession}
 import org.apache.spark.sql.functions.expr
 import org.apache.spark.sql.streaming.StreamingQuery
 
-trait BasePipeline {
+object BasePipeline {
   def createSparkSession(jobConfig: IngestionJobConfig): SparkSession = {
     // workaround for issue with arrow & netty
     // see https://github.com/apache/arrow/tree/master/java#java-properties
@@ -75,8 +75,6 @@ trait BasePipeline {
       .getOrCreate()
   }
 
-  def createPipeline(sparkSession: SparkSession, config: IngestionJobConfig): Option[StreamingQuery]
-
   /**
     * Build column projection using custom mapping with fallback to feature|entity names.
     */
@@ -99,4 +97,9 @@ trait BasePipeline {
       expr(source).alias(alias)
     }.toArray
   }
+}
+
+trait BasePipeline {
+
+  def createPipeline(sparkSession: SparkSession, config: IngestionJobConfig): Option[StreamingQuery]
 }
