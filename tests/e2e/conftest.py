@@ -30,6 +30,7 @@ def pytest_addoption(parser):
     parser.addoption("--feast-project", action="store", default="default")
     parser.addoption("--statsd-url", action="store", default="localhost:8125")
     parser.addoption("--prometheus-url", action="store", default="localhost:9102")
+    parser.addoption("--enable-auth", action="store_true")
     parser.addoption(
         "--scheduled-streaming-job",
         action="store_true",

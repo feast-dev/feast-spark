@@ -70,6 +70,7 @@ def feast_client(
             ),
             ingestion_drop_invalid_rows=True,
             grpc_connection_timeout=30,
+            enable_auth=pytestconfig.getoption("enable_auth"),
             **job_service_env,
         )
     elif pytestconfig.getoption("env") == "aws":
@@ -88,6 +89,7 @@ def feast_client(
                 local_staging_path, "historical_output"
             ),
             ingestion_drop_invalid_rows=True,
+            enable_auth=pytestconfig.getoption("enable_auth"),
         )
     elif pytestconfig.getoption("env") == "k8s":
         return Client(
@@ -101,6 +103,7 @@ def feast_client(
             historical_feature_output_location=os.path.join(
                 local_staging_path, "historical_output"
             ),
+            enable_auth=pytestconfig.getoption("enable_auth"),
         )
     else:
         raise KeyError(f"Unknown environment {pytestconfig.getoption('env')}")
