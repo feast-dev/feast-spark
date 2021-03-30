@@ -120,8 +120,9 @@ class BigTableSinkRelation(
     val key              = schemaKeyPrefix.getBytes ++ serializer.schemaReference(featureSchema)
     val serializedSchema = serializer.serializeSchema(featureSchema).getBytes
 
-    val put = new Put(key)
-    put.addColumn(metadataColumnFamily.getBytes, emptyQualifier.getBytes, serializedSchema)
+    val put       = new Put(key)
+    val qualifier = "avro".getBytes
+    put.addColumn(metadataColumnFamily.getBytes, qualifier, serializedSchema)
 
     val btConn = BigtableConfiguration.connect(hadoopConfig)
     try {
@@ -129,7 +130,7 @@ class BigTableSinkRelation(
       table.checkAndPut(
         key,
         metadataColumnFamily.getBytes,
-        "avro".getBytes,
+        qualifier,
         null,
         put
       )
