@@ -38,6 +38,7 @@ import redis.clients.jedis.Jedis
 import collection.JavaConverters._
 import feast.ingestion.helpers.RedisStorageHelper._
 import feast.ingestion.helpers.DataHelper._
+import feast.ingestion.helpers.TestRow
 import feast.proto.storage.RedisProto.RedisKeyV2
 import feast.proto.types.ValueProto
 import org.apache.spark.sql.Encoder
@@ -46,13 +47,6 @@ import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.functions.{col, struct}
 
 class StreamingPipelineIT extends SparkSpec with ForAllTestContainer {
-  case class TestRow(
-      customer: String,
-      feature1: Int,
-      feature2: Float,
-      eventTimestamp: java.sql.Timestamp
-  )
-
   val redisContainer = GenericContainer("redis:6.0.8", exposedPorts = Seq(6379))
   val kafkaContainer = KafkaContainer()
 

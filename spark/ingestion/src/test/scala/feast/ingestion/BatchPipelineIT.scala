@@ -30,18 +30,12 @@ import org.scalatest._
 import redis.clients.jedis.Jedis
 import feast.ingestion.helpers.RedisStorageHelper._
 import feast.ingestion.helpers.DataHelper._
+import feast.ingestion.helpers.TestRow
 import feast.ingestion.metrics.StatsDStub
 import feast.proto.storage.RedisProto.RedisKeyV2
 import feast.proto.types.ValueProto
 import org.apache.spark.sql.Encoder
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
-
-case class TestRow(
-    customer: String,
-    feature1: Int,
-    feature2: Float,
-    eventTimestamp: java.sql.Timestamp
-)
 
 class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
 
@@ -60,21 +54,6 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
     statsDStub.receivedMetrics // clean the buffer
 
     implicit def testRowEncoder: Encoder[TestRow] = ExpressionEncoder()
-
-    def rowGenerator(start: DateTime, end: DateTime, customerGen: Option[Gen[String]] = None) =
-      for {
-        customer <- customerGen.getOrElse(Gen.asciiPrintableStr)
-        feature1 <- Gen.choose(0, 100)
-        feature2 <- Gen.choose[Float](0, 1)
-        eventTimestamp <- Gen
-          .choose(0, Seconds.secondsBetween(start, end).getSeconds - 1)
-          .map(start.withMillisOfSecond(0).plusSeconds)
-      } yield TestRow(
-        customer,
-        feature1,
-        feature2,
-        new java.sql.Timestamp(eventTimestamp.getMillis)
-      )
 
     def encodeEntityKey(row: TestRow, featureTable: FeatureTable): Array[Byte] = {
       RedisKeyV2
