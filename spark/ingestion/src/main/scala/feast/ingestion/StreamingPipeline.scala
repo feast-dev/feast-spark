@@ -16,6 +16,9 @@
  */
 package feast.ingestion
 
+import java.io.File
+import java.util.concurrent.TimeUnit
+
 import feast.ingestion.metrics.IngestionPipelineMetrics
 import feast.ingestion.registry.proto.ProtoRegistryFactory
 import feast.ingestion.utils.ProtoReflection
@@ -33,9 +36,6 @@ import org.apache.spark.sql.functions.{expr, struct, udf}
 import org.apache.spark.sql.streaming.StreamingQuery
 import org.apache.spark.sql.types.BooleanType
 import org.apache.spark.{SparkEnv, SparkFiles}
-
-import java.io.File
-import java.util.concurrent.TimeUnit
 
 /**
   * Streaming pipeline (currently in micro-batches mode only, since we need to have multiple sinks: redis & deadletters).
@@ -111,7 +111,10 @@ object StreamingPipeline extends BasePipeline with Serializable {
           .map(metrics.incrementRead)
           .filter(if (config.doNotIngestInvalidRows) expr("_isValid") else rowValidator.allChecks)
           .write
-          .format("feast.ingestion.stores.redis")
+          .format(config.store match {
+            case _: RedisConfig    => "feast.ingestion.stores.redis"
+            case _: BigTableConfig => "feast.ingestion.stores.bigtable"
+          })
           .option("entity_columns", featureTable.entities.map(_.name).mkString(","))
           .option("namespace", featureTable.name)
           .option("project_name", featureTable.project)
