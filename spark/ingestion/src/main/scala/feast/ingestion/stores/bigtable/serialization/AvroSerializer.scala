@@ -23,14 +23,16 @@ import org.apache.spark.sql.avro.functions.to_avro
 import org.apache.spark.sql.types.StructType
 
 class AvroSerializer extends Serializer {
-  def serializeSchema(schema: StructType): String = {
+  override type SchemaType = String
+
+  def convertSchema(schema: StructType): String = {
     val avroSchema = SchemaConverters.toAvroType(schema)
     avroSchema.toString
   }
 
-  def schemaReference(schema: StructType): Array[Byte] = {
-    Hashing.murmur3_32().hashBytes(serializeSchema(schema).getBytes).asBytes()
+  def schemaReference(schema: String): Array[Byte] = {
+    Hashing.murmur3_32().hashBytes(schema.getBytes).asBytes()
   }
 
-  def serializeData: Column => Column = to_avro
+  def serializeData(schema: String): Column => Column = to_avro(_, schema)
 }

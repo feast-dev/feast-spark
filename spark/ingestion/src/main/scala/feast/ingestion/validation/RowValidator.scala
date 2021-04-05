@@ -31,5 +31,5 @@ class RowValidator(featureTable: FeatureTable, timestampColumn: String) extends 
     col(timestampColumn).isNotNull
 
   def allChecks: Column =
-    allEntitiesPresent && atLeastOneFeatureNotNull && timestampPresent
+    allEntitiesPresent && timestampPresent
 }
