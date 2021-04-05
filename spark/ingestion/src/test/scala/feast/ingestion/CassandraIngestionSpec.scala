@@ -107,7 +107,7 @@ class CassandraIngestionSpec extends SparkSpec with ForAllTestContainer {
 
     val storedRows = sparkSession
       .sql(
-        "SELECT key, test_fs, schema_ref, writeTime(test_fs) FROM feast.feast.default_customer"
+        "SELECT key, test_fs, test_fs__schema_ref, writeTime(test_fs) FROM feast.feast.default__customer"
       )
       .collect()
       .map { row =>

@@ -39,8 +39,8 @@ class CassandraSinkRelation(
 
     val featureColumns = featureFields.map(f => data(f.name))
 
-    val entityColumns = config.entityColumns.map(c => data(c).cast(StringType))
-    val schema = serializer.convertSchema(StructType(featureFields))
+    val entityColumns   = config.entityColumns.map(c => data(c).cast(StringType))
+    val schema          = serializer.convertSchema(StructType(featureFields))
     val schemaReference = serializer.schemaReference(schema)
 
     val writerWithoutTTL = data
@@ -49,7 +49,7 @@ class CassandraSinkRelation(
         serializer.serializeData(schema)(struct(featureColumns: _*)).alias(columnName),
         col(config.timestampColumn).alias("ts")
       )
-      .withColumn("schema_ref", lit(schemaReference))
+      .withColumn(schemaRefColumnName, lit(schemaReference))
       .writeTo(fullTableReference)
       .option("writeTime", "ts")
 
@@ -66,8 +66,8 @@ class CassandraSinkRelation(
   }
 
   val tableName = {
-    val entities = config.entityColumns.mkString("_")
-    sanitizedForCassandra(s"${config.projectName}_${entities}")
+    val entities = config.entityColumns.mkString("__")
+    sanitizedForCassandra(s"${config.projectName}__${entities}")
   }
 
   val keyspace = config.keyspace
@@ -78,20 +78,22 @@ class CassandraSinkRelation(
 
   val columnName = sanitizedForCassandra(config.namespace)
 
+  val schemaRefColumnName = sanitizedForCassandra(s"${config.namespace}__schema_ref")
+
   val schemaTableName = s"${sparkCatalog}.${keyspace}.feast_schema_reference"
 
   def createTable(): Unit = {
 
     sqlContext.sql(s"""
     |CREATE TABLE IF NOT EXISTS ${fullTableReference}
-    |(key BINARY, schema_ref BINARY)
+    |(key BINARY)
     |USING cassandra
     |PARTITIONED BY (key)
     |""".stripMargin)
 
     sqlContext.sql(s"""
          |ALTER TABLE ${fullTableReference}
-         |ADD COLUMNS (${columnName} BINARY)
+         |ADD COLUMNS (${columnName} BINARY, ${schemaRefColumnName} BINARY)
          |""".stripMargin)
 
   }
@@ -113,13 +115,14 @@ class CassandraSinkRelation(
 
     val featureFields = data.schema.fields
       .filterNot(f => isSystemColumn(f.name))
-    val featureSchema    = StructType(featureFields)
+    val featureSchema = StructType(featureFields)
 
     val schema = serializer.convertSchema(featureSchema)
     val key    = serializer.schemaReference(schema)
 
     import sqlContext.sparkSession.implicits._
-    val schemaData = List((key, schema.asInstanceOf[String].getBytes)).toDF("schema_ref", "avro_schema")
+    val schemaData =
+      List((key, schema.asInstanceOf[String].getBytes)).toDF("schema_ref", "avro_schema")
 
     schemaData.writeTo(schemaTableName).append()
   }
