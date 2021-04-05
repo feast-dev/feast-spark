@@ -37,16 +37,16 @@ class CassandraSinkRelation(
     val featureFields = data.schema.fields
       .filterNot(f => isSystemColumn(f.name))
 
-    val featureColumns = featureFields.map(f => col(f.name))
+    val featureColumns = featureFields.map(f => data(f.name))
 
-    val entityColumns = config.entityColumns.map(c => col(c).cast(StringType))
-
-    val schemaReference = serializer.schemaReference(StructType(featureFields))
+    val entityColumns = config.entityColumns.map(c => data(c).cast(StringType))
+    val schema = serializer.convertSchema(StructType(featureFields))
+    val schemaReference = serializer.schemaReference(schema)
 
     val writerWithoutTTL = data
       .select(
         joinEntityKey(struct(entityColumns: _*)).alias("key"),
-        serializer.serializeData(struct(featureColumns: _*)).alias(columnName),
+        serializer.serializeData(schema)(struct(featureColumns: _*)).alias(columnName),
         col(config.timestampColumn).alias("ts")
       )
       .withColumn("schema_ref", lit(schemaReference))
@@ -114,11 +114,12 @@ class CassandraSinkRelation(
     val featureFields = data.schema.fields
       .filterNot(f => isSystemColumn(f.name))
     val featureSchema    = StructType(featureFields)
-    val key              = serializer.schemaReference(featureSchema)
-    val serializedSchema = serializer.serializeSchema(featureSchema).getBytes
+
+    val schema = serializer.convertSchema(featureSchema)
+    val key    = serializer.schemaReference(schema)
 
     import sqlContext.sparkSession.implicits._
-    val schemaData = List((key, serializedSchema)).toDF("schema_ref", "avro_schema")
+    val schemaData = List((key, schema.asInstanceOf[String].getBytes)).toDF("schema_ref", "avro_schema")
 
     schemaData.writeTo(schemaTableName).append()
   }
