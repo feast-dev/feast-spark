@@ -43,7 +43,7 @@ class CassandraSinkRelation(
 
     val schemaReference = serializer.schemaReference(StructType(featureFields))
 
-    data
+    val writerWithoutTTL = data
       .select(
         joinEntityKey(struct(entityColumns: _*)).alias("key"),
         serializer.serializeData(struct(featureColumns: _*)).alias(columnName),
@@ -52,7 +52,13 @@ class CassandraSinkRelation(
       .withColumn("schema_ref", lit(schemaReference))
       .writeTo(fullTableReference)
       .option("writeTime", "ts")
-      .append()
+
+    val writer =
+      if (config.maxAge <= 0)
+        writerWithoutTTL
+      else writerWithoutTTL.option("ttl", config.maxAge.toString)
+
+    writer.append()
   }
 
   def sanitizedForCassandra(expr: String): String = {
