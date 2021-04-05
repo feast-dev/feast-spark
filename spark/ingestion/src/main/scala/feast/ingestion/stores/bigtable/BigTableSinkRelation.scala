@@ -94,15 +94,16 @@ class BigTableSinkRelation(
     val featureFields = data.schema.fields
       .filterNot(f => isSystemColumn(f.name))
 
-    val featureColumns = featureFields.map(f => col(f.name))
+    val featureColumns = featureFields.map(f => data(f.name))
 
-    val entityColumns   = config.entityColumns.map(c => col(c).cast(StringType))
-    val schemaReference = serializer.schemaReference(StructType(featureFields))
+    val entityColumns   = config.entityColumns.map(c => data(c).cast(StringType))
+    val schema          = serializer.convertSchema(StructType(featureFields))
+    val schemaReference = serializer.schemaReference(schema)
 
     data
       .select(
         joinEntityKey(struct(entityColumns: _*)).alias("key"),
-        serializer.serializeData(struct(featureColumns: _*)).alias("value"),
+        serializer.serializeData(schema)(struct(featureColumns: _*)).alias("value"),
         col(config.timestampColumn).alias("ts")
       )
       .where(length(col("key")) > 0)
@@ -117,12 +118,12 @@ class BigTableSinkRelation(
       .filterNot(f => isSystemColumn(f.name))
     val featureSchema = StructType(featureFields)
 
-    val key              = schemaKeyPrefix.getBytes ++ serializer.schemaReference(featureSchema)
-    val serializedSchema = serializer.serializeSchema(featureSchema).getBytes
+    val schema = serializer.convertSchema(featureSchema)
+    val key    = schemaKeyPrefix.getBytes ++ serializer.schemaReference(schema)
 
     val put       = new Put(key)
     val qualifier = "avro".getBytes
-    put.addColumn(metadataColumnFamily.getBytes, qualifier, serializedSchema)
+    put.addColumn(metadataColumnFamily.getBytes, qualifier, schema.asInstanceOf[String].getBytes)
 
     val btConn = BigtableConfiguration.connect(hadoopConfig)
     try {

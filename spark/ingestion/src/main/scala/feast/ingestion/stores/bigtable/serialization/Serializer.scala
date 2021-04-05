@@ -20,9 +20,11 @@ import org.apache.spark.sql.Column
 import org.apache.spark.sql.types.StructType
 
 trait Serializer {
-  def serializeSchema(schema: StructType): String
+  type SchemaType
 
-  def schemaReference(schema: StructType): Array[Byte]
+  def convertSchema(schema: StructType): SchemaType
 
-  def serializeData: Column => Column
+  def schemaReference(schema: SchemaType): Array[Byte]
+
+  def serializeData(schema: SchemaType): Column => Column
 }
