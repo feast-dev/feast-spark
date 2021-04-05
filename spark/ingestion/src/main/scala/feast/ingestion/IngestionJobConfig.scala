@@ -31,7 +31,7 @@ case class BigTableConfig(projectId: String, instanceId: String) extends StoreCo
 case class CassandraConfig(
     connection: CassandraConnection,
     keyspace: String,
-    properties: CassandraWriteProperties
+    properties: CassandraWriteProperties = CassandraWriteProperties(1024, 5)
 ) extends StoreConfig
 case class CassandraConnection(host: String, port: Int)
 case class CassandraWriteProperties(batchSize: Int, concurrentWrite: Int)
