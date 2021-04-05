@@ -119,7 +119,7 @@ class BigTableSinkRelation(
     val featureSchema = StructType(featureFields)
 
     val schema = serializer.convertSchema(featureSchema)
-    val key = schemaKeyPrefix.getBytes ++ serializer.schemaReference(schema)
+    val key    = schemaKeyPrefix.getBytes ++ serializer.schemaReference(schema)
 
     val put       = new Put(key)
     val qualifier = "avro".getBytes
