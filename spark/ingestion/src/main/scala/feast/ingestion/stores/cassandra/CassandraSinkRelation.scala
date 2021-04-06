@@ -70,7 +70,7 @@ class CassandraSinkRelation(
     sanitizedForCassandra(s"${config.projectName}__${entities}")
   }
 
-  val keyspace = config.keyspace
+  val keyspace = sqlContext.sparkContext.getConf.get("feast.store.cassandra.keyspace")
 
   val sparkCatalog = "feast"
 

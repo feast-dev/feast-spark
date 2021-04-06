@@ -42,7 +42,7 @@ object BasePipeline {
         conf
           .set("spark.bigtable.projectId", projectId)
           .set("spark.bigtable.instanceId", instanceId)
-      case CassandraConfig(connection, _, properties) =>
+      case CassandraConfig(connection, keyspace, properties) =>
         conf
           .set("spark.sql.extensions", "com.datastax.spark.connector.CassandraSparkExtensions")
           .set("spark.cassandra.connection.host", connection.host)
@@ -53,6 +53,7 @@ object BasePipeline {
             s"spark.sql.catalog.feast",
             "com.datastax.spark.connector.datasource.CassandraCatalog"
           )
+          .set("feast.store.cassandra.keyspace", keyspace)
     }
 
     jobConfig.metrics match {

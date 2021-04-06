@@ -107,7 +107,7 @@ object StreamingPipeline extends BasePipeline with Serializable {
 
         implicit val rowEncoder: Encoder[Row] = RowEncoder(rowsAfterValidation.schema)
 
-        val writerWithCommonOptions = rowsAfterValidation
+        rowsAfterValidation
           .map(metrics.incrementRead)
           .filter(if (config.doNotIngestInvalidRows) expr("_isValid") else rowValidator.allChecks)
           .write
@@ -121,15 +121,7 @@ object StreamingPipeline extends BasePipeline with Serializable {
           .option("project_name", featureTable.project)
           .option("timestamp_column", config.source.eventTimestampColumn)
           .option("max_age", config.featureTable.maxAge.getOrElse(0L))
-
-        val writer = config.store match {
-          case storeConfig: CassandraConfig =>
-            writerWithCommonOptions
-              .option("keyspace", storeConfig.keyspace)
-          case _ => writerWithCommonOptions
-        }
-
-        writer.save()
+          .save()
 
         config.deadLetterPath match {
           case Some(path) =>

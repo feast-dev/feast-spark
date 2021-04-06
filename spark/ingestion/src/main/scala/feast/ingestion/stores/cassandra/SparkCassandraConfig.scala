@@ -17,7 +17,6 @@
 package feast.ingestion.stores.cassandra
 
 case class SparkCassandraConfig(
-    keyspace: String,
     namespace: String,
     projectName: String,
     entityColumns: Array[String],
@@ -26,7 +25,6 @@ case class SparkCassandraConfig(
 )
 
 object SparkCassandraConfig {
-  val KEYSPACE       = "keyspace"
   val NAMESPACE      = "namespace"
   val ENTITY_COLUMNS = "entity_columns"
   val TS_COLUMN      = "timestamp_column"
@@ -35,7 +33,6 @@ object SparkCassandraConfig {
 
   def parse(parameters: Map[String, String]): SparkCassandraConfig =
     SparkCassandraConfig(
-      keyspace = parameters.getOrElse(KEYSPACE, ""),
       namespace = parameters.getOrElse(NAMESPACE, ""),
       projectName = parameters.getOrElse(PROJECT_NAME, "default"),
       entityColumns = parameters.getOrElse(ENTITY_COLUMNS, "").split(","),

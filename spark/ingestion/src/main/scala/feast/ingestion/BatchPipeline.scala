@@ -76,7 +76,7 @@ object BatchPipeline extends BasePipeline {
       .map(metrics.incrementRead)
       .filter(rowValidator.allChecks)
 
-    val writerWithCommonOptions = validRows.write
+    validRows.write
       .format(config.store match {
         case _: RedisConfig     => "feast.ingestion.stores.redis"
         case _: BigTableConfig  => "feast.ingestion.stores.bigtable"
@@ -87,15 +87,7 @@ object BatchPipeline extends BasePipeline {
       .option("project_name", featureTable.project)
       .option("timestamp_column", config.source.eventTimestampColumn)
       .option("max_age", config.featureTable.maxAge.getOrElse(0L))
-
-    val writer = config.store match {
-      case storeConfig: CassandraConfig =>
-        writerWithCommonOptions
-          .option("keyspace", storeConfig.keyspace)
-      case _ => writerWithCommonOptions
-    }
-
-    writer.save()
+      .save()
 
     config.deadLetterPath foreach { path =>
       projected

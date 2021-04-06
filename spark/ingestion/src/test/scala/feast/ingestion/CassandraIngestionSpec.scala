@@ -40,6 +40,8 @@ class CassandraIngestionSpec extends SparkSpec with ForAllTestContainer {
       .withStartupTimeout(Duration.ofSeconds(120))
   )
 
+  val keyspace = "feast"
+
   override def withSparkConfOverrides(conf: SparkConf): SparkConf = conf
     .set("spark.sql.extensions", "com.datastax.spark.connector.CassandraSparkExtensions")
     .set("spark.cassandra.connection.host", container.host)
@@ -49,9 +51,9 @@ class CassandraIngestionSpec extends SparkSpec with ForAllTestContainer {
       "com.datastax.spark.connector.datasource.CassandraCatalog"
     )
     .set("spark.cassandra.connection.localDC", "datacenter1")
+    .set("feast.store.cassandra.keyspace", keyspace)
 
   trait Scope {
-    val keyspace = "feast"
 
     val config = IngestionJobConfig(
       featureTable = FeatureTable(
@@ -113,7 +115,7 @@ class CassandraIngestionSpec extends SparkSpec with ForAllTestContainer {
       .map { row =>
         val record = decodeAvroValue(
           row.getAs[Array[Byte]](1),
-          avroSchema.get(row.getAs[Array[Byte]](2).toSeq).get
+          avroSchema(row.getAs[Array[Byte]](2).toSeq)
         )
 
         TestRow(
