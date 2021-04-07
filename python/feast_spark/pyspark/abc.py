@@ -333,6 +333,8 @@ class IngestionJobParameters(SparkJobParameters):
         redis_ssl: Optional[bool] = None,
         bigtable_project: Optional[str] = None,
         bigtable_instance: Optional[str] = None,
+        cassandra_host: Optional[str] = None,
+        cassandra_port: Optional[int] = None,
         statsd_host: Optional[str] = None,
         statsd_port: Optional[int] = None,
         deadletter_path: Optional[str] = None,
@@ -347,6 +349,8 @@ class IngestionJobParameters(SparkJobParameters):
         self._redis_ssl = redis_ssl
         self._bigtable_project = bigtable_project
         self._bigtable_instance = bigtable_instance
+        self._cassandra_host = cassandra_host
+        self._cassandra_port = cassandra_port
         self._statsd_host = statsd_host
         self._statsd_port = statsd_port
         self._deadletter_path = deadletter_path
@@ -360,6 +364,9 @@ class IngestionJobParameters(SparkJobParameters):
         return dict(
             project_id=self._bigtable_project, instance_id=self._bigtable_instance
         )
+
+    def _get_cassandra_config(self):
+        return dict(host=self._cassandra_host, port=self._cassandra_port)
 
     def _get_statsd_config(self):
         return (
@@ -394,6 +401,9 @@ class IngestionJobParameters(SparkJobParameters):
         if self._bigtable_project and self._bigtable_instance:
             args.extend(["--bigtable", json.dumps(self._get_bigtable_config())])
 
+        if self._cassandra_host and self._cassandra_port:
+            args.extend(["--cassandra", json.dumps(self._get_cassandra_config())])
+
         if self._get_statsd_config():
             args.extend(["--statsd", json.dumps(self._get_statsd_config())])
 
@@ -427,6 +437,8 @@ class BatchIngestionJobParameters(IngestionJobParameters):
         redis_ssl: Optional[bool],
         bigtable_project: Optional[str],
         bigtable_instance: Optional[str],
+        cassandra_host: Optional[str] = None,
+        cassandra_port: Optional[int] = None,
         statsd_host: Optional[str] = None,
         statsd_port: Optional[int] = None,
         deadletter_path: Optional[str] = None,
@@ -441,6 +453,8 @@ class BatchIngestionJobParameters(IngestionJobParameters):
             redis_ssl,
             bigtable_project,
             bigtable_instance,
+            cassandra_host,
+            cassandra_port,
             statsd_host,
             statsd_port,
             deadletter_path,
@@ -481,6 +495,8 @@ class StreamIngestionJobParameters(IngestionJobParameters):
         redis_ssl: Optional[bool],
         bigtable_project: Optional[str],
         bigtable_instance: Optional[str],
+        cassandra_host: Optional[str] = None,
+        cassandra_port: Optional[int] = None,
         statsd_host: Optional[str] = None,
         statsd_port: Optional[int] = None,
         deadletter_path: Optional[str] = None,
@@ -497,6 +513,8 @@ class StreamIngestionJobParameters(IngestionJobParameters):
             redis_ssl,
             bigtable_project,
             bigtable_instance,
+            cassandra_host,
+            cassandra_port,
             statsd_host,
             statsd_port,
             deadletter_path,
