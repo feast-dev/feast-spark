@@ -276,6 +276,9 @@ def start_offline_to_online_ingestion(
             redis_ssl=client.config.getboolean(opt.REDIS_SSL),
             bigtable_project=client.config.get(opt.BIGTABLE_PROJECT),
             bigtable_instance=client.config.get(opt.BIGTABLE_INSTANCE),
+            cassandra_host=client.config.get(opt.CASSANDRA_HOST),
+            cassandra_port=bool(client.config.get(opt.CASSANDRA_HOST))
+            and client.config.getint(opt.CASSANDRA_PORT),
             statsd_host=(
                 client.config.getboolean(opt.STATSD_ENABLED)
                 and client.config.get(opt.STATSD_HOST)

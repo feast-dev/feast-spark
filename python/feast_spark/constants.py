@@ -114,6 +114,12 @@ class ConfigOptions(metaclass=ConfigMeta):
     #: BigTable Instance ID
     BIGTABLE_INSTANCE: Optional[str] = ""
 
+    #: Cassandra host. Can be a comma separated string
+    CASSANDRA_HOST: Optional[str] = ""
+
+    #: Cassandra port
+    CASSANDRA_PORT: Optional[str] = ""
+
     #: Enable or disable StatsD
     STATSD_ENABLED: str = "False"
 

@@ -42,6 +42,18 @@ object BasePipeline {
         conf
           .set("spark.bigtable.projectId", projectId)
           .set("spark.bigtable.instanceId", instanceId)
+      case CassandraConfig(connection, keyspace, properties) =>
+        conf
+          .set("spark.sql.extensions", "com.datastax.spark.connector.CassandraSparkExtensions")
+          .set("spark.cassandra.connection.host", connection.host)
+          .set("spark.cassandra.connection.port", connection.port.toString)
+          .set("spark.cassandra.output.batch.size.bytes", properties.batchSize.toString)
+          .set("spark.cassandra.output.concurrent.writes", properties.concurrentWrite.toString)
+          .set(
+            s"spark.sql.catalog.feast",
+            "com.datastax.spark.connector.datasource.CassandraCatalog"
+          )
+          .set("feast.store.cassandra.keyspace", keyspace)
     }
 
     jobConfig.metrics match {

@@ -32,7 +32,7 @@ import org.apache.spark.sql.functions.{col, length, struct, udf}
 import org.apache.spark.sql.{DataFrame, Row, SQLContext}
 import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
 import org.apache.spark.sql.types.{StringType, StructType}
-import feast.ingestion.stores.bigtable.serialization.Serializer
+import feast.ingestion.stores.serialization.Serializer
 import org.apache.hadoop.security.UserGroupInformation
 
 class BigTableSinkRelation(

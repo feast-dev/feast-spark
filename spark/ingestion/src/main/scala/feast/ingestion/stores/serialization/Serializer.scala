@@ -14,25 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package feast.ingestion.stores.bigtable.serialization
+package feast.ingestion.stores.serialization
 
-import com.google.common.hash.Hashing
 import org.apache.spark.sql.Column
-import org.apache.spark.sql.avro.SchemaConverters
-import org.apache.spark.sql.avro.functions.to_avro
 import org.apache.spark.sql.types.StructType
 
-class AvroSerializer extends Serializer {
-  override type SchemaType = String
+trait Serializer {
+  type SchemaType
 
-  def convertSchema(schema: StructType): String = {
-    val avroSchema = SchemaConverters.toAvroType(schema)
-    avroSchema.toString
-  }
+  def convertSchema(schema: StructType): SchemaType
 
-  def schemaReference(schema: String): Array[Byte] = {
-    Hashing.murmur3_32().hashBytes(schema.getBytes).asBytes()
-  }
+  def schemaReference(schema: SchemaType): Array[Byte]
 
-  def serializeData(schema: String): Column => Column = to_avro(_, schema)
+  def serializeData(schema: SchemaType): Column => Column
 }

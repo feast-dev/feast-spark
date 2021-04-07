@@ -112,8 +112,9 @@ object StreamingPipeline extends BasePipeline with Serializable {
           .filter(if (config.doNotIngestInvalidRows) expr("_isValid") else rowValidator.allChecks)
           .write
           .format(config.store match {
-            case _: RedisConfig    => "feast.ingestion.stores.redis"
-            case _: BigTableConfig => "feast.ingestion.stores.bigtable"
+            case _: RedisConfig     => "feast.ingestion.stores.redis"
+            case _: BigTableConfig  => "feast.ingestion.stores.bigtable"
+            case _: CassandraConfig => "feast.ingestion.stores.cassandra"
           })
           .option("entity_columns", featureTable.entities.map(_.name).mkString(","))
           .option("namespace", featureTable.name)

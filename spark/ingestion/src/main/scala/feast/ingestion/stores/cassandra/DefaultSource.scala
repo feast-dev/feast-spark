@@ -14,12 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package feast.ingestion.stores.bigtable
+package feast.ingestion.stores.cassandra
 
-import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode}
-import org.apache.spark.sql.sources.{BaseRelation, CreatableRelationProvider}
-import com.google.cloud.bigtable.hbase.BigtableConfiguration
 import feast.ingestion.stores.serialization.AvroSerializer
+import org.apache.spark.sql.sources.{BaseRelation, CreatableRelationProvider}
+import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode}
 
 class DefaultSource extends CreatableRelationProvider {
   override def createRelation(
@@ -28,24 +27,12 @@ class DefaultSource extends CreatableRelationProvider {
       parameters: Map[String, String],
       data: DataFrame
   ): BaseRelation = {
-    val bigtableConf = BigtableConfiguration.configure(
-      sqlContext.getConf("spark.bigtable.projectId"),
-      sqlContext.getConf("spark.bigtable.instanceId")
-    )
-
-    if (sqlContext.getConf("spark.bigtable.emulatorHost", "").nonEmpty) {
-      bigtableConf.set(
-        "google.bigtable.emulator.endpoint.host",
-        sqlContext.getConf("spark.bigtable.emulatorHost")
-      )
-    }
 
     val rel =
-      new BigTableSinkRelation(
+      new CassandraSinkRelation(
         sqlContext,
         new AvroSerializer,
-        SparkBigtableConfig.parse(parameters),
-        bigtableConf
+        SparkCassandraConfig.parse(parameters)
       )
     rel.createTable()
     rel.saveWriteSchema(data)
