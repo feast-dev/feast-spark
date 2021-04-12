@@ -26,6 +26,7 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
 import collection.convert.ImplicitConversions._
+import scala.util.Try
 
 object ProtoReflection {
   def structFieldFor(fd: FieldDescriptor): Option[StructField] = {
@@ -122,11 +123,16 @@ object ProtoReflection {
     }: _*)
   }
 
-  def createMessageParser(protoRegistry: ProtoRegistry, className: String)(
-      bytes: Array[Byte]
-  ): Row = {
-    val protoDescriptor = protoRegistry.getProtoDescriptor(className)
+  def createMessageParser(protoRegistry: ProtoRegistry, className: String): Array[Byte] => Row = {
+    // perform request to registry in driver, so serialized protoRegistry will have cached descriptor
+    protoRegistry.getProtoDescriptor(className)
 
-    messageToRow(protoDescriptor, DynamicMessage.parseFrom(protoDescriptor, bytes))
+    bytes => {
+      val protoDescriptor = protoRegistry.getProtoDescriptor(className)
+
+      Try { DynamicMessage.parseFrom(protoDescriptor, bytes) }
+        .map(messageToRow(protoDescriptor, _))
+        .getOrElse(null)
+    }
   }
 }
