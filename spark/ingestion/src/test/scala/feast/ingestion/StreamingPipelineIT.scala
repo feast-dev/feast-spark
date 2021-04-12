@@ -66,7 +66,11 @@ class StreamingPipelineIT extends SparkSpec with ForAllTestContainer {
     val producer = new KafkaProducer[Void, Array[Byte]](props)
 
     def sendToKafka(topic: String, m: AbstractMessage): Unit = {
-      producer.send(new ProducerRecord[Void, Array[Byte]](topic, null, m.toByteArray)).get
+      sendToKafka(topic, m.toByteArray)
+    }
+
+    def sendToKafka(topic: String, bytes: Array[Byte]): Unit = {
+      producer.send(new ProducerRecord[Void, Array[Byte]](topic, null, bytes)).get
     }
   }
 
@@ -445,5 +449,20 @@ class StreamingPipelineIT extends SparkSpec with ForAllTestContainer {
       )
     )
 
+  }
+
+  "Streaming pipeline" should "correctly handle invalid message from stream" in new Scope {
+    val configWithDeadletter = config.copy(
+      source = kafkaSource,
+      deadLetterPath = Some(generateTempPath("deadletters"))
+    )
+    val query = StreamingPipeline.createPipeline(sparkSession, configWithDeadletter).get
+    query.processAllAvailable() // to init kafka consumer
+
+    sendToKafka(kafkaSource.topic, "invalid".getBytes)
+
+    query.processAllAvailable()
+
+    jedis.keys("*").asScala.toList.length should be(0)
   }
 }
