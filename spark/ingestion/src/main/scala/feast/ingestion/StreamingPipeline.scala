@@ -32,7 +32,7 @@ import org.apache.spark.sql.avro.functions.from_avro
 import org.apache.spark.sql.catalyst.encoders.RowEncoder
 import org.apache.spark.sql.execution.python.UserDefinedPythonFunction
 import org.apache.spark.sql.execution.streaming.ProcessingTimeTrigger
-import org.apache.spark.sql.functions.{expr, struct, udf}
+import org.apache.spark.sql.functions.{expr, lit, struct, udf, coalesce}
 import org.apache.spark.sql.streaming.StreamingQuery
 import org.apache.spark.sql.types.BooleanType
 import org.apache.spark.{SparkEnv, SparkFiles}
@@ -98,7 +98,7 @@ object StreamingPipeline extends BasePipeline with Serializable {
           val columns = batchDF.columns.map(batchDF(_))
           batchDF.withColumn(
             "_isValid",
-            rowValidator.allChecks && validationUDF.get(struct(columns: _*))
+            rowValidator.allChecks && coalesce(validationUDF.get(struct(columns: _*)), lit(false))
           )
         } else {
           batchDF.withColumn("_isValid", rowValidator.allChecks)

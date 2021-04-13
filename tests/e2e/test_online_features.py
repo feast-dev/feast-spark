@@ -211,7 +211,7 @@ def test_list_jobs_long_table_name(
     entity = Entity(name="s2id", description="S2id", value_type=ValueType.INT64,)
 
     feature_table = FeatureTable(
-        name="just1a2featuretable3with4a5really6really7really8really9really10really11really12long13name",
+        name="just1a2featuretable3with4a5really6really7really8really9really10",
         entities=["s2id"],
         features=[Feature("unique_drivers", ValueType.INT64)],
         batch_source=batch_source,
