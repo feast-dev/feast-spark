@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-pip install "s3fs" "boto3" "urllib3>=1.25.4"
+pip install "s3fs" "aiobotocore==1.2.2" "boto3" "urllib3>=1.25.4"
 
 export DISABLE_FEAST_SERVICE_FIXTURES=1
 export DISABLE_SERVICE_FIXTURES=1
