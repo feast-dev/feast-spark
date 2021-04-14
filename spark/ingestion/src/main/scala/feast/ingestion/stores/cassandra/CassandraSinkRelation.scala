@@ -21,7 +21,9 @@ import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions.{col, lit, struct, udf}
 import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
 import org.apache.spark.sql.types.{StringType, StructType}
-import org.apache.spark.sql.{DataFrame, Row, SQLContext}
+import org.apache.spark.sql.{AnalysisException, DataFrame, Row, SQLContext}
+
+import scala.util.{Failure, Success, Try}
 
 class CassandraSinkRelation(
     override val sqlContext: SQLContext,
@@ -91,10 +93,13 @@ class CassandraSinkRelation(
     |PARTITIONED BY (key)
     |""".stripMargin)
 
-    sqlContext.sql(s"""
+    Try(sqlContext.sql(s"""
          |ALTER TABLE ${fullTableReference}
          |ADD COLUMNS (${columnName} BINARY, ${schemaRefColumnName} BINARY)
-         |""".stripMargin)
+         |""".stripMargin)) match {
+      case Success(_) | Failure(_: AnalysisException) =>
+      case Failure(e)                                 => throw e
+    }
 
   }
 

@@ -16,6 +16,7 @@
  */
 package feast.ingestion
 
+import com.datastax.spark.connector.cql.CassandraConnector
 import com.dimafeng.testcontainers.{ForAllTestContainer, GenericContainer}
 import feast.ingestion.helpers.DataHelper.{generateDistinctRows, rowGenerator, storeAsParquet}
 import feast.ingestion.helpers.TestRow
@@ -76,6 +77,14 @@ class CassandraIngestionSpec extends SparkSpec with ForAllTestContainer {
 
     val gen = rowGenerator(DateTime.parse("2020-08-01"), DateTime.parse("2020-09-01"))
 
+    def resetDatabase(): Unit = {
+      val connector = CassandraConnector(sparkSession.sparkContext.getConf)
+      connector.withSessionDo(session => session.execute("DROP KEYSPACE IF EXISTS feast"))
+      sparkSession.sql(
+        "CREATE DATABASE feast.feast WITH DBPROPERTIES (class='SimpleStrategy',replication_factor='1')"
+      )
+    }
+
   }
 
   def decodeAvroValue(input: Array[Byte], jsonFormatSchema: String): GenericRecord = {
@@ -89,9 +98,7 @@ class CassandraIngestionSpec extends SparkSpec with ForAllTestContainer {
   }
 
   "Dataset" should "be ingested in cassandra" in new Scope {
-    sparkSession.sql(
-      "CREATE DATABASE IF NOT EXISTS feast.feast WITH DBPROPERTIES (class='SimpleStrategy',replication_factor='1')"
-    )
+    resetDatabase()
     val rows     = generateDistinctRows(gen, 1000, (_: TestRow).customer).filterNot(_.customer.isEmpty)
     val tempPath = storeAsParquet(sparkSession, rows)
     val configWithOfflineSource = config.copy(
@@ -129,4 +136,19 @@ class CassandraIngestionSpec extends SparkSpec with ForAllTestContainer {
     storedRows should contain allElementsOf rows
 
   }
+
+  "Cassandra schema update" should "not fail when column exists" in new Scope {
+    resetDatabase()
+    val rows     = generateDistinctRows(gen, 1, (_: TestRow).customer).filterNot(_.customer.isEmpty)
+    val tempPath = storeAsParquet(sparkSession, rows)
+    val configWithOfflineSource = config.copy(
+      source = FileSource(tempPath, Map.empty, "eventTimestamp")
+    )
+
+    for (_ <- 0 to 2) {
+      BatchPipeline.createPipeline(sparkSession, configWithOfflineSource)
+    }
+
+  }
+
 }
