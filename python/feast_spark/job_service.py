@@ -102,6 +102,12 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
         self, request: StartOfflineToOnlineIngestionJobRequest, context
     ):
         """Start job to ingest data from offline store into online store"""
+
+        if not self.client.is_whitelisted(request.project):
+            raise ValueError(
+                f"Project {request.project} is not whitelisted. Please contact your Feast administrator to whitelist it."
+            )
+
         feature_table = self.client.feature_store.get_feature_table(
             request.table_name, request.project
         )
@@ -125,6 +131,12 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
 
     def GetHistoricalFeatures(self, request: GetHistoricalFeaturesRequest, context):
         """Produce a training dataset, return a job id that will provide a file reference"""
+
+        if not self.client.is_whitelisted(request.project):
+            raise ValueError(
+                f"Project {request.project} is not whitelisted. Please contact your Feast administrator to whitelist it."
+            )
+
         job = start_historical_feature_retrieval_job(
             client=self.client,
             project=request.project,
@@ -151,6 +163,11 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
         self, request: StartStreamToOnlineIngestionJobRequest, context
     ):
         """Start job to ingest data from stream into online store"""
+
+        if not self.client.is_whitelisted(request.project):
+            raise ValueError(
+                f"Project {request.project} is not whitelisted. Please contact your Feast administrator to whitelist it."
+            )
 
         feature_table = self.client.feature_store.get_feature_table(
             request.table_name, request.project
@@ -196,6 +213,12 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
 
     def ListJobs(self, request, context):
         """List all types of jobs"""
+
+        if not self.client.is_whitelisted(request.project):
+            raise ValueError(
+                f"Project {request.project} is not whitelisted. Please contact your Feast administrator to whitelist it."
+            )
+
         jobs = list_jobs(
             include_terminated=request.include_terminated,
             project=request.project,
@@ -326,6 +349,10 @@ def ensure_stream_ingestion_jobs(client: Client, all_projects: bool):
         if all_projects
         else [client.feature_store.project]
     )
+    if client._whitelisted_projects:
+        projects = [
+            project for project in projects if project in client._whitelisted_projects
+        ]
 
     expected_job_hash_to_tables = _get_expected_job_hash_to_tables(client, projects)
 
