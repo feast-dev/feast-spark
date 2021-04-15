@@ -39,7 +39,7 @@ AUTHOR = "Feast"
 REQUIRES_PYTHON = ">=3.6.0"
 
 REQUIRED = [
-    "feast==0.9.5",
+    "feast==0.9.5.1",
     "Click==7.*",
     "google-api-core==1.22.4",
     "google-cloud-bigquery==1.18.*",
