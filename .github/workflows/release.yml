@@ -161,6 +161,6 @@ jobs:
       - name: Publish Python Package
         run: |
           cd python/
-          python3 -m pip install --user --upgrade setuptools wheel twine grpcio-tools
+          python3 -m pip install --user --upgrade setuptools wheel twine grpcio-tools mypy-protobuf
           python3 setup.py sdist bdist_wheel
           python3 -m twine upload --verbose dist/*
