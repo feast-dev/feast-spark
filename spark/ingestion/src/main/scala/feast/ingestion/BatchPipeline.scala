@@ -62,7 +62,11 @@ object BatchPipeline extends BasePipeline {
         )
     }
 
-    val projected = input.select(projection: _*).cache()
+    val projected = if (config.deadLetterPath.nonEmpty) {
+      input.select(projection: _*).cache()
+    } else {
+      input.select(projection: _*)
+    }
 
     TypeCheck.allTypesMatch(projected.schema, featureTable) match {
       case Some(error) =>
