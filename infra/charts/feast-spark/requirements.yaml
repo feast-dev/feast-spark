@@ -1,6 +1,6 @@
 dependencies:
   - name: feast-jobservice
-    version: 0.1.0-SNAPSHOT
+    version: 0.2.0
     condition: feast-jobservice.enabled
   - name: prometheus-statsd-exporter
     version: 0.1.2

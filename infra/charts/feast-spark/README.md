@@ -1,6 +1,6 @@
 # feast-spark
 
-Feast Extension for running Ingestion on Spark 0.1.0-SNAPSHOT
+Feast Extension for running Ingestion on Spark 0.2.0
 
 ## Installation
 
@@ -10,7 +10,7 @@ https://docs.feast.dev/v/master/getting-started/deploying-feast/kubernetes
 
 | Repository | Name | Version |
 |------------|------|---------|
-|  | feast-jobservice | 0.1.0-SNAPSHOT |
+|  | feast-jobservice | 0.2.0 |
 |  | prometheus-statsd-exporter | 0.1.2 |
 
 ## Values
