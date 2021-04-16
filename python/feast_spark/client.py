@@ -71,13 +71,6 @@ class Client:
         return self.config.exists(opt.JOB_SERVICE_URL)
 
     @property
-    def _whitelisted_projects(self) -> Optional[List[str]]:
-        if self.config.exists(opt.WHITELISTED_PROJECTS):
-            whitelisted_projects = self.config.get(opt.WHITELISTED_PROJECTS)
-            return whitelisted_projects.split(",")
-        return None
-
-    @property
     def _job_service(self):
         """
         Creates or returns the gRPC Feast Job Service Stub
@@ -99,12 +92,6 @@ class Client:
             )
             self._job_service_service_stub = JobServiceStub(channel)
         return self._job_service_service_stub
-
-    def is_whitelisted(self, project: str):
-        # Whitelisted projects not specified, allow all projects
-        if not self._whitelisted_projects:
-            return True
-        return project in self._whitelisted_projects
 
     def get_historical_features(
         self,
