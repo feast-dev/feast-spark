@@ -124,12 +124,13 @@ object ProtoReflection {
   }
 
   def createMessageParser(protoRegistry: ProtoRegistry, className: String): Array[Byte] => Row = {
-    bytes => {
-      val protoDescriptor = protoRegistry.getProtoDescriptor(className)
+    bytes =>
+      {
+        val protoDescriptor = protoRegistry.getProtoDescriptor(className)
 
-      Try { DynamicMessage.parseFrom(protoDescriptor, bytes) }
-        .map(messageToRow(protoDescriptor, _))
-        .getOrElse(null)
-    }
+        Try { DynamicMessage.parseFrom(protoDescriptor, bytes) }
+          .map(messageToRow(protoDescriptor, _))
+          .getOrElse(null)
+      }
   }
 }
