@@ -362,12 +362,12 @@ def ensure_stream_ingestion_jobs(client: Client, all_projects: bool):
         if all_projects
         else [client.feature_store.project]
     )
+    filtered_projects = []
     if client._job_service._whitelisted_projects:
-        projects = [
-            project
-            for project in projects
-            if project in client._job_service._whitelisted_projects
-        ]
+        for project in projects:
+            if project in client._job_service._whitelisted_projects():
+                filtered_projects.append(project)
+    projects = filtered_projects
 
     expected_job_hash_to_tables = _get_expected_job_hash_to_tables(client, projects)
 
