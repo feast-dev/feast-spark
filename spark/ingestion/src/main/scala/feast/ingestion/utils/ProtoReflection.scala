@@ -124,9 +124,6 @@ object ProtoReflection {
   }
 
   def createMessageParser(protoRegistry: ProtoRegistry, className: String): Array[Byte] => Row = {
-    // perform request to registry in driver, so serialized protoRegistry will have cached descriptor
-    protoRegistry.getProtoDescriptor(className)
-
     bytes => {
       val protoDescriptor = protoRegistry.getProtoDescriptor(className)
 
