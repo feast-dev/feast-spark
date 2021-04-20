@@ -30,6 +30,7 @@ class SparkSpec extends UnitSpec with BeforeAndAfter {
     val sparkConf = new SparkConf()
       .setMaster("local[4]")
       .setAppName("Testing")
+      .set("spark.driver.bindAddress", "localhost")
       .set("spark.default.parallelism", "8")
       .set(
         "spark.metrics.conf.*.sink.statsd.class",

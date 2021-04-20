@@ -5,7 +5,7 @@ import threading
 import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
-from typing import Dict, List, Tuple, cast
+from typing import Dict, List, Optional, Tuple, cast
 
 import grpc
 from google.api_core.exceptions import FailedPrecondition
@@ -98,10 +98,29 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
     def __init__(self, client: Client):
         self.client = client
 
+    @property
+    def _whitelisted_projects(self) -> Optional[List[str]]:
+        if self.client.config.exists(opt.WHITELISTED_PROJECTS):
+            whitelisted_projects = self.client.config.get(opt.WHITELISTED_PROJECTS)
+            return whitelisted_projects.split(",")
+        return None
+
+    def is_whitelisted(self, project: str):
+        # Whitelisted projects not specified, allow all projects
+        if not self._whitelisted_projects:
+            return True
+        return project in self._whitelisted_projects
+
     def StartOfflineToOnlineIngestionJob(
         self, request: StartOfflineToOnlineIngestionJobRequest, context
     ):
         """Start job to ingest data from offline store into online store"""
+
+        if not self.is_whitelisted(request.project):
+            raise ValueError(
+                f"Project {request.project} is not whitelisted. Please contact your Feast administrator to whitelist it."
+            )
+
         feature_table = self.client.feature_store.get_feature_table(
             request.table_name, request.project
         )
@@ -125,6 +144,12 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
 
     def GetHistoricalFeatures(self, request: GetHistoricalFeaturesRequest, context):
         """Produce a training dataset, return a job id that will provide a file reference"""
+
+        if not self.is_whitelisted(request.project):
+            raise ValueError(
+                f"Project {request.project} is not whitelisted. Please contact your Feast administrator to whitelist it."
+            )
+
         job = start_historical_feature_retrieval_job(
             client=self.client,
             project=request.project,
@@ -151,6 +176,11 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
         self, request: StartStreamToOnlineIngestionJobRequest, context
     ):
         """Start job to ingest data from stream into online store"""
+
+        if not self.is_whitelisted(request.project):
+            raise ValueError(
+                f"Project {request.project} is not whitelisted. Please contact your Feast administrator to whitelist it."
+            )
 
         feature_table = self.client.feature_store.get_feature_table(
             request.table_name, request.project
@@ -196,6 +226,12 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
 
     def ListJobs(self, request, context):
         """List all types of jobs"""
+
+        if not self.is_whitelisted(request.project):
+            raise ValueError(
+                f"Project {request.project} is not whitelisted. Please contact your Feast administrator to whitelist it."
+            )
+
         jobs = list_jobs(
             include_terminated=request.include_terminated,
             project=request.project,
@@ -326,6 +362,13 @@ def ensure_stream_ingestion_jobs(client: Client, all_projects: bool):
         if all_projects
         else [client.feature_store.project]
     )
+    if client.config.exists(opt.WHITELISTED_PROJECTS):
+        whitelisted_projects = client.config.get(opt.WHITELISTED_PROJECTS)
+        if whitelisted_projects:
+            whitelisted_projects = whitelisted_projects.split(",")
+            projects = [
+                project for project in projects if project in whitelisted_projects
+            ]
 
     expected_job_hash_to_tables = _get_expected_job_hash_to_tables(client, projects)
 

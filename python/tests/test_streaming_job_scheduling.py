@@ -19,8 +19,11 @@ from feast_spark.pyspark.launcher import _feature_table_to_argument, _source_to_
 
 @pytest.fixture
 def feast_client():
-    c = FeastClient(job_service_pause_between_jobs=0)
-    c.list_projects = Mock(return_value=["default"])
+    c = FeastClient(
+        job_service_pause_between_jobs=0,
+        options={"whitelisted_projects": "default,ride"},
+    )
+    c.list_projects = Mock(return_value=["default", "ride", "invalid_project"])
     c.list_feature_tables = Mock()
 
     yield c
@@ -51,15 +54,18 @@ def feature_table():
 
 
 class SimpleStreamingIngestionJob(StreamIngestionJob):
-    def __init__(self, id: str, feature_table: FeatureTable, status: SparkJobStatus):
+    def __init__(
+        self, id: str, project: str, feature_table: FeatureTable, status: SparkJobStatus
+    ):
         self._id = id
         self._feature_table = feature_table
+        self._project = project
         self._status = status
         self._hash = hash
 
     def get_hash(self) -> str:
         source = _source_to_argument(self._feature_table.stream_source, Config())
-        feature_table = _feature_table_to_argument(None, "default", self._feature_table)  # type: ignore
+        feature_table = _feature_table_to_argument(None, self._project, self._feature_table)  # type: ignore
 
         job_json = json.dumps(
             {"source": source, "feature_table": feature_table}, sort_keys=True,
@@ -90,18 +96,21 @@ def test_new_job_creation(spark_client, feature_table):
 
     ensure_stream_ingestion_jobs(spark_client, all_projects=True)
 
-    spark_client.start_stream_to_online_ingestion.assert_called_once_with(
-        feature_table, [], project="default"
-    )
+    assert spark_client.start_stream_to_online_ingestion.call_count == 2
 
 
 def test_no_changes(spark_client, feature_table):
     """ Feature Table spec is the same """
 
-    job = SimpleStreamingIngestionJob("", feature_table, SparkJobStatus.IN_PROGRESS)
+    job = SimpleStreamingIngestionJob(
+        "", "default", feature_table, SparkJobStatus.IN_PROGRESS
+    )
+    job2 = SimpleStreamingIngestionJob(
+        "", "ride", feature_table, SparkJobStatus.IN_PROGRESS
+    )
 
     spark_client.feature_store.list_feature_tables.return_value = [feature_table]
-    spark_client.list_jobs.return_value = [job]
+    spark_client.list_jobs.return_value = [job, job2]
 
     ensure_stream_ingestion_jobs(spark_client, all_projects=True)
 
@@ -114,7 +123,9 @@ def test_update_existing_job(spark_client, feature_table):
 
     new_ft = copy.deepcopy(feature_table)
     new_ft.stream_source._kafka_options.topic = "new_t"
-    job = SimpleStreamingIngestionJob("", feature_table, SparkJobStatus.IN_PROGRESS)
+    job = SimpleStreamingIngestionJob(
+        "", "default", feature_table, SparkJobStatus.IN_PROGRESS
+    )
 
     spark_client.feature_store.list_feature_tables.return_value = [new_ft]
     spark_client.list_jobs.return_value = [job]
@@ -122,9 +133,7 @@ def test_update_existing_job(spark_client, feature_table):
     ensure_stream_ingestion_jobs(spark_client, all_projects=True)
 
     assert job.get_status() == SparkJobStatus.COMPLETED
-    spark_client.start_stream_to_online_ingestion.assert_called_once_with(
-        new_ft, [], project="default"
-    )
+    assert spark_client.start_stream_to_online_ingestion.call_count == 2
 
 
 def test_not_cancelling_starting_job(spark_client, feature_table):
@@ -132,7 +141,9 @@ def test_not_cancelling_starting_job(spark_client, feature_table):
 
     new_ft = copy.deepcopy(feature_table)
     new_ft.stream_source._kafka_options.topic = "new_t"
-    job = SimpleStreamingIngestionJob("", feature_table, SparkJobStatus.STARTING)
+    job = SimpleStreamingIngestionJob(
+        "", "default", feature_table, SparkJobStatus.STARTING
+    )
 
     spark_client.feature_store.list_feature_tables.return_value = [new_ft]
     spark_client.list_jobs.return_value = [job]
@@ -140,15 +151,15 @@ def test_not_cancelling_starting_job(spark_client, feature_table):
     ensure_stream_ingestion_jobs(spark_client, all_projects=True)
 
     assert job.get_status() == SparkJobStatus.STARTING
-    spark_client.start_stream_to_online_ingestion.assert_called_once_with(
-        new_ft, [], project="default"
-    )
+    assert spark_client.start_stream_to_online_ingestion.call_count == 2
 
 
 def test_not_retrying_failed_job(spark_client, feature_table):
     """ Job has failed on previous try """
 
-    job = SimpleStreamingIngestionJob("", feature_table, SparkJobStatus.FAILED)
+    job = SimpleStreamingIngestionJob(
+        "", "default", feature_table, SparkJobStatus.FAILED
+    )
 
     spark_client.feature_store.list_feature_tables.return_value = [feature_table]
     spark_client.list_jobs.return_value = [job]
@@ -157,21 +168,23 @@ def test_not_retrying_failed_job(spark_client, feature_table):
 
     spark_client.list_jobs.assert_called_once_with(include_terminated=True)
     assert job.get_status() == SparkJobStatus.FAILED
-    spark_client.start_stream_to_online_ingestion.assert_not_called()
+    spark_client.start_stream_to_online_ingestion.assert_called_once_with(
+        feature_table, [], project="ride"
+    )
 
 
 def test_restarting_completed_job(spark_client, feature_table):
     """ Job has succesfully finished on previous try """
-    job = SimpleStreamingIngestionJob("", feature_table, SparkJobStatus.COMPLETED)
+    job = SimpleStreamingIngestionJob(
+        "", "default", feature_table, SparkJobStatus.COMPLETED
+    )
 
     spark_client.feature_store.list_feature_tables.return_value = [feature_table]
     spark_client.list_jobs.return_value = [job]
 
     ensure_stream_ingestion_jobs(spark_client, all_projects=True)
 
-    spark_client.start_stream_to_online_ingestion.assert_called_once_with(
-        feature_table, [], project="default"
-    )
+    assert spark_client.start_stream_to_online_ingestion.call_count == 2
 
 
 def test_stopping_running_job(spark_client, feature_table):
@@ -179,7 +192,9 @@ def test_stopping_running_job(spark_client, feature_table):
     new_ft = copy.deepcopy(feature_table)
     new_ft.stream_source = None
 
-    job = SimpleStreamingIngestionJob("", feature_table, SparkJobStatus.IN_PROGRESS)
+    job = SimpleStreamingIngestionJob(
+        "", "default", feature_table, SparkJobStatus.IN_PROGRESS
+    )
 
     spark_client.feature_store.list_feature_tables.return_value = [new_ft]
     spark_client.list_jobs.return_value = [job]
@@ -194,7 +209,9 @@ def test_restarting_failed_jobs(feature_table):
     """ If configured - restart failed jobs """
 
     feast_client = FeastClient(
-        job_service_pause_between_jobs=0, job_service_retry_failed_jobs=True
+        job_service_pause_between_jobs=0,
+        job_service_retry_failed_jobs=True,
+        options={"whitelisted_projects": "default,ride"},
     )
     feast_client.list_projects = Mock(return_value=["default"])
     feast_client.list_feature_tables = Mock()
