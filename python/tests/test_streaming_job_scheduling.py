@@ -2,7 +2,7 @@ import copy
 import hashlib
 import json
 from datetime import datetime
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
@@ -19,7 +19,10 @@ from feast_spark.pyspark.launcher import _feature_table_to_argument, _source_to_
 
 @pytest.fixture
 def feast_client():
-    c = FeastClient(job_service_pause_between_jobs=0)
+    c = FeastClient(
+        job_service_pause_between_jobs=0,
+        options={"whitelisted_projects": "default,ride"},
+    )
     c.list_projects = Mock(return_value=["default", "ride", "invalid_project"])
     c.list_feature_tables = Mock()
 
@@ -28,14 +31,11 @@ def feast_client():
 
 @pytest.fixture
 def spark_client(feast_client):
-    with patch("feast_spark.client.Client._job_service") as job_service:
-        job_service._whitelisted_projects.return_value = ["default", "ride"]
+    c = Client(feast_client)
+    c.list_jobs = Mock()
+    c.start_stream_to_online_ingestion = Mock()
 
-        c = Client(feast_client)
-        c.list_jobs = Mock()
-        c.start_stream_to_online_ingestion = Mock()
-
-        yield c
+    yield c
 
 
 @pytest.fixture
@@ -208,24 +208,24 @@ def test_stopping_running_job(spark_client, feature_table):
 def test_restarting_failed_jobs(feature_table):
     """ If configured - restart failed jobs """
 
-    with patch("feast_spark.client.Client._job_service") as job_service:
-        feast_client = FeastClient(
-            job_service_pause_between_jobs=0, job_service_retry_failed_jobs=True
-        )
-        feast_client.list_projects = Mock(return_value=["default"])
-        feast_client.list_feature_tables = Mock()
+    feast_client = FeastClient(
+        job_service_pause_between_jobs=0,
+        job_service_retry_failed_jobs=True,
+        options={"whitelisted_projects": "default,ride"},
+    )
+    feast_client.list_projects = Mock(return_value=["default"])
+    feast_client.list_feature_tables = Mock()
 
-        spark_client = Client(feast_client)
-        spark_client.list_jobs = Mock()
-        spark_client.start_stream_to_online_ingestion = Mock()
-        job_service._whitelisted_projects.return_value = ["default"]
+    spark_client = Client(feast_client)
+    spark_client.list_jobs = Mock()
+    spark_client.start_stream_to_online_ingestion = Mock()
 
-        spark_client.feature_store.list_feature_tables.return_value = [feature_table]
-        spark_client.list_jobs.return_value = []
+    spark_client.feature_store.list_feature_tables.return_value = [feature_table]
+    spark_client.list_jobs.return_value = []
 
-        ensure_stream_ingestion_jobs(spark_client, all_projects=True)
+    ensure_stream_ingestion_jobs(spark_client, all_projects=True)
 
-        spark_client.list_jobs.assert_called_once_with(include_terminated=False)
-        spark_client.start_stream_to_online_ingestion.assert_called_once_with(
-            feature_table, [], project="default"
-        )
+    spark_client.list_jobs.assert_called_once_with(include_terminated=False)
+    spark_client.start_stream_to_online_ingestion.assert_called_once_with(
+        feature_table, [], project="default"
+    )
