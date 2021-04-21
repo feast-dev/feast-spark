@@ -17,10 +17,10 @@
 package feast.ingestion
 
 import feast.ingestion.utils.JsonUtils
-import org.joda.time.DateTime
+import org.joda.time.{DateTime, DateTimeZone}
 import org.json4s._
-import org.json4s.jackson.JsonMethods.{parse => parseJSON}
 import org.json4s.ext.JavaEnumNameSerializer
+import org.json4s.jackson.JsonMethods.{parse => parseJSON}
 
 object IngestionJob {
   import Modes._
@@ -77,6 +77,15 @@ object IngestionJob {
     opt[String](name = "end")
       .action((x, c) => c.copy(endTime = DateTime.parse(x)))
       .text("End timestamp for offline ingestion")
+
+    opt[String](name = "ingestion_timespan")
+      .action((x, c) => {
+        val currentTimeUTC = new DateTime(DateTimeZone.UTC);
+        val startTime      = currentTimeUTC.withTimeAtStartOfDay().minusDays(x.toInt - 1)
+        val endTime        = currentTimeUTC.withTimeAtStartOfDay().plusDays(1)
+        c.copy(startTime = startTime, endTime = endTime)
+      })
+      .text("Ingestion timespan")
 
     opt[String](name = "redis")
       .action((x, c) => c.copy(store = parseJSON(x).extract[RedisConfig]))

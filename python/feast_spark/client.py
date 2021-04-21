@@ -6,6 +6,7 @@ from itertools import groupby
 from typing import List, Optional, Union, cast
 
 import pandas as pd
+from croniter import croniter
 
 import feast
 from feast.config import Config
@@ -21,6 +22,7 @@ from feast_spark.api.JobService_pb2 import (
     GetHistoricalFeaturesRequest,
     GetJobRequest,
     ListJobsRequest,
+    ScheduleOfflineToOnlineIngestionJobRequest,
     StartOfflineToOnlineIngestionJobRequest,
     StartStreamToOnlineIngestionJobRequest,
 )
@@ -30,6 +32,7 @@ from feast_spark.pyspark.abc import RetrievalJob, SparkJob
 from feast_spark.pyspark.launcher import (
     get_job_by_id,
     list_jobs,
+    schedule_offline_to_online_ingestion,
     start_historical_feature_retrieval_job,
     start_historical_feature_retrieval_spark_session,
     start_offline_to_online_ingestion,
@@ -38,6 +41,7 @@ from feast_spark.pyspark.launcher import (
 from feast_spark.remote_job import (
     RemoteBatchIngestionJob,
     RemoteRetrievalJob,
+    RemoteScheduledBatchIngestionJob,
     RemoteStreamIngestionJob,
     get_remote_job_from_proto,
 )
@@ -297,6 +301,51 @@ class Client:
             request.end_date.FromDatetime(end)
             response = self._job_service.StartOfflineToOnlineIngestionJob(request)
             return RemoteBatchIngestionJob(
+                self._job_service,
+                self._extra_grpc_params,
+                response.id,
+                feature_table.name,
+                response.job_start_time.ToDatetime(),
+                response.log_uri,
+            )
+
+    def schedule_offline_to_online_ingestion(
+        self,
+        feature_table: feast.FeatureTable,
+        ingestion_timespan: int,
+        cron_schedule: str,
+    ) -> SparkJob:
+        """
+        Launch Scheduled Ingestion Job from Batch Source to Online Store for given feature table
+
+        Args:
+            feature_table:  FeatureTable that will be ingested into the online store
+            ingestion_timespan: Days of data which will be ingestion per job. The boundaries
+                on which to filter the source are [end of day of execution date - ingestion_timespan (days) ,
+                end of day of execution date)
+            cron_schedule: Cron schedule expression
+
+        Returns: Spark Job Proxy object
+        """
+        if not croniter.is_valid(cron_schedule):
+            raise RuntimeError(f"{cron_schedule} is not a valid cron expression")
+        if not self._use_job_service:
+            return schedule_offline_to_online_ingestion(
+                client=self,
+                project=self._feast.project,
+                feature_table=feature_table,
+                ingestion_timespan=ingestion_timespan,
+                cron_schedule=cron_schedule,
+            )
+        else:
+            request = ScheduleOfflineToOnlineIngestionJobRequest(
+                project=self._feast.project,
+                table_name=feature_table.name,
+                ingestion_timespan=ingestion_timespan,
+                cron_schedule=cron_schedule,
+            )
+            response = self._job_service.ScheduleOfflineToOnlineIngestionJob(request)
+            return RemoteScheduledBatchIngestionJob(
                 self._job_service,
                 self._extra_grpc_params,
                 response.id,

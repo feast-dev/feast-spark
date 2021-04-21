@@ -14,6 +14,8 @@ from feast_spark.pyspark.abc import (
     JobLauncher,
     RetrievalJob,
     RetrievalJobParameters,
+    ScheduledBatchIngestionJob,
+    ScheduledBatchIngestionJobParameters,
     SparkJob,
     SparkJobFailure,
     SparkJobParameters,
@@ -418,6 +420,13 @@ class DataprocClusterLauncher(JobLauncher):
             cancel_fn=cancel_fn,
             project=self.project_id,
             region=self.region,
+        )
+
+    def schedule_offline_to_online_ingestion(
+        self, ingestion_job_params: ScheduledBatchIngestionJobParameters
+    ) -> ScheduledBatchIngestionJob:
+        raise NotImplementedError(
+            "Schedule spark jobs are not supported by dataproc launcher"
         )
 
     def start_stream_to_online_ingestion(

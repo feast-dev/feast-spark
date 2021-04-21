@@ -29,6 +29,12 @@ service JobService {
     // Start job to ingest data from offline store into online store
     rpc StartOfflineToOnlineIngestionJob (StartOfflineToOnlineIngestionJobRequest) returns (StartOfflineToOnlineIngestionJobResponse);
 
+    // Start scheduled job to ingest data from offline store into online store
+    rpc ScheduleOfflineToOnlineIngestionJob (ScheduleOfflineToOnlineIngestionJobRequest) returns (ScheduleOfflineToOnlineIngestionJobResponse);
+
+    // Unschedule job to ingest data from offline store into online store
+    rpc UnscheduleOfflineToOnlineIngestionJob(UnscheduleOfflineToOnlineIngestionJobRequest) returns (UnscheduleOfflineToOnlineIngestionJobResponse);
+
     // Produce a training dataset, return a job id that will provide a file reference
     rpc GetHistoricalFeatures (GetHistoricalFeaturesRequest) returns (GetHistoricalFeaturesResponse);
 
@@ -126,6 +132,41 @@ message StartOfflineToOnlineIngestionJobResponse {
   // Path to Spark job logs, if available
   string log_uri = 4;
 }
+
+message ScheduleOfflineToOnlineIngestionJobRequest {
+    // Feature table to ingest
+    string project = 1;
+    string table_name = 2;
+
+
+    // Timespan of the ingested data per job, in days. The data from  end of the day - timespan till end of the day will be ingested. Eg. if the job execution date is 10/4/2021, and ingestion timespan is 2, then data from 9/4/2021 00:00 to 10/4/2021 23:59 (inclusive) will be ingested.
+    int32 ingestion_timespan = 3;
+
+   // Crontab string. Eg. 0 13 * * *
+    string cron_schedule = 4;
+
+}
+
+message ScheduleOfflineToOnlineIngestionJobResponse {
+  // Job ID assigned by Feast
+  string id = 1;
+
+  // Job start time
+  google.protobuf.Timestamp job_start_time = 2;
+
+  // Feature table associated with the job
+  string table_name = 3;
+
+  // Path to Spark job logs, if available
+  string log_uri = 4;
+}
+
+message UnscheduleOfflineToOnlineIngestionJobRequest {
+  string project = 1;
+  string feature_table = 2;
+}
+
+message UnscheduleOfflineToOnlineIngestionJobResponse {}
 
 message GetHistoricalFeaturesRequest {
   // List of feature references that are being retrieved

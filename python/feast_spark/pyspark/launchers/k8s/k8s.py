@@ -18,6 +18,8 @@ from feast_spark.pyspark.abc import (
     JobLauncher,
     RetrievalJob,
     RetrievalJobParameters,
+    ScheduledBatchIngestionJob,
+    ScheduledBatchIngestionJobParameters,
     SparkJob,
     SparkJobFailure,
     SparkJobStatus,
@@ -27,6 +29,7 @@ from feast_spark.pyspark.abc import (
 
 from .k8s_utils import (
     DEFAULT_JOB_TEMPLATE,
+    DEFAULT_SCHEDULED_JOB_TEMPLATE,
     HISTORICAL_RETRIEVAL_JOB_TYPE,
     LABEL_FEATURE_TABLE,
     LABEL_FEATURE_TABLE_HASH,
@@ -42,6 +45,7 @@ from .k8s_utils import (
     _get_job_by_id,
     _list_jobs,
     _prepare_job_resource,
+    _prepare_scheduled_job_resource,
     _submit_job,
 )
 
@@ -140,6 +144,23 @@ class KubernetesBatchIngestionJob(KubernetesJobMixin, BatchIngestionJob):
         return self._feature_table
 
 
+class KubernetesScheduledBatchIngestionJob(
+    KubernetesJobMixin, ScheduledBatchIngestionJob
+):
+    """
+    Scheduled ingestion job result for a k8s cluster
+    """
+
+    def __init__(
+        self, api: CustomObjectsApi, namespace: str, job_id: str, feature_table: str
+    ):
+        super().__init__(api, namespace, job_id)
+        self._feature_table = feature_table
+
+    def get_feature_table(self) -> str:
+        return self._feature_table
+
+
 class KubernetesStreamIngestionJob(KubernetesJobMixin, StreamIngestionJob):
     """
     Ingestion streaming job for a k8s cluster
@@ -189,6 +210,21 @@ class KubernetesJobLauncher(JobLauncher):
             self._resource_template = _load_resource_template(resource_template_path)
         else:
             self._resource_template = yaml.safe_load(DEFAULT_JOB_TEMPLATE)
+        self._scheduled_resource_template = yaml.safe_load(
+            DEFAULT_SCHEDULED_JOB_TEMPLATE
+        )
+
+    def _scheduled_job_from_job_info(self, job_info: JobInfo) -> SparkJob:
+        if job_info.job_type == OFFLINE_TO_ONLINE_JOB_TYPE:
+            return KubernetesScheduledBatchIngestionJob(
+                api=self._api,
+                namespace=job_info.namespace,
+                job_id=job_info.job_id,
+                feature_table=job_info.labels.get(LABEL_FEATURE_TABLE, ""),
+            )
+        else:
+            # We should never get here
+            raise ValueError(f"Unknown job type {job_info.job_type}")
 
     def _job_from_job_info(self, job_info: JobInfo) -> SparkJob:
         if job_info.job_type == HISTORICAL_RETRIEVAL_JOB_TYPE:
@@ -351,6 +387,54 @@ class KubernetesJobLauncher(JobLauncher):
         )
 
         return cast(BatchIngestionJob, self._job_from_job_info(job_info))
+
+    def schedule_offline_to_online_ingestion(
+        self, ingestion_job_params: ScheduledBatchIngestionJobParameters
+    ) -> ScheduledBatchIngestionJob:
+        """
+        Schedule a batch ingestion job using Spark Operator.
+
+        Raises:
+            SparkJobFailure: Failure to create the ScheduleSparkApplication resource, or timeout.
+
+        Returns:
+            ScheduledBatchIngestionJob: wrapper around remote job that can be used to check the job id.
+        """
+
+        jar_s3_path = self._upload_jar(ingestion_job_params.get_main_file_path())
+
+        job_id = _generate_job_id()
+
+        resource = _prepare_scheduled_job_resource(
+            scheduled_job_template=self._scheduled_resource_template,
+            job_template=self._resource_template,
+            job_id=job_id,
+            job_type=OFFLINE_TO_ONLINE_JOB_TYPE,
+            main_application_file=jar_s3_path,
+            main_class=ingestion_job_params.get_class_name(),
+            packages=[BQ_SPARK_PACKAGE],
+            jars=[],
+            extra_metadata={},
+            azure_credentials=self._get_azure_credentials(),
+            arguments=ingestion_job_params.get_arguments(),
+            namespace=self._namespace,
+            extra_labels={
+                LABEL_FEATURE_TABLE: _truncate_label(
+                    ingestion_job_params.get_feature_table_name()
+                ),
+                LABEL_FEATURE_TABLE_HASH: _generate_project_table_hash(
+                    ingestion_job_params.get_project(),
+                    ingestion_job_params.get_feature_table_name(),
+                ),
+                LABEL_PROJECT: ingestion_job_params.get_project(),
+            },
+        )
+
+        job_info = _submit_job(
+            api=self._api, resource=resource, namespace=self._namespace,
+        )
+
+        return cast(ScheduledBatchIngestionJob, self._job_from_job_info(job_info))
 
     def start_stream_to_online_ingestion(
         self, ingestion_job_params: StreamIngestionJobParameters

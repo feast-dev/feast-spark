@@ -9,6 +9,7 @@ from feast.core.JobService_pb2_grpc import JobServiceStub
 from feast_spark.pyspark.abc import (
     BatchIngestionJob,
     RetrievalJob,
+    ScheduledBatchIngestionJob,
     SparkJob,
     SparkJobFailure,
     SparkJobStatus,
@@ -123,6 +124,29 @@ class RemoteRetrievalJob(RemoteJobMixin, RetrievalJob):
 class RemoteBatchIngestionJob(RemoteJobMixin, BatchIngestionJob):
     """
     Batch ingestion job result.
+    """
+
+    def __init__(
+        self,
+        service: JobServiceStub,
+        grpc_extra_param_provider: GrpcExtraParamProvider,
+        job_id: str,
+        feature_table: str,
+        start_time: datetime,
+        log_uri: Optional[str],
+    ):
+        super().__init__(
+            service, grpc_extra_param_provider, job_id, start_time, log_uri
+        )
+        self._feature_table = feature_table
+
+    def get_feature_table(self) -> str:
+        return self._feature_table
+
+
+class RemoteScheduledBatchIngestionJob(RemoteJobMixin, ScheduledBatchIngestionJob):
+    """
+    Scheduled batch ingestion job result.
     """
 
     def __init__(

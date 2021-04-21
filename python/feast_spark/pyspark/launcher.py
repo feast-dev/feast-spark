@@ -18,6 +18,8 @@ from feast_spark.pyspark.abc import (
     JobLauncher,
     RetrievalJob,
     RetrievalJobParameters,
+    ScheduledBatchIngestionJob,
+    ScheduledBatchIngestionJobParameters,
     SparkJob,
     StreamIngestionJob,
     StreamIngestionJobParameters,
@@ -270,6 +272,46 @@ def start_offline_to_online_ingestion(
             feature_table=_feature_table_to_argument(client, project, feature_table),
             start=start,
             end=end,
+            redis_host=client.config.get(opt.REDIS_HOST),
+            redis_port=bool(client.config.get(opt.REDIS_HOST))
+            and client.config.getint(opt.REDIS_PORT),
+            redis_ssl=client.config.getboolean(opt.REDIS_SSL),
+            bigtable_project=client.config.get(opt.BIGTABLE_PROJECT),
+            bigtable_instance=client.config.get(opt.BIGTABLE_INSTANCE),
+            cassandra_host=client.config.get(opt.CASSANDRA_HOST),
+            cassandra_port=bool(client.config.get(opt.CASSANDRA_HOST))
+            and client.config.getint(opt.CASSANDRA_PORT),
+            statsd_host=(
+                client.config.getboolean(opt.STATSD_ENABLED)
+                and client.config.get(opt.STATSD_HOST)
+            ),
+            statsd_port=(
+                client.config.getboolean(opt.STATSD_ENABLED)
+                and client.config.getint(opt.STATSD_PORT)
+            ),
+            deadletter_path=client.config.get(opt.DEADLETTER_PATH),
+            stencil_url=client.config.get(opt.STENCIL_URL),
+        )
+    )
+
+
+def schedule_offline_to_online_ingestion(
+    client: "Client",
+    project: str,
+    feature_table: FeatureTable,
+    ingestion_timespan: int,
+    cron_schedule: str,
+) -> ScheduledBatchIngestionJob:
+
+    launcher = resolve_launcher(client.config)
+
+    return launcher.schedule_offline_to_online_ingestion(
+        ScheduledBatchIngestionJobParameters(
+            jar=client.config.get(opt.SPARK_INGESTION_JAR),
+            source=_source_to_argument(feature_table.batch_source, client.config),
+            feature_table=_feature_table_to_argument(client, project, feature_table),
+            ingestion_timespan=ingestion_timespan,
+            cron_schedule=cron_schedule,
             redis_host=client.config.get(opt.REDIS_HOST),
             redis_port=bool(client.config.get(opt.REDIS_HOST))
             and client.config.getint(opt.REDIS_PORT),

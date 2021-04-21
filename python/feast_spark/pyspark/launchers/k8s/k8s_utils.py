@@ -12,6 +12,7 @@ __all__ = [
     "_get_api",
     "_cancel_job_by_id",
     "_prepare_job_resource",
+    "_prepare_scheduled_job_resource",
     "_list_jobs",
     "_get_job_by_id",
     "_generate_project_table_hash",
@@ -150,6 +151,49 @@ def _prepare_job_resource(
     _append_items(job, ("spec", "deps", "jars"), jars)
 
     return job
+
+
+def _prepare_scheduled_job_resource(
+    scheduled_job_template: Dict[str, Any],
+    job_template: Dict[str, Any],
+    job_id: str,
+    job_type: str,
+    main_application_file: str,
+    main_class: Optional[str],
+    packages: List[str],
+    jars: List[str],
+    extra_metadata: Dict[str, str],
+    azure_credentials: Dict[str, str],
+    arguments: List[str],
+    namespace: str,
+    extra_labels: Dict[str, str] = None,
+) -> Dict[str, Any]:
+    """ Prepare ScheduledSparkApplication custom resource configs """
+    scheduled_job = deepcopy(scheduled_job_template)
+
+    labels = {LABEL_JOBID: job_id, LABEL_JOBTYPE: job_type}
+    if extra_labels:
+        labels = {**labels, **extra_labels}
+
+    _add_keys(scheduled_job, ("metadata", "labels"), labels)
+
+    job = _prepare_job_resource(
+        job_template=job_template,
+        job_id=job_id,
+        job_type=job_type,
+        main_application_file=main_application_file,
+        main_class=main_class,
+        packages=packages,
+        jars=jars,
+        extra_metadata=extra_metadata,
+        azure_credentials=azure_credentials,
+        arguments=arguments,
+        namespace=namespace,
+        extra_labels=extra_labels,
+    )
+
+    _add_keys(scheduled_job, ("spec", "template"), job)
+    return scheduled_job
 
 
 def _get_api(incluster: bool) -> CustomObjectsApi:
@@ -328,4 +372,14 @@ spec:
     volumeMounts:
       - name: "test-volume"
         mountPath: "/tmp"
+"""
+
+DEFAULT_SCHEDULED_JOB_TEMPLATE = """
+
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: ScheduledSparkApplication
+metadata:
+  namespace: default
+spec:
+  schedule: "0 1 * * *"
 """
