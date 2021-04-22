@@ -78,7 +78,7 @@ object IngestionJob {
       .action((x, c) => c.copy(endTime = DateTime.parse(x)))
       .text("End timestamp for offline ingestion")
 
-    opt[String](name = "ingestion_timespan")
+    opt[String](name = "ingestion-timespan")
       .action((x, c) => {
         val currentTimeUTC = new DateTime(DateTimeZone.UTC);
         val startTime      = currentTimeUTC.withTimeAtStartOfDay().minusDays(x.toInt - 1)
