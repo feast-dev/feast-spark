@@ -339,7 +339,7 @@ def unschedule_offline_to_online_ingestion(
 ):
 
     launcher = resolve_launcher(client.config)
-    launcher.unschedule_offline_to_online_ingestion(project, feature_table)
+    launcher.unschedule_offline_to_online_ingestion(project, feature_table.name)
 
 
 def get_stream_to_online_ingestion_params(

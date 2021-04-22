@@ -20,7 +20,7 @@ def test_schedule_batch_ingestion_jobs(
         date_partition_column="datetime",
     )
     feature_table = FeatureTable(
-        name=f"schedule_{str(uuid.uuid4())}",
+        name=f"schedule_{str(uuid.uuid4())}".replace("-", "_"),
         entities=["s2id"],
         features=[Feature("unique_drivers", ValueType.INT64)],
         batch_source=batch_source,

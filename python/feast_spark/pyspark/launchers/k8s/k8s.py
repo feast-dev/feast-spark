@@ -63,7 +63,7 @@ def _generate_job_id() -> str:
 
 
 def _generate_scheduled_job_id(project: str, feature_table_name: str) -> str:
-    return f"feast-{project}-{feature_table_name}"
+    return f"feast-{project}-{feature_table_name}".replace("_", "-")
 
 
 def _truncate_label(label: str) -> str:
@@ -410,7 +410,10 @@ class KubernetesJobLauncher(JobLauncher):
         )
 
         _submit_scheduled_job(
-            api=self._api, resource=resource, namespace=self._namespace,
+            api=self._api,
+            name=schedule_job_id,
+            resource=resource,
+            namespace=self._namespace,
         )
 
     def unschedule_offline_to_online_ingestion(self, project: str, feature_table: str):

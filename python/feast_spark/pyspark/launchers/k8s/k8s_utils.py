@@ -286,11 +286,20 @@ def _submit_job(api: CustomObjectsApi, resource, namespace: str) -> JobInfo:
     return _resource_to_job_info(response)
 
 
-def _submit_scheduled_job(api: CustomObjectsApi, resource, namespace: str):
-    # create the resource
-    api.create_namespaced_custom_object(
-        **_scheduled_crd_args(namespace), body=resource,
-    )
+def _submit_scheduled_job(
+    api: CustomObjectsApi, name: str, resource: dict, namespace: str
+):
+    try:
+        api.get_namespaced_custom_object(**_scheduled_crd_args(namespace), name=name)
+    except client.ApiException as e:
+        if e.status == 404:
+            api.create_namespaced_custom_object(
+                **_scheduled_crd_args(namespace), body=resource
+            )
+        else:
+            api.replace_namespaced_custom_object(
+                **_scheduled_crd_args(namespace), name=name, body=resource,
+            )
 
 
 def _list_jobs(
