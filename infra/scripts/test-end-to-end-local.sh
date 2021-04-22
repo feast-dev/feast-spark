@@ -66,4 +66,4 @@ PYTHONPATH=sdk/python pytest tests/e2e/ \
       --staging-path s3a://feast-staging \
       --redis-url sparkop-redis-master.sparkop.svc.cluster.local:6379 \
       --kafka-brokers sparkop-kafka.sparkop.svc.cluster.local:9092 \
-      -m "not bq"
+      -m "not bq and not k8s"
