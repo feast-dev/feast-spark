@@ -14,7 +14,6 @@ from feast_spark.pyspark.abc import (
     JobLauncher,
     RetrievalJob,
     RetrievalJobParameters,
-    ScheduledBatchIngestionJob,
     ScheduledBatchIngestionJobParameters,
     SparkJob,
     SparkJobFailure,
@@ -302,9 +301,14 @@ class EmrClusterLauncher(JobLauncher):
 
     def schedule_offline_to_online_ingestion(
         self, ingestion_job_params: ScheduledBatchIngestionJobParameters
-    ) -> ScheduledBatchIngestionJob:
+    ):
         raise NotImplementedError(
             "Schedule spark jobs are not supported by emr launcher"
+        )
+
+    def unschedule_offline_to_online_ingestion(self, project: str, feature_table: str):
+        raise NotImplementedError(
+            "Unschedule spark jobs are not supported by emr launcher"
         )
 
     def start_stream_to_online_ingestion(

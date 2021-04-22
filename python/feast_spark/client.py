@@ -25,6 +25,7 @@ from feast_spark.api.JobService_pb2 import (
     ScheduleOfflineToOnlineIngestionJobRequest,
     StartOfflineToOnlineIngestionJobRequest,
     StartStreamToOnlineIngestionJobRequest,
+    UnscheduleOfflineToOnlineIngestionJobRequest,
 )
 from feast_spark.api.JobService_pb2_grpc import JobServiceStub
 from feast_spark.constants import ConfigOptions as opt
@@ -37,11 +38,11 @@ from feast_spark.pyspark.launcher import (
     start_historical_feature_retrieval_spark_session,
     start_offline_to_online_ingestion,
     start_stream_to_online_ingestion,
+    unschedule_offline_to_online_ingestion,
 )
 from feast_spark.remote_job import (
     RemoteBatchIngestionJob,
     RemoteRetrievalJob,
-    RemoteScheduledBatchIngestionJob,
     RemoteStreamIngestionJob,
     get_remote_job_from_proto,
 )
@@ -314,7 +315,7 @@ class Client:
         feature_table: feast.FeatureTable,
         ingestion_timespan: int,
         cron_schedule: str,
-    ) -> SparkJob:
+    ):
         """
         Launch Scheduled Ingestion Job from Batch Source to Online Store for given feature table
 
@@ -330,7 +331,7 @@ class Client:
         if not croniter.is_valid(cron_schedule):
             raise RuntimeError(f"{cron_schedule} is not a valid cron expression")
         if not self._use_job_service:
-            return schedule_offline_to_online_ingestion(
+            schedule_offline_to_online_ingestion(
                 client=self,
                 project=self._feast.project,
                 feature_table=feature_table,
@@ -344,15 +345,21 @@ class Client:
                 ingestion_timespan=ingestion_timespan,
                 cron_schedule=cron_schedule,
             )
-            response = self._job_service.ScheduleOfflineToOnlineIngestionJob(request)
-            return RemoteScheduledBatchIngestionJob(
-                self._job_service,
-                self._extra_grpc_params,
-                response.id,
-                feature_table.name,
-                response.job_start_time.ToDatetime(),
-                response.log_uri,
+            self._job_service.ScheduleOfflineToOnlineIngestionJob(request)
+
+    def unschedule_offline_to_online_ingestion(
+        self, feature_table: feast.FeatureTable, project: str = None,
+    ):
+        if not self._use_job_service:
+            unschedule_offline_to_online_ingestion(
+                client=self, project=self._feast.project, feature_table=feature_table,
             )
+        else:
+            request = UnscheduleOfflineToOnlineIngestionJobRequest(
+                project=self._feast.project, table_name=feature_table.name,
+            )
+
+            self._job_service.UnscheduleOfflineToOnlineIngestionJob(request)
 
     def start_stream_to_online_ingestion(
         self,

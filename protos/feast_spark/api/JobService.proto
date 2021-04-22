@@ -147,23 +147,11 @@ message ScheduleOfflineToOnlineIngestionJobRequest {
 
 }
 
-message ScheduleOfflineToOnlineIngestionJobResponse {
-  // Job ID assigned by Feast
-  string id = 1;
-
-  // Job start time
-  google.protobuf.Timestamp job_start_time = 2;
-
-  // Feature table associated with the job
-  string table_name = 3;
-
-  // Path to Spark job logs, if available
-  string log_uri = 4;
-}
+message ScheduleOfflineToOnlineIngestionJobResponse {}
 
 message UnscheduleOfflineToOnlineIngestionJobRequest {
   string project = 1;
-  string feature_table = 2;
+  string table_name = 2;
 }
 
 message UnscheduleOfflineToOnlineIngestionJobResponse {}

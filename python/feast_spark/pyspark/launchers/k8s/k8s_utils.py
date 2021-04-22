@@ -155,8 +155,8 @@ def _prepare_job_resource(
 
 def _prepare_scheduled_job_resource(
     scheduled_job_template: Dict[str, Any],
+    scheduled_job_id: str,
     job_template: Dict[str, Any],
-    job_id: str,
     job_type: str,
     main_application_file: str,
     main_class: Optional[str],
@@ -171,15 +171,18 @@ def _prepare_scheduled_job_resource(
     """ Prepare ScheduledSparkApplication custom resource configs """
     scheduled_job = deepcopy(scheduled_job_template)
 
-    labels = {LABEL_JOBID: job_id, LABEL_JOBTYPE: job_type}
+    labels = {LABEL_JOBID: scheduled_job_id, LABEL_JOBTYPE: job_type}
     if extra_labels:
         labels = {**labels, **extra_labels}
 
     _add_keys(scheduled_job, ("metadata", "labels"), labels)
+    _add_keys(
+        scheduled_job, ("metadata",), dict(name=scheduled_job_id, namespace=namespace)
+    )
 
     job = _prepare_job_resource(
         job_template=job_template,
-        job_id=job_id,
+        job_id=scheduled_job_id,
         job_type=job_type,
         main_application_file=main_application_file,
         main_class=main_class,
@@ -192,7 +195,7 @@ def _prepare_scheduled_job_resource(
         extra_labels=extra_labels,
     )
 
-    _add_keys(scheduled_job, ("spec", "template"), job)
+    _add_keys(scheduled_job, ("spec", "template"), job["spec"])
     return scheduled_job
 
 
@@ -212,6 +215,15 @@ def _crd_args(namespace: str) -> Dict[str, str]:
         version="v1beta2",
         namespace=namespace,
         plural="sparkapplications",
+    )
+
+
+def _scheduled_crd_args(namespace: str) -> Dict[str, str]:
+    return dict(
+        group="sparkoperator.k8s.io",
+        version="v1beta2",
+        namespace=namespace,
+        plural="scheduledsparkapplications",
     )
 
 
@@ -274,6 +286,13 @@ def _submit_job(api: CustomObjectsApi, resource, namespace: str) -> JobInfo:
     return _resource_to_job_info(response)
 
 
+def _submit_scheduled_job(api: CustomObjectsApi, resource, namespace: str):
+    # create the resource
+    api.create_namespaced_custom_object(
+        **_scheduled_crd_args(namespace), body=resource,
+    )
+
+
 def _list_jobs(
     api: CustomObjectsApi,
     namespace: str,
@@ -329,6 +348,16 @@ def _cancel_job_by_id(api: CustomObjectsApi, namespace: str, job_id: str):
         if e.status == 404:
             return None
         else:
+            raise
+
+
+def _unschedule_job(api: CustomObjectsApi, namespace: str, resource_name: str):
+    try:
+        api.delete_namespaced_custom_object(
+            **_scheduled_crd_args(namespace), name=resource_name,
+        )
+    except client.ApiException as e:
+        if e.status != 404:
             raise
 
 

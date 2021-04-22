@@ -18,7 +18,6 @@ from feast_spark.pyspark.abc import (
     JobLauncher,
     RetrievalJob,
     RetrievalJobParameters,
-    ScheduledBatchIngestionJob,
     ScheduledBatchIngestionJobParameters,
     SparkJob,
     StreamIngestionJob,
@@ -301,11 +300,11 @@ def schedule_offline_to_online_ingestion(
     feature_table: FeatureTable,
     ingestion_timespan: int,
     cron_schedule: str,
-) -> ScheduledBatchIngestionJob:
+):
 
     launcher = resolve_launcher(client.config)
 
-    return launcher.schedule_offline_to_online_ingestion(
+    launcher.schedule_offline_to_online_ingestion(
         ScheduledBatchIngestionJobParameters(
             jar=client.config.get(opt.SPARK_INGESTION_JAR),
             source=_source_to_argument(feature_table.batch_source, client.config),
@@ -333,6 +332,14 @@ def schedule_offline_to_online_ingestion(
             stencil_url=client.config.get(opt.STENCIL_URL),
         )
     )
+
+
+def unschedule_offline_to_online_ingestion(
+    client: "Client", project: str, feature_table: FeatureTable,
+):
+
+    launcher = resolve_launcher(client.config)
+    launcher.unschedule_offline_to_online_ingestion(project, feature_table)
 
 
 def get_stream_to_online_ingestion_params(

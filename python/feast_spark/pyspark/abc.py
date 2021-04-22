@@ -627,24 +627,6 @@ class BatchIngestionJob(SparkJob):
         raise NotImplementedError
 
 
-class ScheduledBatchIngestionJob(SparkJob):
-    """
-    Container for the ingestion job result
-    """
-
-    @abc.abstractmethod
-    def get_feature_table(self) -> str:
-        """
-        Get the feature table name associated with this job. Return empty string if unable to
-        determine the feature table, such as when the job is created by the earlier
-        version of Feast.
-
-        Returns:
-            str: Feature table name
-        """
-        raise NotImplementedError
-
-
 class StreamIngestionJob(SparkJob):
     """
     Container for the streaming ingestion job result
@@ -714,7 +696,7 @@ class JobLauncher(abc.ABC):
     @abc.abstractmethod
     def schedule_offline_to_online_ingestion(
         self, ingestion_job_params: ScheduledBatchIngestionJobParameters
-    ) -> ScheduledBatchIngestionJob:
+    ):
         """
         Submits a scheduled batch ingestion job to a Spark cluster.
 
@@ -724,6 +706,13 @@ class JobLauncher(abc.ABC):
 
         Returns:
             ScheduledBatchIngestionJob: wrapper around remote job that can be used to check when job completed.
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def unschedule_offline_to_online_ingestion(self, project: str, feature_table: str):
+        """
+        Unschedule a scheduled batch ingestion job.
         """
         raise NotImplementedError
 

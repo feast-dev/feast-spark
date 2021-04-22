@@ -53,6 +53,7 @@ from feast_spark.pyspark.launcher import (
     start_historical_feature_retrieval_job,
     start_offline_to_online_ingestion,
     start_stream_to_online_ingestion,
+    unschedule_offline_to_online_ingestion,
 )
 from feast_spark.third_party.grpc.health.v1.HealthService_pb2 import (
     HealthCheckResponse,
@@ -154,7 +155,7 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
         feature_table = self.client.feature_store.get_feature_table(
             request.table_name, request.project
         )
-        job = schedule_offline_to_online_ingestion(
+        schedule_offline_to_online_ingestion(
             client=self.client,
             project=request.project,
             feature_table=feature_table,
@@ -162,19 +163,17 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
             cron_schedule=request.cron_schedule,
         )
 
-        job_start_timestamp = Timestamp()
-        job_start_timestamp.FromDatetime(job.get_start_time())
-
-        return ScheduleOfflineToOnlineIngestionJobResponse(
-            id=job.get_id(),
-            job_start_time=job_start_timestamp,
-            table_name=request.table_name,
-            log_uri=job.get_log_uri(),  # type: ignore
-        )
+        return ScheduleOfflineToOnlineIngestionJobResponse()
 
     def UnscheduleOfflineToOnlineIngestionJob(
         self, request: UnscheduleOfflineToOnlineIngestionJobRequest, context
     ):
+        feature_table = self.client.feature_store.get_feature_table(
+            request.table_name, request.project
+        )
+        unschedule_offline_to_online_ingestion(
+            client=self.client, project=request.project, feature_table=feature_table,
+        )
         return UnscheduleOfflineToOnlineIngestionJobResponse()
 
     def GetHistoricalFeatures(self, request: GetHistoricalFeaturesRequest, context):
