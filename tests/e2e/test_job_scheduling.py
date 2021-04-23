@@ -1,6 +1,7 @@
 import uuid
 
 import pytest as pytest
+from kubernetes import client, config
 
 from feast import Client, Entity, Feature, FeatureTable, FileSource, ValueType
 from feast.data_format import ParquetFormat
@@ -30,6 +31,15 @@ def test_schedule_batch_ingestion_jobs(
 
     feast_spark_client.schedule_offline_to_online_ingestion(
         feature_table, 1, "0 0 * * *"
+    )
+    config.load_incluster_config()
+    k8s_api = client.CustomObjectsApi()
+    k8s_api.get_namespaced_custom_object(
+        group="sparkoperator.k8s.io",
+        version="v1beta2",
+        namespace="default",
+        plural="scheduledsparkapplications",
+        name=f"feast-{feast_client.project}-{feature_table.name}".replace("_", "-"),
     )
     feast_spark_client.unschedule_offline_to_online_ingestion(
         feature_table, feast_spark_client._feast.project
