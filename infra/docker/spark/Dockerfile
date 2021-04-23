@@ -8,7 +8,7 @@ ARG VERSION=dev
 
 RUN REVISION=$VERSION make build-ingestion-jar-no-tests
 
-FROM gcr.io/kf-feast/spark-py:v3.0.1 as runtime
+FROM gcr.io/kf-feast/spark-py:3.0.2 as runtime
 
 ARG VERSION=dev
 
