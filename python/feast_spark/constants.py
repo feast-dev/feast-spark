@@ -93,6 +93,21 @@ class ConfigOptions(metaclass=ConfigMeta):
     # SparkApplication resource template
     SPARK_K8S_JOB_TEMPLATE_PATH = None
 
+    # Synapse dev url
+    AZURE_SYNAPSE_DEV_URL: Optional[str] = None 
+
+    # Synapse pool name
+    AZURE_SYNAPSE_POOL_NAME: Optional[str] = None
+
+    # Datalake directory that linked to Synapse
+    AZURE_SYNAPSE_DATALAKE_DIR: Optional[str] = None
+
+    # Synapse pool executor size: Small, Medium or Large
+    AZURE_SYNAPSE_EXECUTOR_SIZE = "Small"
+
+    # Synapse pool executor count
+    AZURE_SYNAPSE_EXECUTORS = "2"
+
     #: File format of historical retrieval features
     HISTORICAL_FEATURE_OUTPUT_FORMAT: str = "parquet"
 

@@ -10,7 +10,7 @@ def pytest_addoption(parser):
     parser.addoption("--kafka-brokers", action="store", default="localhost:9092")
 
     parser.addoption(
-        "--env", action="store", help="local|aws|gcloud|k8s", default="local"
+        "--env", action="store", help="local|aws|gcloud|k8s|synapse", default="local"
     )
     parser.addoption("--with-job-service", action="store_true")
     parser.addoption("--staging-path", action="store")
@@ -22,6 +22,11 @@ def pytest_addoption(parser):
     parser.addoption("--dataproc-executor-instances", action="store", default="2")
     parser.addoption("--dataproc-executor-cores", action="store", default="2")
     parser.addoption("--dataproc-executor-memory", action="store", default="2g")
+    parser.addoption("--azure-synapse-dev-url", action="store", default="")
+    parser.addoption("--azure-synapse-pool-name", action="store", default="")
+    parser.addoption("--azure-synapse-datalake-dir", action="store", default="")
+    parser.addoption("--azure-blob-account-name", action="store", default="")
+    parser.addoption("--azure-blob-account-access-key", action="store", default="")
     parser.addoption("--ingestion-jar", action="store")
     parser.addoption("--redis-url", action="store", default="localhost:6379")
     parser.addoption("--redis-cluster", action="store_true")
