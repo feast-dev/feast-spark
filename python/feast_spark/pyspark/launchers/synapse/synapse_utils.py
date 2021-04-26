@@ -144,10 +144,7 @@ class SynapseJobRunner(object):
         executor_cores = EXECUTOR_SIZE[self._executor_size]['Cores']
         executor_memory = EXECUTOR_SIZE[self._executor_size]['Memory']
 
-        # hard coded for test
-        arguments = ['--feature-table', '{"features": [{"name": "avg_daily_trips", "type": "INT32"}, {"name": "conv_rate", "type": "FLOAT"}, {"name": "acc_rate", "type": "FLOAT"}], "project": "default", "name": "driver_statistics", "entities": [{"name": "driver_id", "type": "INT64"}], "max_age": null, "labels": "test"}', '--source', '{"file": {"field_mapping": "test", "event_timestamp_column": "datetime", "created_timestamp_column": "created", "date_partition_column": "date", "path": "wasbs://feasttest@feaststore.blob.core.windows.net/driver_statistics", "format": {"json_class": "ParquetFormat"}}}', '--redis', '{"host": "localhost", "port": 6379, "ssl": false}', '--mode', 'offline', '--start', '2020/10/10T00:00:00', '--end', '2020-10-20T00:00:00']
-        # SDK source code is here: https://github.com/Azure/azure-sdk-for-python/tree/master/sdk/synapse/azure-synapse
-        # Exact code is here: https://github.com/Azure/azure-sdk-for-python/blob/master/sdk/synapse/azure-synapse-spark/azure/synapse/spark/operations/_spark_batch_operations.py#L114
+        # Exact API definition is here: https://github.com/Azure/azure-sdk-for-python/blob/master/sdk/synapse/azure-synapse-spark/azure/synapse/spark/operations/_spark_batch_operations.py#L114
         spark_batch_job_options = SparkBatchJobOptions(
             tags=tags,
             name=job_name,
@@ -164,8 +161,6 @@ class SynapseJobRunner(object):
             executor_cores=executor_cores,
             executor_count=self._executors)
         
-        print("Final input argument:", arguments, type(arguments))
-
         return self.client.spark_batch.create_spark_batch_job(spark_batch_job_options, detailed=True)
 
 
