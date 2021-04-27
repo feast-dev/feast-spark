@@ -114,6 +114,7 @@ object IngestionJob {
           case Modes.Offline =>
             val sparkSession = BasePipeline.createSparkSession(config)
             BatchPipeline.createPipeline(sparkSession, config)
+            sparkSession.close()
           case Modes.Online =>
             val sparkSession = BasePipeline.createSparkSession(config)
             StreamingPipeline.createPipeline(sparkSession, config).get.awaitTermination
