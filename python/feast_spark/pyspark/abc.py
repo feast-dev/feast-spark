@@ -503,6 +503,7 @@ class StreamIngestionJobParameters(IngestionJobParameters):
         checkpoint_path: Optional[str] = None,
         stencil_url: Optional[str] = None,
         drop_invalid_rows: bool = False,
+        triggering_interval: Optional[int] = None,
     ):
         super().__init__(
             feature_table,
@@ -523,6 +524,7 @@ class StreamIngestionJobParameters(IngestionJobParameters):
         )
         self._extra_jars = extra_jars
         self._checkpoint_path = checkpoint_path
+        self._triggering_interval = triggering_interval
 
     def get_name(self) -> str:
         return f"{self.get_job_type().to_pascal_case()}-{self.get_feature_table_name()}"
@@ -538,6 +540,8 @@ class StreamIngestionJobParameters(IngestionJobParameters):
         args.extend(["--mode", "online"])
         if self._checkpoint_path:
             args.extend(["--checkpoint-path", self._checkpoint_path])
+        if self._triggering_interval:
+            args.extend(["--triggering-interval", str(self._triggering_interval)])
         return args
 
     def get_job_hash(self) -> str:

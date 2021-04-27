@@ -101,6 +101,9 @@ object IngestionJob {
 
     opt[String](name = "checkpoint-path")
       .action((x, c) => c.copy(checkpointPath = Some(x)))
+
+    opt[Int](name = "triggering-interval")
+      .action((x, c) => c.copy(streamingTriggeringSecs = x))
   }
 
   def main(args: Array[String]): Unit = {
