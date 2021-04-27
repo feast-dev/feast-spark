@@ -160,6 +160,11 @@ class ConfigOptions(metaclass=ConfigMeta):
     #: Whitelisted Feast projects
     WHITELISTED_PROJECTS: Optional[str] = None
 
+    #: If set - streaming ingestion job will be consuming incoming rows not continuously,
+    #: but periodically with configured interval (in seconds).
+    #: That may help to control amount of write requests to storage
+    SPARK_STREAMING_TRIGGERING_INTERVAL: Optional[str] = None
+
     def defaults(self):
         return {
             k: getattr(self, k)

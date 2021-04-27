@@ -315,6 +315,9 @@ def get_stream_to_online_ingestion_params(
         checkpoint_path=client.config.get(opt.CHECKPOINT_PATH),
         stencil_url=client.config.get(opt.STENCIL_URL),
         drop_invalid_rows=client.config.get(opt.INGESTION_DROP_INVALID_ROWS),
+        triggering_interval=client.config.getint(
+            opt.SPARK_STREAMING_TRIGGERING_INTERVAL, default=None
+        ),
     )
 
 

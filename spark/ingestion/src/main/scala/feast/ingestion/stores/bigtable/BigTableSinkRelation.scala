@@ -16,6 +16,8 @@
  */
 package feast.ingestion.stores.bigtable
 
+import java.io.IOException
+
 import com.google.cloud.bigtable.hbase.BigtableConfiguration
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hbase.{
@@ -75,7 +77,13 @@ class BigTableSinkRelation(
       try {
         admin.createTable(table)
       } catch {
-        case _: TableExistsException => admin.modifyTable(table)
+        case _: TableExistsException =>
+          try {
+            admin.modifyTable(table)
+          } catch {
+            case e: IOException =>
+              println(s"Table modification failed: ${e.getMessage}")
+          }
       }
     } finally {
       btConn.close()
