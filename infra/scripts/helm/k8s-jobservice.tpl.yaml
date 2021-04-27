@@ -24,7 +24,7 @@ feast-jobservice:
           "fs.gs.project.id": "kf-feast"
           "google.cloud.auth.service.account.enable": "true"
           "google.cloud.auth.service.account.json.keyfile": "/mnt/secrets/credentials.json"
-        sparkVersion: "3.0.1"
+        sparkVersion: "3.0.2"
         timeToLiveSeconds: 3600
         pythonVersion: "3"
         restartPolicy:
@@ -34,7 +34,7 @@ feast-jobservice:
           coreLimit: "1200m"
           memory: "600m"
           labels:
-            version: 3.0.1
+            version: 3.0.2
           secrets:
             - name: feast-gcp-service-account
               path: /mnt/secrets
@@ -44,7 +44,7 @@ feast-jobservice:
           instances: 1
           memory: "800m"
           labels:
-            version: 3.0.1
+            version: 3.0.2
           secrets:
             - name: feast-gcp-service-account
               path: /mnt/secrets
