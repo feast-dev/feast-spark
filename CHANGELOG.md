@@ -1,4 +1,27 @@
 # Changelog
+## [v0.2.2](https://github.com/feast-dev/feast-spark/tree/v0.2.2) (2021-04-27)
+
+[Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.1...v0.2.2)
+
+**Implemented enhancements:**
+
+- Add project whitelist [\#57](https://github.com/feast-dev/feast-spark/pull/57) ([terryyylim](https://github.com/terryyylim))
+
+**Merged pull requests:**
+
+- Bump spark version to 3.0.2 [\#60](https://github.com/feast-dev/feast-spark/pull/60) ([pyalex](https://github.com/pyalex))
+
+## [v0.2.1](https://github.com/feast-dev/feast-spark/tree/v0.2.1) (2021-04-19)
+
+[Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.0...v0.2.1)
+
+**Implemented enhancements:**
+
+- Cassandra as sink option for ingestion job [\#51](https://github.com/feast-dev/feast-spark/pull/51) ([khorshuheng](https://github.com/khorshuheng))
+
+**Merged pull requests:**
+
+- Reuse stencil client between Spark Tasks [\#58](https://github.com/feast-dev/feast-spark/pull/58) ([pyalex](https://github.com/pyalex))
 
 ## [v0.2.0](https://github.com/feast-dev/feast-spark/tree/v0.2.0) (2021-04-15)
 
