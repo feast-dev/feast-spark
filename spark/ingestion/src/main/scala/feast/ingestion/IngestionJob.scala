@@ -117,7 +117,11 @@ object IngestionJob {
             sparkSession.close()
           case Modes.Online =>
             val sparkSession = BasePipeline.createSparkSession(config)
-            StreamingPipeline.createPipeline(sparkSession, config).get.awaitTermination
+            try {
+              StreamingPipeline.createPipeline(sparkSession, config).get.awaitTermination
+            } finally {
+              sparkSession.close()
+            }
         }
       case None =>
         println("Parameters can't be parsed")
