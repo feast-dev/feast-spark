@@ -79,7 +79,11 @@ class BigTableSinkRelation(
         } else {
           admin.modifyTable(table)
         }
-      } else if (config.maxAge > 0 && table.getColumnFamily(config.namespace.getBytes).getTimeToLive != featuresCF.getTimeToLive) {
+      } else if (
+        config.maxAge > 0 && table
+          .getColumnFamily(config.namespace.getBytes)
+          .getTimeToLive != featuresCF.getTimeToLive
+      ) {
         table.modifyFamily(featuresCF)
         admin.modifyTable(table)
       }
