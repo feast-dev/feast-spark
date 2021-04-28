@@ -24,7 +24,7 @@ import feast.proto.types.ValueProto.ValueType
 import org.apache.avro.Schema
 import org.apache.avro.generic.{GenericDatumReader, GenericRecord}
 import org.apache.avro.io.DecoderFactory
-import org.apache.hadoop.hbase.TableName
+import org.apache.hadoop.hbase.{HColumnDescriptor, HTableDescriptor, TableName}
 import org.apache.hadoop.hbase.client.{Connection, Scan}
 import org.apache.spark.SparkConf
 import org.joda.time.DateTime
@@ -141,6 +141,40 @@ class BigTableIngestionSpec extends SparkSpec with ForAllTestContainer {
       cf.getTimeToLive should be(600)
       cf.getMaxVersions should be(1)
       cf.getMinVersions should be(0)
+    }
+  }
+
+  "Column family" should "be updated when ttl changed" in withBTConnection { btConn =>
+    new Scope {
+      val rows     = generateDistinctRows(gen, 1, (_: TestRow).customer)
+      val tempPath = storeAsParquet(sparkSession, rows)
+      val configWithOfflineSource = config.copy(
+        source = FileSource(tempPath, Map.empty, "eventTimestamp"),
+        featureTable = config.featureTable.copy(
+          name = "feature-table-name",
+          maxAge = Some(600L)
+        )
+      )
+
+      val tableName  = TableName.valueOf("default__customer")
+      val cfName     = configWithOfflineSource.featureTable.name.getBytes
+      val tableV1    = new HTableDescriptor(tableName)
+      val featuresCF = new HColumnDescriptor(cfName)
+      val metadataCF = new HColumnDescriptor("metadata")
+      featuresCF.setTimeToLive(300)
+      tableV1.addFamily(featuresCF)
+      tableV1.addFamily(metadataCF)
+
+      if (btConn.getAdmin.isTableAvailable(tableName)) {
+        btConn.getAdmin.deleteTable(tableName)
+      }
+      btConn.getAdmin.createTable(tableV1)
+
+      BatchPipeline.createPipeline(sparkSession, configWithOfflineSource)
+
+      val tableV2 = btConn.getAdmin.getDescriptor(tableName)
+      val cf      = tableV2.getColumnFamily(cfName)
+      cf.getTimeToLive should be(600)
     }
   }
 }
