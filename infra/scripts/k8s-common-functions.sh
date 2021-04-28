@@ -91,13 +91,18 @@ function helm_install {
           exit 1
     fi
 
+    if [ -z ${JOBSERVICE_HELM_VALUES:-} ]; then
+      export HELM_ARGS="--set feast-jobservice.image.repository=${DOCKER_REPOSITORY}/feast-jobservice \
+        --set feast-jobservice.image.tag=${JOBSERVICE_GIT_TAG:-$GIT_TAG} \
+        --set prometheus-statsd-exporter.enabled=false $@";
+    else
+      export HELM_ARGS="--values ${JOBSERVICE_HELM_VALUES}";
+    fi
+
     if ! time helm install --wait "$RELEASE" "${HELM_CHART_LOCATION:-./infra/charts/feast-spark}" \
         --timeout 5m \
-        --set "feast-jobservice.image.repository=${DOCKER_REPOSITORY}/feast-jobservice" \
-        --set "feast-jobservice.image.tag=${JOBSERVICE_GIT_TAG:-$GIT_TAG}" \
-        --set "prometheus-statsd-exporter.enabled=false" \
         --namespace "$NAMESPACE" \
-        "$@" ; then
+        ${HELM_ARGS}; then
 
         echo "Error during helm install. "
         kubectl -n "$NAMESPACE" get pods

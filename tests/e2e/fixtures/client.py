@@ -95,15 +95,12 @@ def feast_client(
         return Client(
             core_url=f"{feast_core[0]}:{feast_core[1]}",
             serving_url=f"{feast_serving[0]}:{feast_serving[1]}",
-            spark_launcher="k8s",
-            spark_staging_location=os.path.join(local_staging_path, "k8s"),
-            spark_ingestion_jar=ingestion_job_jar,
-            redis_host=pytestconfig.getoption("redis_url").split(":")[0],
-            redis_port=pytestconfig.getoption("redis_url").split(":")[1],
             historical_feature_output_location=os.path.join(
                 local_staging_path, "historical_output"
             ),
+            spark_staging_location=os.path.join(local_staging_path, "k8s"),
             enable_auth=pytestconfig.getoption("enable_auth"),
+            **job_service_env,
         )
     else:
         raise KeyError(f"Unknown environment {pytestconfig.getoption('env')}")
@@ -185,6 +182,7 @@ def tfrecord_feast_client(
             historical_feature_output_location=os.path.join(
                 local_staging_path, "historical_output"
             ),
+            **job_service_env,
         )
     else:
         raise KeyError(f"Unknown environment {pytestconfig.getoption('env')}")
