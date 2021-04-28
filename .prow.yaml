@@ -1,5 +1,5 @@
 presubmits:
-- name: test-end-to-end-gcp-presubmit
+- name: test-end-to-end-gcp
   decorate: true
   always_run: true
   max_concurrency: 1
@@ -23,7 +23,7 @@ presubmits:
       - name: service-account
         secret:
           secretName: feast-service-account
-- name: test-end-to-end-aws-presubmit
+- name: test-end-to-end-aws
   decorate: true
   always_run: true
   max_concurrency: 1
@@ -61,7 +61,7 @@ presubmits:
       - name: service-account
         secret:
           secretName: feast-service-account
-- name: test-end-to-end-sparkop-presubmit
+- name: test-end-to-end-sparkop
   decorate: true
   always_run: true
   max_concurrency: 1
@@ -91,7 +91,7 @@ presubmits:
           secretName: feast-service-account
 
 
-#- name: test-end-to-end-azure-presubmit
+#- name: test-end-to-end-azure
 #  decorate: true
 #  always_run: true
 #  max_concurrency: 1
@@ -150,7 +150,7 @@ presubmits:
 #          secretName: feast-service-account
 
 postsubmits:
-- name: test-end-to-end-gcp-postsubmit
+- name: test-end-to-end-gcp
   decorate: true
   always_run: true
   max_concurrency: 1
@@ -177,7 +177,7 @@ postsubmits:
         secret:
           secretName: feast-service-account
 
-- name: test-end-to-end-aws-postsubmit
+- name: test-end-to-end-aws
   decorate: true
   always_run: true
   max_concurrency: 1
@@ -218,7 +218,7 @@ postsubmits:
         secret:
           secretName: feast-service-account
 
-- name: test-end-to-end-sparkop-postsubmit
+- name: test-end-to-end-sparkop
   decorate: true
   always_run: true
   max_concurrency: 1
@@ -249,7 +249,7 @@ postsubmits:
         secret:
           secretName: feast-service-account
 
-#- name: test-end-to-end-azure-postsubmit
+#- name: test-end-to-end-azure
 #  decorate: true
 #  always_run: true
 #  max_concurrency: 1
