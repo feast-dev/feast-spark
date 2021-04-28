@@ -64,26 +64,24 @@ class BigTableSinkRelation(
         admin.getTableDescriptor(TableName.valueOf(tableName))
       }
 
-      if (!table.getColumnFamilyNames.contains(config.namespace.getBytes)) {
-        val featuresCF = new HColumnDescriptor(config.namespace)
-        if (config.maxAge > 0) {
-          featuresCF.setTimeToLive(config.maxAge.toInt)
-        }
-
-        featuresCF.setMaxVersions(1)
-        table.addFamily(featuresCF)
+      val featuresCF = new HColumnDescriptor(config.namespace)
+      if (config.maxAge > 0) {
+        featuresCF.setTimeToLive(config.maxAge.toInt)
       }
 
-      try {
-        admin.createTable(table)
-      } catch {
-        case _: TableExistsException =>
-          try {
-            admin.modifyTable(table)
-          } catch {
-            case e: IOException =>
-              println(s"Table modification failed: ${e.getMessage}")
-          }
+      featuresCF.setMaxVersions(1)
+
+      if (!table.getColumnFamilyNames.contains(config.namespace.getBytes)) {
+        table.addFamily(featuresCF)
+
+        if (!admin.isTableAvailable(table.getTableName)) {
+          admin.createTable(table)
+        } else {
+          admin.modifyTable(table)
+        }
+      } else if (config.maxAge > 0 && table.getColumnFamily(config.namespace.getBytes).getTimeToLive != featuresCF.getTimeToLive) {
+        table.modifyFamily(featuresCF)
+        admin.modifyTable(table)
       }
     } finally {
       btConn.close()
