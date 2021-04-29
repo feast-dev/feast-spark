@@ -37,7 +37,7 @@ def test_schedule_batch_ingestion_jobs(
     k8s_api.get_namespaced_custom_object(
         group="sparkoperator.k8s.io",
         version="v1beta2",
-        namespace="default",
+        namespace=pytestconfig.getoption("k8s_namespace"),
         plural="scheduledsparkapplications",
         name=f"feast-{feast_client.project}-{feature_table.name}".replace("_", "-"),
     )
