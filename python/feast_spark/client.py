@@ -348,17 +348,19 @@ class Client:
             self._job_service.ScheduleOfflineToOnlineIngestionJob(request)
 
     def unschedule_offline_to_online_ingestion(
-        self, feature_table: feast.FeatureTable,
+        self, feature_table: feast.FeatureTable, project=None
     ):
+        feature_table_project = self._feast.project if project is None else project
+
         if not self._use_job_service:
             unschedule_offline_to_online_ingestion(
                 client=self,
-                project=self._feast.project,
+                project=feature_table_project,
                 feature_table=feature_table.name,
             )
         else:
             request = UnscheduleOfflineToOnlineIngestionJobRequest(
-                project=self._feast.project, table_name=feature_table.name,
+                project=feature_table_project, table_name=feature_table.name,
             )
 
             self._job_service.UnscheduleOfflineToOnlineIngestionJob(request)

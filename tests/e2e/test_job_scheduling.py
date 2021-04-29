@@ -41,6 +41,4 @@ def test_schedule_batch_ingestion_jobs(
         plural="scheduledsparkapplications",
         name=f"feast-{feast_client.project}-{feature_table.name}".replace("_", "-"),
     )
-    feast_spark_client.unschedule_offline_to_online_ingestion(
-        feature_table, feast_spark_client._feast.project
-    )
+    feast_spark_client.unschedule_offline_to_online_ingestion(feature_table)
