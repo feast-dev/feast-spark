@@ -1,4 +1,18 @@
 # Changelog
+## [v0.2.3](https://github.com/feast-dev/feast-spark/tree/v0.2.3) (2021-04-29)
+**Implemented enhancements:**
+
+- Support for Schedule Spark Application [\#59](https://github.com/feast-dev/feast-spark/pull/59) ([khorshuheng](https://github.com/khorshuheng))
+
+**Fixed bugs:**
+
+- Call admin.modifyTable only if table spec changes: preventing quota to be exceeded [\#66](https://github.com/feast-dev/feast-spark/pull/66) ([pyalex](https://github.com/pyalex))
+
+**Merged pull requests:**
+
+- Explicitly stop sparkSession on exception to prevent it stucking [\#65](https://github.com/feast-dev/feast-spark/pull/65) ([pyalex](https://github.com/pyalex))
+- Migrate sparkop e2e tests to kf-feast cluster [\#62](https://github.com/feast-dev/feast-spark/pull/62) ([khorshuheng](https://github.com/khorshuheng))
+
 ## [v0.2.2](https://github.com/feast-dev/feast-spark/tree/v0.2.2) (2021-04-27)
 
 [Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.1...v0.2.2)
@@ -6,6 +20,7 @@
 **Implemented enhancements:**
 
 - Add project whitelist [\#57](https://github.com/feast-dev/feast-spark/pull/57) ([terryyylim](https://github.com/terryyylim))
+- Configurable triggering interval from streaming ingestion [\#63](https://github.com/feast-dev/feast-spark/pull/63) ([pyalex](https://github.com/pyalex))
 
 **Merged pull requests:**
 
