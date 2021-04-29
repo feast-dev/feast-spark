@@ -63,7 +63,13 @@ def _generate_job_id() -> str:
 
 
 def _generate_scheduled_job_id(project: str, feature_table_name: str) -> str:
-    return f"feast-{project}-{feature_table_name}".replace("_", "-")
+    scheduled_job_id = f"feast-{project}-{feature_table_name}".replace("_", "-")
+    k8s_res_name_char_limit = 253
+    return (
+        scheduled_job_id
+        if len(scheduled_job_id) <= k8s_res_name_char_limit
+        else scheduled_job_id[:k8s_res_name_char_limit]
+    )
 
 
 def _truncate_label(label: str) -> str:

@@ -171,7 +171,7 @@ def _prepare_scheduled_job_resource(
     """ Prepare ScheduledSparkApplication custom resource configs """
     scheduled_job = deepcopy(scheduled_job_template)
 
-    labels = {LABEL_JOBID: scheduled_job_id, LABEL_JOBTYPE: job_type}
+    labels = {LABEL_JOBTYPE: job_type}
     if extra_labels:
         labels = {**labels, **extra_labels}
 
