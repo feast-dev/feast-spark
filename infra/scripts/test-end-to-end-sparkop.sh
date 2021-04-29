@@ -54,6 +54,7 @@ CMD=$(printf '%s' \
   "--core-url feast-release-feast-core:6565 " \
   "--serving-url feast-release-feast-online-serving:6566 " \
   "--job-service-url js-feast-jobservice:6568 " \
+  "--k8s-namespace sparkop-e2e " \
   "--kafka-brokers feast-release-kafka-headless:9092 --bq-project kf-feast --feast-version dev")
 
 # Delete old test running pod if it exists

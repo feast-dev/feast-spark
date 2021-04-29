@@ -1,4 +1,6 @@
 feast-jobservice:
+  image:
+    tag: ${IMAGE_TAG}
   envOverrides:
     FEAST_CORE_URL: feast-release-feast-core:6565
     FEAST_SPARK_LAUNCHER: k8s

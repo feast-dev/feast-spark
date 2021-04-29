@@ -50,7 +50,8 @@ REQUIRED = [
     "google-cloud-dataproc==2.0.2",
     "kubernetes==12.0.*",
     "grpcio-tools==1.31.0",
-    "mypy-protobuf"
+    "mypy-protobuf",
+    "croniter==1.*",
 ]
 
 # README file from Feast repo root directory

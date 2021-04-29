@@ -18,4 +18,4 @@ PYTHONPATH=sdk/python pytest tests/e2e/ \
       --redis-url $NODE_IP:32379 \
       --emr-region us-west-2 \
       --kafka-brokers $NODE_IP:30092 \
-      -m "not bq"
+      -m "not bq and not k8s"

@@ -22,6 +22,7 @@ def pytest_addoption(parser):
     parser.addoption("--dataproc-executor-instances", action="store", default="2")
     parser.addoption("--dataproc-executor-cores", action="store", default="2")
     parser.addoption("--dataproc-executor-memory", action="store", default="2g")
+    parser.addoption("--k8s-namespace", action="store", default="sparkop-e2e")
     parser.addoption("--ingestion-jar", action="store")
     parser.addoption("--redis-url", action="store", default="localhost:6379")
     parser.addoption("--redis-cluster", action="store_true")

@@ -28,10 +28,14 @@ from feast_spark.api.JobService_pb2 import (
     JobStatus,
     JobType,
     ListJobsResponse,
+    ScheduleOfflineToOnlineIngestionJobRequest,
+    ScheduleOfflineToOnlineIngestionJobResponse,
     StartOfflineToOnlineIngestionJobRequest,
     StartOfflineToOnlineIngestionJobResponse,
     StartStreamToOnlineIngestionJobRequest,
     StartStreamToOnlineIngestionJobResponse,
+    UnscheduleOfflineToOnlineIngestionJobRequest,
+    UnscheduleOfflineToOnlineIngestionJobResponse,
 )
 from feast_spark.constants import ConfigOptions as opt
 from feast_spark.pyspark.abc import (
@@ -45,9 +49,11 @@ from feast_spark.pyspark.launcher import (
     get_job_by_id,
     get_stream_to_online_ingestion_params,
     list_jobs,
+    schedule_offline_to_online_ingestion,
     start_historical_feature_retrieval_job,
     start_offline_to_online_ingestion,
     start_stream_to_online_ingestion,
+    unschedule_offline_to_online_ingestion,
 )
 from feast_spark.third_party.grpc.health.v1.HealthService_pb2 import (
     HealthCheckResponse,
@@ -141,6 +147,34 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
             table_name=request.table_name,
             log_uri=job.get_log_uri(),  # type: ignore
         )
+
+    def ScheduleOfflineToOnlineIngestionJob(
+        self, request: ScheduleOfflineToOnlineIngestionJobRequest, context
+    ):
+        """Schedule job to ingest data from offline store into online store periodically"""
+        feature_table = self.client.feature_store.get_feature_table(
+            request.table_name, request.project
+        )
+        schedule_offline_to_online_ingestion(
+            client=self.client,
+            project=request.project,
+            feature_table=feature_table,
+            ingestion_timespan=request.ingestion_timespan,
+            cron_schedule=request.cron_schedule,
+        )
+
+        return ScheduleOfflineToOnlineIngestionJobResponse()
+
+    def UnscheduleOfflineToOnlineIngestionJob(
+        self, request: UnscheduleOfflineToOnlineIngestionJobRequest, context
+    ):
+        feature_table = self.client.feature_store.get_feature_table(
+            request.table_name, request.project
+        )
+        unschedule_offline_to_online_ingestion(
+            client=self.client, project=request.project, feature_table=feature_table,
+        )
+        return UnscheduleOfflineToOnlineIngestionJobResponse()
 
     def GetHistoricalFeatures(self, request: GetHistoricalFeaturesRequest, context):
         """Produce a training dataset, return a job id that will provide a file reference"""

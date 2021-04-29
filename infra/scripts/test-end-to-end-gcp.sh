@@ -64,7 +64,7 @@ CMD=$(printf '%s' \
   "--core-url feast-release-feast-core:6565 " \
   "--serving-url feast-release-feast-online-serving:6566 " \
   "--job-service-url js-feast-jobservice:6568 " \
-  "--kafka-brokers 10.128.0.103:9094 --bq-project kf-feast --feast-version dev")
+  "--kafka-brokers 10.128.0.103:9094 --bq-project kf-feast --feast-version dev -m \"not k8s\"")
 
 # Delete old test running pod if it exists
 kubectl delete pod -n "$NAMESPACE" ci-test-runner 2>/dev/null || true

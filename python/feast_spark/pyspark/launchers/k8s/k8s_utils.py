@@ -12,6 +12,7 @@ __all__ = [
     "_get_api",
     "_cancel_job_by_id",
     "_prepare_job_resource",
+    "_prepare_scheduled_job_resource",
     "_list_jobs",
     "_get_job_by_id",
     "_generate_project_table_hash",
@@ -152,6 +153,52 @@ def _prepare_job_resource(
     return job
 
 
+def _prepare_scheduled_job_resource(
+    scheduled_job_template: Dict[str, Any],
+    scheduled_job_id: str,
+    job_template: Dict[str, Any],
+    job_type: str,
+    main_application_file: str,
+    main_class: Optional[str],
+    packages: List[str],
+    jars: List[str],
+    extra_metadata: Dict[str, str],
+    azure_credentials: Dict[str, str],
+    arguments: List[str],
+    namespace: str,
+    extra_labels: Dict[str, str] = None,
+) -> Dict[str, Any]:
+    """ Prepare ScheduledSparkApplication custom resource configs """
+    scheduled_job = deepcopy(scheduled_job_template)
+
+    labels = {LABEL_JOBTYPE: job_type}
+    if extra_labels:
+        labels = {**labels, **extra_labels}
+
+    _add_keys(scheduled_job, ("metadata", "labels"), labels)
+    _add_keys(
+        scheduled_job, ("metadata",), dict(name=scheduled_job_id, namespace=namespace)
+    )
+
+    job = _prepare_job_resource(
+        job_template=job_template,
+        job_id=scheduled_job_id,
+        job_type=job_type,
+        main_application_file=main_application_file,
+        main_class=main_class,
+        packages=packages,
+        jars=jars,
+        extra_metadata=extra_metadata,
+        azure_credentials=azure_credentials,
+        arguments=arguments,
+        namespace=namespace,
+        extra_labels=extra_labels,
+    )
+
+    _add_keys(scheduled_job, ("spec", "template"), job["spec"])
+    return scheduled_job
+
+
 def _get_api(incluster: bool) -> CustomObjectsApi:
     # Configs can be set in Configuration class directly or using helper utility
     if not incluster:
@@ -168,6 +215,15 @@ def _crd_args(namespace: str) -> Dict[str, str]:
         version="v1beta2",
         namespace=namespace,
         plural="sparkapplications",
+    )
+
+
+def _scheduled_crd_args(namespace: str) -> Dict[str, str]:
+    return dict(
+        group="sparkoperator.k8s.io",
+        version="v1beta2",
+        namespace=namespace,
+        plural="scheduledsparkapplications",
     )
 
 
@@ -230,6 +286,22 @@ def _submit_job(api: CustomObjectsApi, resource, namespace: str) -> JobInfo:
     return _resource_to_job_info(response)
 
 
+def _submit_scheduled_job(
+    api: CustomObjectsApi, name: str, resource: dict, namespace: str
+):
+    try:
+        api.get_namespaced_custom_object(**_scheduled_crd_args(namespace), name=name)
+    except client.ApiException as e:
+        if e.status == 404:
+            api.create_namespaced_custom_object(
+                **_scheduled_crd_args(namespace), body=resource
+            )
+        else:
+            api.replace_namespaced_custom_object(
+                **_scheduled_crd_args(namespace), name=name, body=resource,
+            )
+
+
 def _list_jobs(
     api: CustomObjectsApi,
     namespace: str,
@@ -288,6 +360,16 @@ def _cancel_job_by_id(api: CustomObjectsApi, namespace: str, job_id: str):
             raise
 
 
+def _unschedule_job(api: CustomObjectsApi, namespace: str, resource_name: str):
+    try:
+        api.delete_namespaced_custom_object(
+            **_scheduled_crd_args(namespace), name=resource_name,
+        )
+    except client.ApiException as e:
+        if e.status != 404:
+            raise
+
+
 DEFAULT_JOB_TEMPLATE = """
 
 apiVersion: "sparkoperator.k8s.io/v1beta2"
@@ -328,4 +410,14 @@ spec:
     volumeMounts:
       - name: "test-volume"
         mountPath: "/tmp"
+"""
+
+DEFAULT_SCHEDULED_JOB_TEMPLATE = """
+
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: ScheduledSparkApplication
+metadata:
+  namespace: default
+spec:
+  schedule: "0 1 * * *"
 """

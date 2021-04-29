@@ -30,6 +30,7 @@ class SparkJobType(Enum):
     HISTORICAL_RETRIEVAL = 0
     BATCH_INGESTION = 1
     STREAM_INGESTION = 2
+    SCHEDULED_BATCH_INGESTION = 3
 
     def to_pascal_case(self):
         return self.name.title().replace("_", "")
@@ -483,6 +484,60 @@ class BatchIngestionJobParameters(IngestionJobParameters):
         ]
 
 
+class ScheduledBatchIngestionJobParameters(IngestionJobParameters):
+    def __init__(
+        self,
+        feature_table: Dict,
+        source: Dict,
+        ingestion_timespan: int,
+        cron_schedule: str,
+        jar: str,
+        redis_host: Optional[str],
+        redis_port: Optional[int],
+        redis_ssl: Optional[bool],
+        bigtable_project: Optional[str],
+        bigtable_instance: Optional[str],
+        cassandra_host: Optional[str] = None,
+        cassandra_port: Optional[int] = None,
+        statsd_host: Optional[str] = None,
+        statsd_port: Optional[int] = None,
+        deadletter_path: Optional[str] = None,
+        stencil_url: Optional[str] = None,
+    ):
+        super().__init__(
+            feature_table,
+            source,
+            jar,
+            redis_host,
+            redis_port,
+            redis_ssl,
+            bigtable_project,
+            bigtable_instance,
+            cassandra_host,
+            cassandra_port,
+            statsd_host,
+            statsd_port,
+            deadletter_path,
+            stencil_url,
+        )
+        self._ingestion_timespan = ingestion_timespan
+        self._cron_schedule = cron_schedule
+
+    def get_name(self) -> str:
+        return f"{self.get_job_type().to_pascal_case()}-{self.get_feature_table_name()}"
+
+    def get_job_type(self) -> SparkJobType:
+        return SparkJobType.SCHEDULED_BATCH_INGESTION
+
+    def get_arguments(self) -> List[str]:
+        return super().get_arguments() + [
+            "--mode",
+            "offline",
+            "--ingestion-timespan",
+            str(self._ingestion_timespan),
+        ]
+
+
 class StreamIngestionJobParameters(IngestionJobParameters):
     def __init__(
         self,
@@ -633,6 +688,29 @@ class JobLauncher(abc.ABC):
 
         Returns:
             BatchIngestionJob: wrapper around remote job that can be used to check when job completed.
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def schedule_offline_to_online_ingestion(
+        self, ingestion_job_params: ScheduledBatchIngestionJobParameters
+    ):
+        """
+        Submits a scheduled batch ingestion job to a Spark cluster.
+
+        Raises:
+            SparkJobFailure: The spark job submission failed, encountered error
+                during execution, or timeout.
+
+        Returns:
+            ScheduledBatchIngestionJob: wrapper around remote job that can be used to check when job completed.
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def unschedule_offline_to_online_ingestion(self, project: str, feature_table: str):
+        """
+        Unschedule a scheduled batch ingestion job.
         """
         raise NotImplementedError
 

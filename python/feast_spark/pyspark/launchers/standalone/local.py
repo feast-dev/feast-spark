@@ -17,6 +17,7 @@ from feast_spark.pyspark.abc import (
     JobLauncher,
     RetrievalJob,
     RetrievalJobParameters,
+    ScheduledBatchIngestionJobParameters,
     SparkJob,
     SparkJobFailure,
     SparkJobParameters,
@@ -335,6 +336,18 @@ class StandaloneClusterLauncher(JobLauncher):
         )
         global_job_cache.add_job(job)
         return job
+
+    def schedule_offline_to_online_ingestion(
+        self, ingestion_job_params: ScheduledBatchIngestionJobParameters
+    ):
+        raise NotImplementedError(
+            "Schedule spark jobs are not supported by standalone launcher"
+        )
+
+    def unschedule_offline_to_online_ingestion(self, project: str, feature_table: str):
+        raise NotImplementedError(
+            "Unschedule spark jobs are not supported by standalone launcher"
+        )
 
     def start_stream_to_online_ingestion(
         self, ingestion_job_params: StreamIngestionJobParameters
