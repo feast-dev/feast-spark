@@ -535,8 +535,6 @@ class ScheduledBatchIngestionJobParameters(IngestionJobParameters):
             "offline",
             "--ingestion-timespan",
             str(self._ingestion_timespan),
-            "--cron-schedule",
-            self._cron_schedule,
         ]
 
 
