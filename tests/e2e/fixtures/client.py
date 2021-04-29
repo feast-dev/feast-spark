@@ -102,6 +102,24 @@ def feast_client(
             enable_auth=pytestconfig.getoption("enable_auth"),
             **job_service_env,
         )
+    elif pytestconfig.getoption("env") == "synapse":
+        return Client(
+            core_url=f"{feast_core[0]}:{feast_core[1]}",
+            serving_url=f"{feast_serving[0]}:{feast_serving[1]}",
+            spark_launcher="synapse",
+            azure_synapse_dev_url = pytestconfig.getoption("azure_synapse_dev_url"),
+            azure_synapse_pool_name = pytestconfig.getoption("azure_synapse_pool_name"),
+            azure_synapse_datalake_dir = pytestconfig.getoption("azure_synapse_datalake_dir"),
+            spark_staging_location=os.path.join(local_staging_path, "synapse"),
+            azure_blob_account_name=pytestconfig.getoption("azure_blob_account_name"),
+            azure_blob_account_access_key=pytestconfig.getoption("azure_blob_account_access_key"),
+            spark_ingestion_jar=ingestion_job_jar,
+            redis_host=pytestconfig.getoption("redis_url").split(":")[0],
+            redis_port=pytestconfig.getoption("redis_url").split(":")[1],
+            historical_feature_output_location=os.path.join(
+                local_staging_path, "historical_output"
+            ),
+        )
     else:
         raise KeyError(f"Unknown environment {pytestconfig.getoption('env')}")
 
@@ -183,6 +201,21 @@ def tfrecord_feast_client(
                 local_staging_path, "historical_output"
             ),
             **job_service_env,
+        )
+    elif pytestconfig.getoption("env") == "synapse":
+        return Client(
+            core_url=f"{feast_core[0]}:{feast_core[1]}",
+            spark_launcher="synapse",
+            azure_synapse_dev_url = pytestconfig.getoption("azure_synapse_dev_url"),
+            azure_synapse_pool_name = pytestconfig.getoption("azure_synapse_pool_name"),
+            azure_synapse_datalake_dir = pytestconfig.getoption("azure_synapse_datalake_dir"),
+            spark_staging_location=os.path.join(local_staging_path, "synapse"),
+            azure_blob_account_name=pytestconfig.getoption("azure_blob_account_name"),
+            azure_blob_account_access_key=pytestconfig.getoption("azure_blob_account_access_key"),
+            historical_feature_output_format="tfrecord",
+            historical_feature_output_location=os.path.join(
+                local_staging_path, "historical_output"
+            ),
         )
     else:
         raise KeyError(f"Unknown environment {pytestconfig.getoption('env')}")
