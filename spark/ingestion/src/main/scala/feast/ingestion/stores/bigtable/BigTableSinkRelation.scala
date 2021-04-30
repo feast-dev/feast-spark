@@ -192,6 +192,7 @@ object BigTableSinkRelation {
       (null, put)
     }
 
+  @transient
   lazy val metricSource: Option[BigTableSinkMetricSource] = {
     if (SparkEnv.get.metricsSystem.getSourcesByName(BigTableSinkMetricSource.sourceName).isEmpty) {
       SparkEnv.get.metricsSystem.registerSource(new BigTableSinkMetricSource)
