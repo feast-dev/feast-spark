@@ -17,7 +17,7 @@
 package org.apache.spark.metrics.source
 
 class BigTableSinkMetricSource extends BaseMetricSource {
-  override val sourceName: String = RedisSinkMetricSource.sourceName
+  override val sourceName: String = BigTableSinkMetricSource.sourceName
 
   val METRIC_TOTAL_ROWS_INSERTED =
     metricRegistry.counter(counterWithLabels("feature_row_ingested_count"))
