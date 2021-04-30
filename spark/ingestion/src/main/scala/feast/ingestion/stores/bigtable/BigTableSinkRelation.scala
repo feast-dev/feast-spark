@@ -36,6 +36,8 @@ import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
 import org.apache.spark.sql.types.{StringType, StructType}
 import feast.ingestion.stores.serialization.Serializer
 import org.apache.hadoop.security.UserGroupInformation
+import org.apache.spark.SparkEnv
+import org.apache.spark.metrics.source.BigTableSinkMetricSource
 
 class BigTableSinkRelation(
     override val sqlContext: SQLContext,
@@ -180,6 +182,24 @@ object BigTableSinkRelation {
         column,
         schemaReference ++ r.getAs[Array[Byte]]("value")
       )
+
+      metricSource.foreach(source => {
+        val lag = System.currentTimeMillis() - r.getAs[java.sql.Timestamp]("ts").getTime
+        source.METRIC_TOTAL_ROWS_INSERTED.inc()
+        source.METRIC_ROWS_LAG.update(lag)
+      })
+
       (null, put)
     }
+
+  lazy val metricSource: Option[BigTableSinkMetricSource] = {
+    if (SparkEnv.get.metricsSystem.getSourcesByName(BigTableSinkMetricSource.sourceName).isEmpty) {
+      SparkEnv.get.metricsSystem.registerSource(new BigTableSinkMetricSource)
+    }
+
+    SparkEnv.get.metricsSystem.getSourcesByName(BigTableSinkMetricSource.sourceName) match {
+      case Seq(source: BigTableSinkMetricSource) => Some(source)
+      case _                                     => None
+    }
+  }
 }
