@@ -122,8 +122,11 @@ object IngestionJob {
         config.mode match {
           case Modes.Offline =>
             val sparkSession = BasePipeline.createSparkSession(config)
-            BatchPipeline.createPipeline(sparkSession, config)
-            sparkSession.close()
+            try {
+              BatchPipeline.createPipeline(sparkSession, config)
+            } finally {
+              sparkSession.close()
+            }
           case Modes.Online =>
             val sparkSession = BasePipeline.createSparkSession(config)
             try {
