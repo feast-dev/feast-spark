@@ -1,4 +1,17 @@
 # Changelog
+## [v0.2.4](https://github.com/feast-dev/feast-spark/tree/v0.2.4) (2021-05-05)
+
+[Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.3...v0.2.4)
+
+**Fixed bugs:**
+
+- Batch Ingestion job is stuck after exception thrown [\#69](https://github.com/feast-dev/feast-spark/pull/69) ([pyalex](https://github.com/pyalex))
+
+**Merged pull requests:**
+
+- Update redis host for e2e tests [\#68](https://github.com/feast-dev/feast-spark/pull/68) ([khorshuheng](https://github.com/khorshuheng))
+- Bigtable sink \(row level\) metrics [\#67](https://github.com/feast-dev/feast-spark/pull/67) ([pyalex](https://github.com/pyalex))
+
 ## [v0.2.3](https://github.com/feast-dev/feast-spark/tree/v0.2.3) (2021-04-29)
 **Implemented enhancements:**
 
