@@ -34,6 +34,7 @@ import org.apache.spark.sql.functions.{col, length, struct, udf}
 import org.apache.spark.sql.{DataFrame, Row, SQLContext}
 import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
 import org.apache.spark.sql.types.{StringType, StructType}
+import feast.ingestion.utils.StringUtils
 import feast.ingestion.stores.serialization.Serializer
 import org.apache.hadoop.security.UserGroupInformation
 import org.apache.spark.SparkEnv
@@ -154,7 +155,7 @@ class BigTableSinkRelation(
 
   private def tableName: String = {
     val entities = config.entityColumns.mkString("__")
-    s"${config.projectName}__${entities}"
+    StringUtils.trimAndHash(s"${config.projectName}__${entities}", maxTableNameLength)
   }
 
   private def joinEntityKey: UserDefinedFunction = udf { r: Row =>
@@ -164,6 +165,7 @@ class BigTableSinkRelation(
   private val metadataColumnFamily = "metadata"
   private val schemaKeyPrefix      = "schema#"
   private val emptyQualifier       = ""
+  private val maxTableNameLength   = 50
 
   private def isSystemColumn(name: String) =
     (config.entityColumns ++ Seq(config.timestampColumn)).contains(name)
