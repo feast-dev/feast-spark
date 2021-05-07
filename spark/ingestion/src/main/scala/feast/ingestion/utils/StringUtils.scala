@@ -24,7 +24,8 @@ object StringUtils {
   }
 
   def trimAndHash(expr: String, maxLength: Int): String = {
-    val maxPrefixLength = 40
+    // Length 8 suffix as derived from murmurhash_32 implementation
+    val maxPrefixLength = maxLength - 8
     if (expr.length > maxLength)
       expr
         .take(maxPrefixLength)
