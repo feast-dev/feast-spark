@@ -16,6 +16,7 @@
  */
 package feast.ingestion.stores.cassandra
 
+import feast.ingestion.utils.StringUtils
 import feast.ingestion.stores.serialization.Serializer
 import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions.{col, lit, struct, udf}
@@ -63,8 +64,11 @@ class CassandraSinkRelation(
     writer.append()
   }
 
+  val maxTableNameLength = 48
+
   def sanitizedForCassandra(expr: String): String = {
-    expr.replace('-', '_')
+    val replacedString = expr.replace('-', '_')
+    StringUtils.trimAndHash(replacedString, maxTableNameLength)
   }
 
   val tableName = {
