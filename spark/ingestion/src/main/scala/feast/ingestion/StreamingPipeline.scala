@@ -36,6 +36,7 @@ import org.apache.spark.sql.functions.{expr, lit, struct, udf, coalesce}
 import org.apache.spark.sql.streaming.StreamingQuery
 import org.apache.spark.sql.types.BooleanType
 import org.apache.spark.{SparkEnv, SparkFiles}
+import org.apache.spark.eventhubs._
 
 /**
   * Streaming pipeline (currently in micro-batches mode only, since we need to have multiple sinks: redis & deadletters).
@@ -59,6 +60,9 @@ object StreamingPipeline extends BasePipeline with Serializable {
     val rowValidator  = new RowValidator(featureTable, config.source.eventTimestampColumn)
     val metrics       = new IngestionPipelineMetrics
     val validationUDF = createValidationUDF(sparkSession, config)
+    val connStr = "Endpoint=sb://xiaoyzhufeasttest.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=z9obEAyVvD36fZIEvvtNlCRBEDjIrsfNfDAbgDyTbDg=;EntityPath=xiaoyzhufeasttesteh"
+    val ehConf = EventHubsConf(connStr).setStartingPosition(EventPosition.fromStartOfStream)
+
 
     val input = config.source match {
       case source: KafkaSource =>
@@ -66,6 +70,11 @@ object StreamingPipeline extends BasePipeline with Serializable {
           .format("kafka")
           .option("kafka.bootstrap.servers", source.bootstrapServers)
           .option("subscribe", source.topic)
+          .load()
+      case source: EventHubSource =>
+        sparkSession.readStream
+          .format("eventhubs")
+          .options(ehConf.toMap)
           .load()
       case source: MemoryStreamingSource =>
         source.read

@@ -90,10 +90,21 @@ case class KafkaSource(
     override val datePartitionColumn: Option[String] = None
 ) extends StreamingSource
 
+case class EventHubSource(
+                        bootstrapServers: String,
+                        topic: String,
+                        override val format: DataFormat,
+                        override val fieldMapping: Map[String, String],
+                        override val eventTimestampColumn: String,
+                        override val createdTimestampColumn: Option[String] = None,
+                        override val datePartitionColumn: Option[String] = None
+                      ) extends StreamingSource
+
 case class Sources(
     file: Option[FileSource] = None,
     bq: Option[BQSource] = None,
-    kafka: Option[KafkaSource] = None
+    kafka: Option[KafkaSource] = None,
+    eventhub: Option[EventHubSource] = None
 )
 
 case class Field(name: String, `type`: feast.proto.types.ValueProto.ValueType.Enum)
