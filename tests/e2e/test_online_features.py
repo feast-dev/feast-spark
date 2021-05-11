@@ -208,11 +208,13 @@ def test_list_jobs_long_table_name(
     feast_spark_client: SparkClient,
     batch_source: Union[BigQuerySource, FileSource],
 ):
-    entity = Entity(name="s2id", description="S2id", value_type=ValueType.INT64,)
+    entity = Entity(
+        name="long_entity_name" * 10, description="S2id", value_type=ValueType.INT64
+    )
 
     feature_table = FeatureTable(
         name="just1a2featuretable3with4a5really6really7really8really9really10",
-        entities=["s2id"],
+        entities=[entity.name],
         features=[Feature("unique_drivers", ValueType.INT64)],
         batch_source=batch_source,
     )
@@ -220,7 +222,7 @@ def test_list_jobs_long_table_name(
     feast_client.apply(entity)
     feast_client.apply(feature_table)
 
-    data_sample = generate_data()
+    data_sample = generate_data().rename(columns={"s2id": entity.name})
     feast_client.ingest(feature_table, data_sample)
 
     job = feast_spark_client.start_offline_to_online_ingestion(
@@ -241,6 +243,19 @@ def test_list_jobs_long_table_name(
         )
     ]
     assert job.get_id() in all_job_ids
+
+    features = feast_client.get_online_features(
+        [f"{feature_table.name}:unique_drivers"],
+        entity_rows=[{entity.name: key} for key in data_sample[entity.name].tolist()],
+    ).to_dict()
+
+    ingested = pd.DataFrame.from_dict(features)
+    pd.testing.assert_frame_equal(
+        ingested[[entity.name, f"{feature_table.name}:unique_drivers"]],
+        data_sample[[entity.name, "unique_drivers"]].rename(
+            columns={"unique_drivers": f"{feature_table.name}:unique_drivers"}
+        ),
+    )
 
 
 def avro_schema():
