@@ -1,4 +1,16 @@
 # Changelog
+## [v0.2.5](https://github.com/feast-dev/feast-spark/tree/v0.2.5) (2021-05-11)
+
+[Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.4...v0.2.5)
+
+**Fixed bugs:**
+
+- Fix SSTable name length restrictions during ingestion [\#70](https://github.com/feast-dev/feast-spark/pull/70) ([terryyylim](https://github.com/terryyylim))
+
+**Merged pull requests:**
+
+- Test long entity names in e2e tests [\#71](https://github.com/feast-dev/feast-spark/pull/71) ([pyalex](https://github.com/pyalex))
+
 ## [v0.2.4](https://github.com/feast-dev/feast-spark/tree/v0.2.4) (2021-05-05)
 
 [Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.3...v0.2.4)
