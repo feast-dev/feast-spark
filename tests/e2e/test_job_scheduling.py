@@ -43,6 +43,7 @@ def test_schedule_batch_ingestion_jobs(
             plural="scheduledsparkapplications",
             name=f"feast-{feast_client.project}-{feature_table.name}".replace("_", "-"),
         )
+
     response = get_scheduled_spark_application()
     assert response["spec"]["schedule"] == "0 0 * * *"
     feast_spark_client.schedule_offline_to_online_ingestion(

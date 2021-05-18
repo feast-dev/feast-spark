@@ -173,7 +173,7 @@ def _prepare_scheduled_job_resource(
     scheduled_job = deepcopy(scheduled_job_template)
     _add_keys(scheduled_job, ("spec",), dict(schedule=job_schedule))
 
-    labels = {LABEL_JOBTYPE: job_type}
+    labels = {LABEL_JOBID: scheduled_job_id, LABEL_JOBTYPE: job_type}
     if extra_labels:
         labels = {**labels, **extra_labels}
 
