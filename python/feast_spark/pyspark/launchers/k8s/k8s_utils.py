@@ -156,6 +156,7 @@ def _prepare_job_resource(
 def _prepare_scheduled_job_resource(
     scheduled_job_template: Dict[str, Any],
     scheduled_job_id: str,
+    job_schedule: str,
     job_template: Dict[str, Any],
     job_type: str,
     main_application_file: str,
@@ -170,6 +171,7 @@ def _prepare_scheduled_job_resource(
 ) -> Dict[str, Any]:
     """ Prepare ScheduledSparkApplication custom resource configs """
     scheduled_job = deepcopy(scheduled_job_template)
+    _add_keys(scheduled_job, ("spec",), dict(schedule=job_schedule))
 
     labels = {LABEL_JOBTYPE: job_type}
     if extra_labels:

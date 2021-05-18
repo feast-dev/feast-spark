@@ -529,6 +529,9 @@ class ScheduledBatchIngestionJobParameters(IngestionJobParameters):
     def get_job_type(self) -> SparkJobType:
         return SparkJobType.SCHEDULED_BATCH_INGESTION
 
+    def get_job_schedule(self) -> str:
+        return self._cron_schedule
+
     def get_arguments(self) -> List[str]:
         return super().get_arguments() + [
             "--mode",

@@ -34,11 +34,12 @@ def test_schedule_batch_ingestion_jobs(
     )
     config.load_incluster_config()
     k8s_api = client.CustomObjectsApi()
-    k8s_api.get_namespaced_custom_object(
+    response = k8s_api.get_namespaced_custom_object(
         group="sparkoperator.k8s.io",
         version="v1beta2",
         namespace=pytestconfig.getoption("k8s_namespace"),
         plural="scheduledsparkapplications",
         name=f"feast-{feast_client.project}-{feature_table.name}".replace("_", "-"),
     )
+    assert response["spec"]["schedule"] == "0 0 * * *"
     feast_spark_client.unschedule_offline_to_online_ingestion(feature_table)
