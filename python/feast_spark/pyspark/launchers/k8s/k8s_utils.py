@@ -298,10 +298,12 @@ def _submit_scheduled_job(
             api.create_namespaced_custom_object(
                 **_scheduled_crd_args(namespace), body=resource
             )
+            return
         else:
-            api.replace_namespaced_custom_object(
-                **_scheduled_crd_args(namespace), name=name, body=resource,
-            )
+            raise e
+    api.patch_namespaced_custom_object(
+        **_scheduled_crd_args(namespace), name=name, body=resource,
+    )
 
 
 def _list_jobs(
