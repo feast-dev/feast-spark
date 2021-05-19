@@ -394,6 +394,7 @@ class KubernetesJobLauncher(JobLauncher):
         resource = _prepare_scheduled_job_resource(
             scheduled_job_template=self._scheduled_resource_template,
             scheduled_job_id=schedule_job_id,
+            job_schedule=ingestion_job_params.get_job_schedule(),
             job_template=self._resource_template,
             job_type=OFFLINE_TO_ONLINE_JOB_TYPE,
             main_application_file=jar_s3_path,

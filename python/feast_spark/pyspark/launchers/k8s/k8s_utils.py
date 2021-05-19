@@ -156,6 +156,7 @@ def _prepare_job_resource(
 def _prepare_scheduled_job_resource(
     scheduled_job_template: Dict[str, Any],
     scheduled_job_id: str,
+    job_schedule: str,
     job_template: Dict[str, Any],
     job_type: str,
     main_application_file: str,
@@ -170,8 +171,9 @@ def _prepare_scheduled_job_resource(
 ) -> Dict[str, Any]:
     """ Prepare ScheduledSparkApplication custom resource configs """
     scheduled_job = deepcopy(scheduled_job_template)
+    _add_keys(scheduled_job, ("spec",), dict(schedule=job_schedule))
 
-    labels = {LABEL_JOBTYPE: job_type}
+    labels = {LABEL_JOBID: scheduled_job_id, LABEL_JOBTYPE: job_type}
     if extra_labels:
         labels = {**labels, **extra_labels}
 
@@ -296,10 +298,12 @@ def _submit_scheduled_job(
             api.create_namespaced_custom_object(
                 **_scheduled_crd_args(namespace), body=resource
             )
+            return
         else:
-            api.replace_namespaced_custom_object(
-                **_scheduled_crd_args(namespace), name=name, body=resource,
-            )
+            raise e
+    api.patch_namespaced_custom_object(
+        **_scheduled_crd_args(namespace), name=name, body=resource,
+    )
 
 
 def _list_jobs(
