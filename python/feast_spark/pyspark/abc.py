@@ -329,13 +329,9 @@ class IngestionJobParameters(SparkJobParameters):
         feature_table: Dict,
         source: Dict,
         jar: str,
-        redis_host: Optional[str] = None,
-        redis_port: Optional[int] = None,
-        redis_ssl: Optional[bool] = None,
-        bigtable_project: Optional[str] = None,
-        bigtable_instance: Optional[str] = None,
-        cassandra_host: Optional[str] = None,
-        cassandra_port: Optional[int] = None,
+        redis_host: str,
+        redis_port: int,
+        redis_ssl: bool,
         statsd_host: Optional[str] = None,
         statsd_port: Optional[int] = None,
         deadletter_path: Optional[str] = None,
@@ -348,10 +344,6 @@ class IngestionJobParameters(SparkJobParameters):
         self._redis_host = redis_host
         self._redis_port = redis_port
         self._redis_ssl = redis_ssl
-        self._bigtable_project = bigtable_project
-        self._bigtable_instance = bigtable_instance
-        self._cassandra_host = cassandra_host
-        self._cassandra_port = cassandra_port
         self._statsd_host = statsd_host
         self._statsd_port = statsd_port
         self._deadletter_path = deadletter_path
@@ -360,14 +352,6 @@ class IngestionJobParameters(SparkJobParameters):
 
     def _get_redis_config(self):
         return dict(host=self._redis_host, port=self._redis_port, ssl=self._redis_ssl)
-
-    def _get_bigtable_config(self):
-        return dict(
-            project_id=self._bigtable_project, instance_id=self._bigtable_instance
-        )
-
-    def _get_cassandra_config(self):
-        return dict(host=self._cassandra_host, port=self._cassandra_port)
 
     def _get_statsd_config(self):
         return (
@@ -394,16 +378,9 @@ class IngestionJobParameters(SparkJobParameters):
             json.dumps(self._feature_table),
             "--source",
             json.dumps(self._source),
+            "--redis",
+            json.dumps(self._get_redis_config()),
         ]
-
-        if self._redis_host and self._redis_port:
-            args.extend(["--redis", json.dumps(self._get_redis_config())])
-
-        if self._bigtable_project and self._bigtable_instance:
-            args.extend(["--bigtable", json.dumps(self._get_bigtable_config())])
-
-        if self._cassandra_host and self._cassandra_port:
-            args.extend(["--cassandra", json.dumps(self._get_cassandra_config())])
 
         if self._get_statsd_config():
             args.extend(["--statsd", json.dumps(self._get_statsd_config())])
@@ -433,13 +410,9 @@ class BatchIngestionJobParameters(IngestionJobParameters):
         start: datetime,
         end: datetime,
         jar: str,
-        redis_host: Optional[str],
-        redis_port: Optional[int],
-        redis_ssl: Optional[bool],
-        bigtable_project: Optional[str],
-        bigtable_instance: Optional[str],
-        cassandra_host: Optional[str] = None,
-        cassandra_port: Optional[int] = None,
+        redis_host: str,
+        redis_port: int,
+        redis_ssl: bool,
         statsd_host: Optional[str] = None,
         statsd_port: Optional[int] = None,
         deadletter_path: Optional[str] = None,
@@ -452,10 +425,6 @@ class BatchIngestionJobParameters(IngestionJobParameters):
             redis_host,
             redis_port,
             redis_ssl,
-            bigtable_project,
-            bigtable_instance,
-            cassandra_host,
-            cassandra_port,
             statsd_host,
             statsd_port,
             deadletter_path,
@@ -484,60 +453,6 @@ class BatchIngestionJobParameters(IngestionJobParameters):
         ]
 
 
-class ScheduledBatchIngestionJobParameters(IngestionJobParameters):
-    def __init__(
-        self,
-        feature_table: Dict,
-        source: Dict,
-        ingestion_timespan: int,
-        cron_schedule: str,
-        jar: str,
-        redis_host: Optional[str],
-        redis_port: Optional[int],
-        redis_ssl: Optional[bool],
-        bigtable_project: Optional[str],
-        bigtable_instance: Optional[str],
-        cassandra_host: Optional[str] = None,
-        cassandra_port: Optional[int] = None,
-        statsd_host: Optional[str] = None,
-        statsd_port: Optional[int] = None,
-        deadletter_path: Optional[str] = None,
-        stencil_url: Optional[str] = None,
-    ):
-        super().__init__(
-            feature_table,
-            source,
-            jar,
-            redis_host,
-            redis_port,
-            redis_ssl,
-            bigtable_project,
-            bigtable_instance,
-            cassandra_host,
-            cassandra_port,
-            statsd_host,
-            statsd_port,
-            deadletter_path,
-            stencil_url,
-        )
-        self._ingestion_timespan = ingestion_timespan
-        self._cron_schedule = cron_schedule
-
-    def get_name(self) -> str:
-        return f"{self.get_job_type().to_pascal_case()}-{self.get_feature_table_name()}"
-
-    def get_job_type(self) -> SparkJobType:
-        return SparkJobType.SCHEDULED_BATCH_INGESTION
-
-    def get_arguments(self) -> List[str]:
-        return super().get_arguments() + [
-            "--mode",
-            "offline",
-            "--ingestion-timespan",
-            str(self._ingestion_timespan),
-        ]
-
-
 class StreamIngestionJobParameters(IngestionJobParameters):
     def __init__(
         self,
@@ -545,20 +460,15 @@ class StreamIngestionJobParameters(IngestionJobParameters):
         source: Dict,
         jar: str,
         extra_jars: List[str],
-        redis_host: Optional[str],
-        redis_port: Optional[int],
-        redis_ssl: Optional[bool],
-        bigtable_project: Optional[str],
-        bigtable_instance: Optional[str],
-        cassandra_host: Optional[str] = None,
-        cassandra_port: Optional[int] = None,
+        redis_host: str,
+        redis_port: int,
+        redis_ssl: bool,
         statsd_host: Optional[str] = None,
         statsd_port: Optional[int] = None,
         deadletter_path: Optional[str] = None,
         checkpoint_path: Optional[str] = None,
         stencil_url: Optional[str] = None,
         drop_invalid_rows: bool = False,
-        triggering_interval: Optional[int] = None,
     ):
         super().__init__(
             feature_table,
@@ -567,10 +477,6 @@ class StreamIngestionJobParameters(IngestionJobParameters):
             redis_host,
             redis_port,
             redis_ssl,
-            bigtable_project,
-            bigtable_instance,
-            cassandra_host,
-            cassandra_port,
             statsd_host,
             statsd_port,
             deadletter_path,
@@ -579,7 +485,6 @@ class StreamIngestionJobParameters(IngestionJobParameters):
         )
         self._extra_jars = extra_jars
         self._checkpoint_path = checkpoint_path
-        self._triggering_interval = triggering_interval
 
     def get_name(self) -> str:
         return f"{self.get_job_type().to_pascal_case()}-{self.get_feature_table_name()}"
@@ -595,8 +500,6 @@ class StreamIngestionJobParameters(IngestionJobParameters):
         args.extend(["--mode", "online"])
         if self._checkpoint_path:
             args.extend(["--checkpoint-path", self._checkpoint_path])
-        if self._triggering_interval:
-            args.extend(["--triggering-interval", str(self._triggering_interval)])
         return args
 
     def get_job_hash(self) -> str:
@@ -688,29 +591,6 @@ class JobLauncher(abc.ABC):
 
         Returns:
             BatchIngestionJob: wrapper around remote job that can be used to check when job completed.
-        """
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def schedule_offline_to_online_ingestion(
-        self, ingestion_job_params: ScheduledBatchIngestionJobParameters
-    ):
-        """
-        Submits a scheduled batch ingestion job to a Spark cluster.
-
-        Raises:
-            SparkJobFailure: The spark job submission failed, encountered error
-                during execution, or timeout.
-
-        Returns:
-            ScheduledBatchIngestionJob: wrapper around remote job that can be used to check when job completed.
-        """
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def unschedule_offline_to_online_ingestion(self, project: str, feature_table: str):
-        """
-        Unschedule a scheduled batch ingestion job.
         """
         raise NotImplementedError
 

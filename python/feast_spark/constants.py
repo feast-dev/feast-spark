@@ -108,6 +108,12 @@ class ConfigOptions(metaclass=ConfigMeta):
     # Synapse pool executor count
     AZURE_SYNAPSE_EXECUTORS = "2"
 
+    # Azure EventHub Connection String (with Kafka API). See more details here:
+    # https://docs.microsoft.com/en-us/azure/event-hubs/apache-kafka-migration-guide
+    # Code Sample is here: 
+    # https://github.com/Azure/azure-event-hubs-for-kafka/blob/master/tutorials/spark/sparkConsumer.scala
+    AZURE_EVENTHUB_KAFKA_CONNECTION_STRING = ""
+
     #: File format of historical retrieval features
     HISTORICAL_FEATURE_OUTPUT_FORMAT: str = "parquet"
 
@@ -122,6 +128,9 @@ class ConfigOptions(metaclass=ConfigMeta):
 
     #: Enable or disable TLS/SSL to Redis
     REDIS_SSL: Optional[str] = "False"
+
+    #: Auth string for redis
+    REDIS_AUTH: str = ""
 
     #: BigTable Project ID
     BIGTABLE_PROJECT: Optional[str] = ""

@@ -219,10 +219,17 @@ class SynapseJobLauncher(JobLauncher):
         """
 
         main_file = self._datalake.upload_file(ingestion_job_params.get_main_file_path())
+        print(main_file, ingestion_job_params.get_main_file_path())
+        print(ingestion_job_params.get_class_name())
+        # for arg in ingestion_job_params.get_arguments():
+        #     print(len(arg), arg)
+        # args = [x.replace(' ', '') for x in ingestion_job_params.get_arguments()]
+        # print(args)
+
         job_info = _submit_job(self._api, ingestion_job_params.get_project(), main_file,
             main_class = ingestion_job_params.get_class_name(),
             arguments = ingestion_job_params.get_arguments(),
-            tags = _prepare_job_tags(ingestion_job_params, OFFLINE_TO_ONLINE_JOB_TYPE))
+            tags = _prepare_job_tags(ingestion_job_params, OFFLINE_TO_ONLINE_JOB_TYPE),configuration=None)
 
         return cast(BatchIngestionJob, self._job_from_job_info(job_info))
 

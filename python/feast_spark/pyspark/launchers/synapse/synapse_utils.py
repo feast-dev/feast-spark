@@ -4,6 +4,7 @@ import hashlib
 import urllib.request
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from azure.core.configuration import Configuration
 
 from azure.identity import DefaultAzureCredential
 
@@ -144,7 +145,11 @@ class SynapseJobRunner(object):
         executor_cores = EXECUTOR_SIZE[self._executor_size]['Cores']
         executor_memory = EXECUTOR_SIZE[self._executor_size]['Memory']
 
-        # Exact API definition is here: https://github.com/Azure/azure-sdk-for-python/blob/master/sdk/synapse/azure-synapse-spark/azure/synapse/spark/operations/_spark_batch_operations.py#L114
+        # SDK source code is here: https://github.com/Azure/azure-sdk-for-python/tree/master/sdk/synapse/azure-synapse
+        # Exact code is here: https://github.com/Azure/azure-sdk-for-python/blob/master/sdk/synapse/azure-synapse-spark/azure/synapse/spark/operations/_spark_batch_operations.py#L114
+        
+        arguments = [elem.replace("}", " }") for elem in arguments]
+
         spark_batch_job_options = SparkBatchJobOptions(
             tags=tags,
             name=job_name,
@@ -160,7 +165,14 @@ class SynapseJobRunner(object):
             executor_memory=executor_memory,
             executor_cores=executor_cores,
             executor_count=self._executors)
+
+        # print("spark_batch_job_options", spark_batch_job_options)
+        # print("arguments", arguments, type(arguments))
+
+        # print(tags,job_name,file,class_name,arguments,jars,files,archives,configuration,driver_memory,driver_cores,executor_memory,executor_cores,self._executors)
         
+        print("Final input argument:", arguments)
+
         return self.client.spark_batch.create_spark_batch_job(spark_batch_job_options, detailed=True)
 
 
@@ -214,10 +226,11 @@ def _submit_job(
     main_class = None,
     arguments = None,
     reference_files = None,
-    tags = None
+    tags = None,
+    configuration = None,
 ) -> SparkBatchJob:
     return api.create_spark_batch_job(name, main_file, class_name = main_class, arguments = arguments,
-                                      reference_files = reference_files, tags = tags)
+                                      reference_files = reference_files, tags = tags, configuration=configuration)
 
 
 def _list_jobs(
