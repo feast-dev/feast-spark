@@ -84,11 +84,24 @@ def _k8s_launcher(config: Config) -> JobLauncher:
     )
 
 
+def _synapse_launcher(config: Config) -> JobLauncher:
+    from feast_spark.pyspark.launchers import synapse
+
+    return synapse.SynapseJobLauncher(
+        synapse_dev_url=config.get(opt.AZURE_SYNAPSE_DEV_URL),
+        pool_name=config.get(opt.AZURE_SYNAPSE_POOL_NAME),
+        datalake_dir=config.get(opt.AZURE_SYNAPSE_DATALAKE_DIR),
+        executor_size=config.get(opt.AZURE_SYNAPSE_EXECUTOR_SIZE),
+        executors=int(config.get(opt.AZURE_SYNAPSE_EXECUTORS))
+    )
+
+
 _launchers = {
     "standalone": _standalone_launcher,
     "dataproc": _dataproc_launcher,
     "emr": _emr_launcher,
     "k8s": _k8s_launcher,
+    'synapse': _synapse_launcher,
 }
 
 
