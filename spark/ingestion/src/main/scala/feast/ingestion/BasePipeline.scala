@@ -33,11 +33,12 @@ object BasePipeline {
     val conf = new SparkConf()
 
     jobConfig.store match {
-      case RedisConfig(host, port, ssl) =>
+      case RedisConfig(host, port, auth, ssl) =>
         conf
           .set("spark.redis.host", host)
           .set("spark.redis.port", port.toString)
           .set("spark.redis.ssl", ssl.toString)
+          .set("spark.redis.auth", auth.toString)
       case BigTableConfig(projectId, instanceId) =>
         conf
           .set("spark.bigtable.projectId", projectId)

@@ -130,7 +130,7 @@ case class IngestionJobConfig(
     source: Source = null,
     startTime: DateTime = DateTime.now(),
     endTime: DateTime = DateTime.now(),
-    store: StoreConfig = RedisConfig("localhost", 6379, false),
+    store: StoreConfig = RedisConfig("localhost", 6379, "", false),
     metrics: Option[MetricConfig] = None,
     deadLetterPath: Option[String] = None,
     stencilURL: Option[String] = None,
@@ -138,4 +138,5 @@ case class IngestionJobConfig(
     validationConfig: Option[ValidationConfig] = None,
     doNotIngestInvalidRows: Boolean = false,
     checkpointPath: Option[String] = None
+    kafkaSASL: Option[String] = None
 )
