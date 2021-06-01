@@ -165,6 +165,9 @@ class ConfigOptions(metaclass=ConfigMeta):
     #: That may help to control amount of write requests to storage
     SPARK_STREAMING_TRIGGERING_INTERVAL: Optional[str] = None
 
+    #: Destination to append logs to for retrieval in Kubernetes Pods
+    KUBE_LOG_DESTINATION: Optional[str] = "/dev/termination-log"
+
     def defaults(self):
         return {
             k: getattr(self, k)

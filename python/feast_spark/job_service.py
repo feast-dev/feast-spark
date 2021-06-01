@@ -71,6 +71,7 @@ def _job_to_proto(spark_job: SparkJob) -> JobProto:
     job = JobProto()
     job.id = spark_job.get_id()
     job.log_uri = cast(str, spark_job.get_log_uri() or "")
+    job.message = cast(str, spark_job.get_message() or "")
     status = spark_job.get_status()
     if status == SparkJobStatus.COMPLETED:
         job.status = JobStatus.JOB_STATUS_DONE

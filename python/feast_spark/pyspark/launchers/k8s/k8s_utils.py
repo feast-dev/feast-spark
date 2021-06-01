@@ -1,4 +1,5 @@
 import hashlib
+import logging
 from copy import deepcopy
 from datetime import datetime
 from typing import Any, Dict, List, NamedTuple, Optional, Tuple
@@ -6,6 +7,7 @@ from typing import Any, Dict, List, NamedTuple, Optional, Tuple
 from kubernetes import client, config
 from kubernetes.client.api import CustomObjectsApi
 
+from feast_spark.constants import ConfigOptions as opt
 from feast_spark.pyspark.abc import SparkJobStatus
 
 __all__ = [
@@ -232,6 +234,7 @@ def _scheduled_crd_args(namespace: str) -> Dict[str, str]:
 class JobInfo(NamedTuple):
     job_id: str
     job_type: str
+    job_message: str
     namespace: str
     extra_metadata: Dict[str, str]
     state: SparkJobStatus
@@ -266,12 +269,26 @@ def _resource_to_job_info(resource: Dict[str, Any]) -> JobInfo:
 
     if "status" in resource:
         state = _k8s_state_to_feast(resource["status"]["applicationState"]["state"])
+        message = resource["status"].get("applicationState", {}).get("errorMessage", "")
     else:
         state = _k8s_state_to_feast("")
+        message = ""
+
+    log_destination = opt.KUBE_LOG_DESTINATION
+    logging.basicConfig(
+        filename=log_destination,
+        filemode="a",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        format="%(asctime)s;%(levelname)s;%(message)s",
+        level=logging.ERROR,
+    )
+    if state == "FAILED":
+        logging.error(message)
 
     return JobInfo(
         job_id=labels[LABEL_JOBID],
         job_type=labels.get(LABEL_JOBTYPE, ""),
+        job_message=message,
         namespace=resource["metadata"].get("namespace", "default"),
         extra_metadata={k: v for k, v in sparkConf.items() if k in METADATA_KEYS},
         state=state,

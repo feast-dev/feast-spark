@@ -104,6 +104,9 @@ message Job {
 
   // Path to Spark job logs, if available
   string log_uri = 9;
+
+  // Job message, if available
+  string message = 10;
 }
 
 // Ingest data from offline store into online store

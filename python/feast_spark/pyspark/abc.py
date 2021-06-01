@@ -80,6 +80,12 @@ class SparkJob(abc.ABC):
         """
         return None
 
+    def get_message(self) -> Optional[str]:
+        """
+        Get Spark job message, if applicable.
+        """
+        return None
+
 
 class SparkJobParameters(abc.ABC):
     @abc.abstractmethod

@@ -86,6 +86,11 @@ class KubernetesJobMixin:
     def get_id(self) -> str:
         return self._job_id
 
+    def get_message(self) -> str:
+        job = _get_job_by_id(self._api, self._namespace, self._job_id)
+        assert job is not None
+        return job.job_message
+
     def get_status(self) -> SparkJobStatus:
         job = _get_job_by_id(self._api, self._namespace, self._job_id)
         assert job is not None
@@ -487,7 +492,7 @@ class KubernetesJobLauncher(JobLauncher):
     def get_job_by_id(self, job_id: str) -> SparkJob:
         job_info = _get_job_by_id(self._api, self._namespace, job_id)
         if job_info is None:
-            raise KeyError(f"Job iwth id {job_id} not found")
+            raise KeyError(f"Job with id {job_id} not found")
         else:
             return self._job_from_job_info(job_info)
 
