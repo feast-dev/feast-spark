@@ -282,7 +282,7 @@ def _resource_to_job_info(resource: Dict[str, Any]) -> JobInfo:
         format="%(asctime)s;%(levelname)s;%(message)s",
         level=logging.ERROR,
     )
-    if state == "FAILED":
+    if state == SparkJobStatus.FAILED:
         logging.error(message)
 
     return JobInfo(
