@@ -21,7 +21,7 @@ DEFAULT_LOGGING = {
     "formatters": {"standard": {"format": "%(asctime)s [%(levelname)s] %(message)s"}},
     "handlers": {
         "file": {
-            "class": "logging.handlers.FileHandler",
+            "class": "logging.FileHandler",
             "level": "INFO",
             "formatter": "standard",
             "filename": "/dev/termination-log",
