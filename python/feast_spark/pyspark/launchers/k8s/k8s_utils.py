@@ -1,5 +1,4 @@
 import hashlib
-import logging
 from copy import deepcopy
 from datetime import datetime
 from typing import Any, Dict, List, NamedTuple, Optional, Tuple
@@ -7,7 +6,6 @@ from typing import Any, Dict, List, NamedTuple, Optional, Tuple
 from kubernetes import client, config
 from kubernetes.client.api import CustomObjectsApi
 
-from feast_spark.constants import ConfigOptions as opt
 from feast_spark.pyspark.abc import SparkJobStatus
 
 __all__ = [
@@ -273,17 +271,6 @@ def _resource_to_job_info(resource: Dict[str, Any]) -> JobInfo:
     else:
         state = _k8s_state_to_feast("")
         message = ""
-
-    log_destination = opt.KUBE_LOG_DESTINATION
-    logging.basicConfig(
-        filename=log_destination,
-        filemode="a",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        format="%(asctime)s;%(levelname)s;%(message)s",
-        level=logging.ERROR,
-    )
-    if state == SparkJobStatus.FAILED:
-        logging.error(message)
 
     return JobInfo(
         job_id=labels[LABEL_JOBID],

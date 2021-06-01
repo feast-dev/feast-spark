@@ -1,6 +1,7 @@
 import abc
 import argparse
 import json
+import logging
 from base64 import b64decode
 from datetime import timedelta
 from typing import Any, Dict, List, NamedTuple, Optional
@@ -8,6 +9,8 @@ from typing import Any, Dict, List, NamedTuple, Optional
 from pyspark.sql import DataFrame, SparkSession, Window
 from pyspark.sql.functions import col, expr, monotonically_increasing_id, row_number
 from pyspark.sql.types import LongType
+
+from feast_spark.constants import ConfigOptions as opt
 
 EVENT_TIMESTAMP_ALIAS = "event_timestamp"
 CREATED_TIMESTAMP_ALIAS = "created_timestamp"
@@ -798,17 +801,27 @@ def json_b64_decode(s: str) -> Any:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        filename=opt.KUBE_LOG_DESTINATION,
+        filemode="a",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        format="%(asctime)s;%(levelname)s;%(message)s",
+        level=logging.ERROR,
+    )
     spark = SparkSession.builder.getOrCreate()
     args = _get_args()
     feature_tables_conf = json_b64_decode(args.feature_tables)
     feature_tables_sources_conf = json_b64_decode(args.feature_tables_sources)
     entity_source_conf = json_b64_decode(args.entity_source)
     destination_conf = json_b64_decode(args.destination)
-    start_job(
-        spark,
-        entity_source_conf,
-        feature_tables_sources_conf,
-        feature_tables_conf,
-        destination_conf,
-    )
+    try:
+        start_job(
+            spark,
+            entity_source_conf,
+            feature_tables_sources_conf,
+            feature_tables_conf,
+            destination_conf,
+        )
+    except Exception as e:
+        logging.error(e)
     spark.stop()
