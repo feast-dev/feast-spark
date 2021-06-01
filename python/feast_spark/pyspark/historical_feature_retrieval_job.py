@@ -10,10 +10,28 @@ from pyspark.sql import DataFrame, SparkSession, Window
 from pyspark.sql.functions import col, expr, monotonically_increasing_id, row_number
 from pyspark.sql.types import LongType
 
-from feast_spark.constants import ConfigOptions as opt
-
 EVENT_TIMESTAMP_ALIAS = "event_timestamp"
 CREATED_TIMESTAMP_ALIAS = "created_timestamp"
+
+
+DEFAULT_LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {"standard": {"format": "%(asctime)s [%(levelname)s] %(message)s"}},
+    "handlers": {
+        "file": {
+            "class": "logging.handlers.FileHandler",
+            "level": "INFO",
+            "formatter": "standard",
+            "filename": "/dev/termination-log",
+            "mode": "a",
+        }
+    },
+    "loggers": {"__main__": {"level": "INFO", "handlers": ["file"]}},
+}
+
+logging.config.dictConfig(DEFAULT_LOGGING)
+logger = logging.getLogger(__name__)
 
 
 class Source(abc.ABC):
@@ -801,13 +819,6 @@ def json_b64_decode(s: str) -> Any:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        filename=opt.KUBE_LOG_DESTINATION,
-        filemode="a",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        format="%(asctime)s;%(levelname)s;%(message)s",
-        level=logging.ERROR,
-    )
     spark = SparkSession.builder.getOrCreate()
     args = _get_args()
     feature_tables_conf = json_b64_decode(args.feature_tables)
@@ -823,5 +834,5 @@ if __name__ == "__main__":
             destination_conf,
         )
     except Exception as e:
-        logging.error(e)
+        logger.exception(e)
     spark.stop()
