@@ -4,6 +4,7 @@ import json
 import logging
 from base64 import b64decode
 from datetime import timedelta
+from logging.config import dictConfig
 from typing import Any, Dict, List, NamedTuple, Optional
 
 from pyspark.sql import DataFrame, SparkSession, Window
@@ -30,7 +31,7 @@ DEFAULT_LOGGING = {
     "loggers": {"__main__": {"level": "INFO", "handlers": ["file"]}},
 }
 
-logging.config.dictConfig(DEFAULT_LOGGING)
+dictConfig(DEFAULT_LOGGING)
 logger = logging.getLogger(__name__)
 
 
