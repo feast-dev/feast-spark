@@ -24,6 +24,7 @@ class RemoteJobMixin:
         service: JobServiceStub,
         grpc_extra_param_provider: GrpcExtraParamProvider,
         job_id: str,
+        message: str,
         start_time: datetime,
         log_uri: Optional[str],
     ):
@@ -37,6 +38,7 @@ class RemoteJobMixin:
         self._grpc_extra_param_provider = grpc_extra_param_provider
         self._start_time = start_time
         self._log_uri = log_uri
+        self._message = message
 
     def get_id(self) -> str:
         return self._job_id
@@ -83,6 +85,9 @@ class RemoteJobMixin:
     def get_log_uri(self) -> Optional[str]:
         return self._log_uri
 
+    def get_message(self) -> str:
+        return self._message
+
 
 class RemoteRetrievalJob(RemoteJobMixin, RetrievalJob):
     """
@@ -95,6 +100,7 @@ class RemoteRetrievalJob(RemoteJobMixin, RetrievalJob):
         grpc_extra_param_provider: GrpcExtraParamProvider,
         job_id: str,
         output_file_uri: str,
+        message: str,
         start_time: datetime,
         log_uri: Optional[str],
     ):
@@ -105,7 +111,7 @@ class RemoteRetrievalJob(RemoteJobMixin, RetrievalJob):
             output_file_uri (str): Uri to the historical feature retrieval job output file.
         """
         super().__init__(
-            service, grpc_extra_param_provider, job_id, start_time, log_uri
+            service, grpc_extra_param_provider, job_id, message, start_time, log_uri
         )
         self._output_file_uri = output_file_uri
 
@@ -130,12 +136,13 @@ class RemoteBatchIngestionJob(RemoteJobMixin, BatchIngestionJob):
         service: JobServiceStub,
         grpc_extra_param_provider: GrpcExtraParamProvider,
         job_id: str,
+        message: str,
         feature_table: str,
         start_time: datetime,
         log_uri: Optional[str],
     ):
         super().__init__(
-            service, grpc_extra_param_provider, job_id, start_time, log_uri
+            service, grpc_extra_param_provider, job_id, message, start_time, log_uri
         )
         self._feature_table = feature_table
 
@@ -153,12 +160,13 @@ class RemoteStreamIngestionJob(RemoteJobMixin, StreamIngestionJob):
         service: JobServiceStub,
         grpc_extra_param_provider: GrpcExtraParamProvider,
         job_id: str,
+        message: str,
         feature_table: str,
         start_time: datetime,
         log_uri: Optional[str],
     ):
         super().__init__(
-            service, grpc_extra_param_provider, job_id, start_time, log_uri
+            service, grpc_extra_param_provider, job_id, message, start_time, log_uri
         )
         self._feature_table = feature_table
 
@@ -195,6 +203,7 @@ def get_remote_job_from_proto(
             grpc_extra_param_provider,
             job.id,
             job.retrieval.output_location,
+            job.message,
             job.start_time.ToDatetime(),
             job.log_uri,
         )
@@ -203,6 +212,7 @@ def get_remote_job_from_proto(
             service,
             grpc_extra_param_provider,
             job.id,
+            job.message,
             job.batch_ingestion.table_name,
             job.start_time.ToDatetime(),
             job.log_uri,
@@ -212,6 +222,7 @@ def get_remote_job_from_proto(
             service,
             grpc_extra_param_provider,
             job.id,
+            job.message,
             job.stream_ingestion.table_name,
             job.start_time.ToDatetime(),
             job.log_uri,
