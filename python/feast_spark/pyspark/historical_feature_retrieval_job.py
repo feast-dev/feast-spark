@@ -20,15 +20,20 @@ DEFAULT_LOGGING = {
     "disable_existing_loggers": False,
     "formatters": {"standard": {"format": "%(asctime)s [%(levelname)s] %(message)s"}},
     "handlers": {
+        "default": {
+            "class": "logging.StreamHandler",
+            "level": "INFO",
+            "formatter": "standard",
+        },
         "file": {
             "class": "logging.FileHandler",
             "level": "INFO",
             "formatter": "standard",
             "filename": "/dev/termination-log",
             "mode": "a",
-        }
+        },
     },
-    "loggers": {"__main__": {"level": "INFO", "handlers": ["file"]}},
+    "loggers": {"__main__": {"level": "INFO", "handlers": ["default", "file"]}},
 }
 
 dictConfig(DEFAULT_LOGGING)
