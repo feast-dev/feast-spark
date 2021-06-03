@@ -27,7 +27,7 @@ DEFAULT_LOGGING = {
         },
         "file": {
             "class": "logging.FileHandler",
-            "level": "INFO",
+            "level": "ERROR",
             "formatter": "standard",
             "filename": "/dev/termination-log",
             "mode": "a",
