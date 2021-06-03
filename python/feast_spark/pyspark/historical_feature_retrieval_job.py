@@ -2,6 +2,7 @@ import abc
 import argparse
 import json
 import logging
+import os
 from base64 import b64decode
 from datetime import timedelta
 from logging.config import dictConfig
@@ -13,6 +14,12 @@ from pyspark.sql.types import LongType
 
 EVENT_TIMESTAMP_ALIAS = "event_timestamp"
 CREATED_TIMESTAMP_ALIAS = "created_timestamp"
+
+
+def get_termination_log_path():
+    if os.access("/dev/termination-log", os.W_OK):
+        return "/dev/termination-log"
+    return "/dev/stderr"
 
 
 DEFAULT_LOGGING = {
@@ -29,7 +36,7 @@ DEFAULT_LOGGING = {
             "class": "logging.FileHandler",
             "level": "ERROR",
             "formatter": "standard",
-            "filename": "/dev/termination-log",
+            "filename": get_termination_log_path(),
             "mode": "a",
         },
     },
