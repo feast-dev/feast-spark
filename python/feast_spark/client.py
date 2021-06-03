@@ -194,13 +194,11 @@ class Client:
                 ),
                 **self._feast._extra_grpc_params(),
             )
-            job_message = self.get_job_by_id(response.id).get_message()
             return RemoteRetrievalJob(
                 self._job_service,
                 self._extra_grpc_params,
                 response.id,
                 output_file_uri=response.output_file_uri,
-                message=job_message,
                 start_time=response.job_start_time.ToDatetime(),
                 log_uri=response.log_uri,
             )
@@ -303,12 +301,10 @@ class Client:
             request.start_date.FromDatetime(start)
             request.end_date.FromDatetime(end)
             response = self._job_service.StartOfflineToOnlineIngestionJob(request)
-            job_message = self.get_job_by_id(response.id).get_message()
             return RemoteBatchIngestionJob(
                 self._job_service,
                 self._extra_grpc_params,
                 response.id,
-                job_message,
                 feature_table.name,
                 response.job_start_time.ToDatetime(),
                 response.log_uri,
@@ -387,12 +383,10 @@ class Client:
                 project=self._feast.project, table_name=feature_table.name,
             )
             response = self._job_service.StartStreamToOnlineIngestionJob(request)
-            job_message = self.get_job_by_id(response.id).get_message()
             return RemoteStreamIngestionJob(
                 self._job_service,
                 self._extra_grpc_params,
                 response.id,
-                job_message,
                 feature_table.name,
                 response.job_start_time,
                 response.log_uri,
