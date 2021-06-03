@@ -83,7 +83,7 @@ class RemoteJobMixin:
     def get_log_uri(self) -> Optional[str]:
         return self._log_uri
 
-    def get_message(self) -> str:
+    def get_error_message(self) -> str:
         job = self._service.GetJob(
             GetJobRequest(job_id=self._job_id), **self._grpc_extra_param_provider()
         ).job
@@ -123,7 +123,9 @@ class RemoteRetrievalJob(RemoteJobMixin, RetrievalJob):
         if status == SparkJobStatus.COMPLETED:
             return self._output_file_uri
         else:
-            raise SparkJobFailure(f"Spark job failed; Reason:{self.get_message()}")
+            raise SparkJobFailure(
+                f"Spark job failed; Reason:{self.get_error_message()}"
+            )
 
 
 class RemoteBatchIngestionJob(RemoteJobMixin, BatchIngestionJob):

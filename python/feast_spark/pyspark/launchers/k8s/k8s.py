@@ -86,7 +86,7 @@ class KubernetesJobMixin:
     def get_id(self) -> str:
         return self._job_id
 
-    def get_message(self) -> str:
+    def get_error_message(self) -> str:
         job = _get_job_by_id(self._api, self._namespace, self._job_id)
         assert job is not None
         return job.job_message
