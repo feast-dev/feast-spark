@@ -39,12 +39,12 @@ class ConfigOptions(metaclass=ConfigMeta):
 
     #: Spark Job launcher. The choice of storage is connected to the choice of SPARK_LAUNCHER.
     #:
-    #: Options: "standalone", "dataproc", "emr"
+    #: Options: "standalone", "dataproc", "emr", "databricks"
     SPARK_LAUNCHER: Optional[str] = None
 
     #: Feast Spark Job ingestion jobs staging location. The choice of storage is connected to the choice of SPARK_LAUNCHER.
     #:
-    #: Eg. gs://some-bucket/output/, s3://some-bucket/output/, file:///data/subfolder/
+    #: Eg. gs://some-bucket/output/, s3://some-bucket/output/, file:///data/subfolder/, dbfs:/mnt/subfolder
     SPARK_STAGING_LOCATION: Optional[str] = None
 
     #: Feast Spark Job ingestion jar file. The choice of storage is connected to the choice of SPARK_LAUNCHER.
@@ -92,6 +92,24 @@ class ConfigOptions(metaclass=ConfigMeta):
 
     # SparkApplication resource template
     SPARK_K8S_JOB_TEMPLATE_PATH = None
+    
+    # Databricks: Access Token
+    DATABRICKS_ACCESS_TOKEN: Optional[str] = None
+    
+    # Databricks: Host (https included URL of the databricks workspace)
+    DATABRICKS_HOST_URL: Optional[str] = None
+    
+    # Databricks: Common Cluster Id
+    DATABRICKS_COMMON_CLUSTER_ID: Optional[str] = None
+    
+    # Databricks: Dedicated Streaming Cluster Id [Optional Dedicated Cluster for streaming use-cases]
+    DATABRICKS_STREAMING_CLUSTER_ID: Optional[str] = None
+    
+    # Databricks: Maximum runs to retrieve
+    DATABRICKS_MAXIMUM_RUNS_TO_RETRIEVE: Optional[str] = None
+    
+    # Databricks: Mounted Storage Path (Ex: /mnt/)
+    DATABRICKS_MOUNTED_STORAGE_PATH: Optional[str] = None
 
     #: File format of historical retrieval features
     HISTORICAL_FEATURE_OUTPUT_FORMAT: str = "parquet"

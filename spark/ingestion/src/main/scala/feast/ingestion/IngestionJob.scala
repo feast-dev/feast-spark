@@ -40,6 +40,7 @@ object IngestionJob {
 
     opt[String](name = "source")
       .action((x, c) => {
+        println("Source", x)
         val json = parseJSON(x)
         JsonUtils
           .mapFieldWithParent(json) {
@@ -58,6 +59,7 @@ object IngestionJob {
 
     opt[String](name = "feature-table")
       .action((x, c) => {
+        println("feature-table", x)
         val ft = parseJSON(x).camelizeKeys.extract[FeatureTable]
 
         c.copy(
@@ -113,6 +115,9 @@ object IngestionJob {
 
     opt[Int](name = "triggering-interval")
       .action((x, c) => c.copy(streamingTriggeringSecs = x))
+
+    opt[Unit](name = "databricks-runtime")
+      .action((_, c) => c.copy(isDatabricksRuntime = true))
   }
 
   def main(args: Array[String]): Unit = {
@@ -125,14 +130,18 @@ object IngestionJob {
             try {
               BatchPipeline.createPipeline(sparkSession, config)
             } finally {
-              sparkSession.close()
+              if (!config.isDatabricksRuntime) {
+                sparkSession.close()
+              }
             }
           case Modes.Online =>
             val sparkSession = BasePipeline.createSparkSession(config)
             try {
               StreamingPipeline.createPipeline(sparkSession, config).get.awaitTermination
             } finally {
-              sparkSession.close()
+              if (!config.isDatabricksRuntime) {
+                sparkSession.close()
+              }
             }
         }
       case None =>

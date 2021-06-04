@@ -126,5 +126,6 @@ case class IngestionJobConfig(
     streamingTriggeringSecs: Int = 0,
     validationConfig: Option[ValidationConfig] = None,
     doNotIngestInvalidRows: Boolean = false,
-    checkpointPath: Option[String] = None
+    checkpointPath: Option[String] = None,
+    isDatabricksRuntime: Boolean = false
 )
