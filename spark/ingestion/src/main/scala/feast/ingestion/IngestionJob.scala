@@ -17,6 +17,7 @@
 package feast.ingestion
 
 import feast.ingestion.utils.JsonUtils
+import org.apache.log4j.Logger
 import org.joda.time.{DateTime, DateTimeZone}
 import org.json4s._
 import org.json4s.ext.JavaEnumNameSerializer
@@ -28,6 +29,8 @@ object IngestionJob {
   implicit val formats: Formats = DefaultFormats +
     new JavaEnumNameSerializer[feast.proto.types.ValueProto.ValueType.Enum]() +
     ShortTypeHints(List(classOf[ProtoFormat], classOf[AvroFormat]))
+
+  private val logger = Logger.getLogger(getClass.getCanonicalName)
 
   val parser = new scopt.OptionParser[IngestionJobConfig]("IngestionJob") {
     // ToDo: read version from Manifest
@@ -124,6 +127,8 @@ object IngestionJob {
             val sparkSession = BasePipeline.createSparkSession(config)
             try {
               BatchPipeline.createPipeline(sparkSession, config)
+            } catch {
+              case e: Throwable => logger.fatal("Batch ingestion failed", e)
             } finally {
               sparkSession.close()
             }
@@ -131,6 +136,8 @@ object IngestionJob {
             val sparkSession = BasePipeline.createSparkSession(config)
             try {
               StreamingPipeline.createPipeline(sparkSession, config).get.awaitTermination
+            } catch {
+              case e: Throwable => logger.fatal("Streaming ingestion failed", e)
             } finally {
               sparkSession.close()
             }
