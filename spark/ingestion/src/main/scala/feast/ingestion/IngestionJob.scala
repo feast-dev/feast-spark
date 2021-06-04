@@ -128,7 +128,9 @@ object IngestionJob {
             try {
               BatchPipeline.createPipeline(sparkSession, config)
             } catch {
-              case e: Throwable => logger.fatal("Batch ingestion failed", e)
+              case e: Throwable =>
+                logger.fatal("Batch ingestion failed", e)
+                throw e
             } finally {
               sparkSession.close()
             }
@@ -137,7 +139,9 @@ object IngestionJob {
             try {
               StreamingPipeline.createPipeline(sparkSession, config).get.awaitTermination
             } catch {
-              case e: Throwable => logger.fatal("Streaming ingestion failed", e)
+              case e: Throwable =>
+                logger.fatal("Streaming ingestion failed", e)
+                throw e
             } finally {
               sparkSession.close()
             }
