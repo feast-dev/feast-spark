@@ -80,6 +80,12 @@ class SparkJob(abc.ABC):
         """
         return None
 
+    def get_error_message(self) -> Optional[str]:
+        """
+        Get Spark job error message, if applicable.
+        """
+        return None
+
 
 class SparkJobParameters(abc.ABC):
     @abc.abstractmethod

@@ -1,8 +1,11 @@
 import abc
 import argparse
 import json
+import logging
+import os
 from base64 import b64decode
 from datetime import timedelta
+from logging.config import dictConfig
 from typing import Any, Dict, List, NamedTuple, Optional
 
 from pyspark.sql import DataFrame, SparkSession, Window
@@ -11,6 +14,37 @@ from pyspark.sql.types import LongType
 
 EVENT_TIMESTAMP_ALIAS = "event_timestamp"
 CREATED_TIMESTAMP_ALIAS = "created_timestamp"
+
+
+def get_termination_log_path():
+    if os.access("/dev/termination-log", os.W_OK):
+        return "/dev/termination-log"
+    return "/dev/stderr"
+
+
+DEFAULT_LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {"standard": {"format": "%(asctime)s [%(levelname)s] %(message)s"}},
+    "handlers": {
+        "default": {
+            "class": "logging.StreamHandler",
+            "level": "INFO",
+            "formatter": "standard",
+        },
+        "file": {
+            "class": "logging.FileHandler",
+            "level": "ERROR",
+            "formatter": "standard",
+            "filename": get_termination_log_path(),
+            "mode": "a",
+        },
+    },
+    "loggers": {"__main__": {"level": "INFO", "handlers": ["default", "file"]}},
+}
+
+dictConfig(DEFAULT_LOGGING)
+logger = logging.getLogger(__name__)
 
 
 class Source(abc.ABC):
@@ -804,11 +838,15 @@ if __name__ == "__main__":
     feature_tables_sources_conf = json_b64_decode(args.feature_tables_sources)
     entity_source_conf = json_b64_decode(args.entity_source)
     destination_conf = json_b64_decode(args.destination)
-    start_job(
-        spark,
-        entity_source_conf,
-        feature_tables_sources_conf,
-        feature_tables_conf,
-        destination_conf,
-    )
+    try:
+        start_job(
+            spark,
+            entity_source_conf,
+            feature_tables_sources_conf,
+            feature_tables_conf,
+            destination_conf,
+        )
+    except Exception as e:
+        logger.exception(e)
+        raise e
     spark.stop()
