@@ -89,7 +89,7 @@ class KubernetesJobMixin:
     def get_error_message(self) -> str:
         job = _get_job_by_id(self._api, self._namespace, self._job_id)
         assert job is not None
-        return job.job_message
+        return job.job_error_message
 
     def get_status(self) -> SparkJobStatus:
         job = _get_job_by_id(self._api, self._namespace, self._job_id)

@@ -232,7 +232,7 @@ def _scheduled_crd_args(namespace: str) -> Dict[str, str]:
 class JobInfo(NamedTuple):
     job_id: str
     job_type: str
-    job_message: str
+    job_error_message: str
     namespace: str
     extra_metadata: Dict[str, str]
     state: SparkJobStatus
@@ -267,15 +267,17 @@ def _resource_to_job_info(resource: Dict[str, Any]) -> JobInfo:
 
     if "status" in resource:
         state = _k8s_state_to_feast(resource["status"]["applicationState"]["state"])
-        message = resource["status"].get("applicationState", {}).get("errorMessage", "")
+        error_message = (
+            resource["status"].get("applicationState", {}).get("errorMessage", "")
+        )
     else:
         state = _k8s_state_to_feast("")
-        message = ""
+        error_message = ""
 
     return JobInfo(
         job_id=labels[LABEL_JOBID],
         job_type=labels.get(LABEL_JOBTYPE, ""),
-        job_message=message,
+        job_error_message=error_message,
         namespace=resource["metadata"].get("namespace", "default"),
         extra_metadata={k: v for k, v in sparkConf.items() if k in METADATA_KEYS},
         state=state,

@@ -87,7 +87,7 @@ class RemoteJobMixin:
         job = self._service.GetJob(
             GetJobRequest(job_id=self._job_id), **self._grpc_extra_param_provider()
         ).job
-        return job.message
+        return job.error_message
 
 
 class RemoteRetrievalJob(RemoteJobMixin, RetrievalJob):
