@@ -89,10 +89,10 @@ class RemoteJobMixin:
         ).job
         return job.error_message
 
-    def wait_termination(self, timeout_sec=600):
+    def wait_termination(self, timeout_sec=None):
         status = self._wait_for_job_status(
             goal_status=[SparkJobStatus.COMPLETED, SparkJobStatus.FAILED],
-            timeout_seconds=timeout_sec,
+            timeout_seconds=timeout_sec or 600,
         )
 
         if status != SparkJobStatus.COMPLETED:
