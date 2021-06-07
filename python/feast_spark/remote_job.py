@@ -89,6 +89,17 @@ class RemoteJobMixin:
         ).job
         return job.error_message
 
+    def wait_termination(self, timeout_sec=600):
+        status = self._wait_for_job_status(
+            goal_status=[SparkJobStatus.COMPLETED, SparkJobStatus.FAILED],
+            timeout_seconds=timeout_sec,
+        )
+
+        if status != SparkJobStatus.COMPLETED:
+            raise SparkJobFailure(
+                f"Spark job failed; Reason: {self.get_error_message()}"
+            )
+
 
 class RemoteRetrievalJob(RemoteJobMixin, RetrievalJob):
     """
@@ -115,17 +126,12 @@ class RemoteRetrievalJob(RemoteJobMixin, RetrievalJob):
         )
         self._output_file_uri = output_file_uri
 
-    def get_output_file_uri(self, timeout_sec=None):
-        status = self._wait_for_job_status(
-            goal_status=[SparkJobStatus.COMPLETED, SparkJobStatus.FAILED],
-            timeout_seconds=600,
-        )
-        if status == SparkJobStatus.COMPLETED:
-            return self._output_file_uri
-        else:
-            raise SparkJobFailure(
-                f"Spark job failed; Reason:{self.get_error_message()}"
-            )
+    def get_output_file_uri(self, timeout_sec=None, block=True):
+        if not block and self.get_status() != SparkJobStatus.COMPLETED:
+            return
+
+        self.wait_termination(timeout_sec)
+        return self._output_file_uri
 
 
 class RemoteBatchIngestionJob(RemoteJobMixin, BatchIngestionJob):
