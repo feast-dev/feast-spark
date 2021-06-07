@@ -71,6 +71,6 @@ kubectl run -n "$NAMESPACE" -i ci-test-runner  \
     --env="FEAST_AZURE_BLOB_ACCOUNT_NAME=${AZURE_BLOB_ACCOUNT_NAME}" \
     --env="FEAST_AZURE_BLOB_ACCOUNT_ACCESS_KEY=${AZURE_BLOB_ACCOUNT_ACCESS_KEY}" \
     --  \
-    bash -c "mkdir src && cd src && git clone --recursive ${GIT_REMOTE_URL} && cd feast* && git config remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pull/*' && git fetch -q && git checkout ${GIT_TAG} && git submodule update --init --recursive && ./infra/scripts/setup-e2e-env-sparkop.sh && ./infra/scripts/test-end-to-end-sparkop.sh"
+    bash -c "mkdir src && cd src && git clone --recursive ${GIT_REMOTE_URL} && cd feast* && git config remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pull/*' && git fetch -q && git checkout ${GIT_TAG} && git submodule update --init --recursive && ./infra/scripts/setup-e2e-env-sparkop.sh && ./infra/scripts/test-end-to-end-azure.sh"
 
 echo "########## e2e tests took $SECONDS seconds ###########"
