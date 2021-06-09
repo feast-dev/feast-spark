@@ -165,6 +165,16 @@ class ConfigOptions(metaclass=ConfigMeta):
     #: That may help to control amount of write requests to storage
     SPARK_STREAMING_TRIGGERING_INTERVAL: Optional[str] = None
 
+    #: GCP project of the BigQuery dataset used to stage the entities during historical
+    #: feature retrieval. If not set, the GCP project of the feature table batch source
+    #: will be used instead.
+    BQ_STAGING_PROJECT: Optional[str] = None
+
+    #: BigQuery dataset used to stage the entities during historical feature retrieval.
+    #  If not set, the BigQuery dataset of the batch source will be used
+    #: instead.
+    BQ_STAGING_DATASET: Optional[str] = None
+
     def defaults(self):
         return {
             k: getattr(self, k)
