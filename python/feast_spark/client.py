@@ -165,16 +165,25 @@ class Client:
 
         if isinstance(entity_source, pd.DataFrame):
             if any(isinstance(source, BigQuerySource) for source in feature_sources):
-                first_bq_source = [
-                    source
-                    for source in feature_sources
-                    if isinstance(source, BigQuerySource)
-                ][0]
-                source_ref = table_reference_from_string(
-                    first_bq_source.bigquery_options.table_ref
-                )
+                if self.config.exists(opt.BQ_STAGING_PROJECT) and self.config.exists(
+                    opt.BQ_STAGING_DATASET
+                ):
+                    staging_bq_project = self.config.get(opt.BQ_STAGING_PROJECT)
+                    staging_bq_dataset = self.config.get(opt.BQ_STAGING_DATASET)
+                else:
+                    first_bq_source = [
+                        source
+                        for source in feature_sources
+                        if isinstance(source, BigQuerySource)
+                    ][0]
+                    source_ref = table_reference_from_string(
+                        first_bq_source.bigquery_options.table_ref
+                    )
+                    staging_bq_project = source_ref.project
+                    staging_bq_dataset = source_ref.dataset_id
+
                 entity_source = stage_entities_to_bq(
-                    entity_source, source_ref.project, source_ref.dataset_id
+                    entity_source, staging_bq_project, staging_bq_dataset
                 )
             else:
                 entity_source = stage_entities_to_fs(
