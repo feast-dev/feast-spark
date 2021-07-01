@@ -271,7 +271,7 @@ def create_bq_view_of_joined_features_and_entities(
 ) -> BigQuerySource:
     """
     Creates BQ view that joins tables from `source` and `entity_source` with join key derived from `entity_names`.
-    Returns BigQuerySource with reference to created view.
+Returns BigQuerySource with reference to created view. The BQ view will be created in the same BQ dataset as `entity_source`.
     """
     from google.cloud import bigquery
 
