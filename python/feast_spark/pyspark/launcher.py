@@ -8,7 +8,6 @@ from feast.config import Config
 from feast.data_format import ParquetFormat
 from feast.data_source import BigQuerySource, DataSource, FileSource, KafkaSource
 from feast.feature_table import FeatureTable
-from feast.staging.entities import create_bq_view_of_joined_features_and_entities
 from feast.staging.storage_client import get_staging_client
 from feast.value_type import ValueType
 from feast_spark.constants import ConfigOptions as opt
@@ -258,7 +257,7 @@ def table_reference_from_string(table_ref: str):
     """
     Parses reference string with format "{project}:{dataset}.{table}" into bigquery.TableReference
     """
-    import bigquery
+    from google.cloud import bigquery
 
     project, dataset_and_table = table_ref.split(":")
     dataset, table_id = dataset_and_table.split(".")
@@ -268,13 +267,14 @@ def table_reference_from_string(table_ref: str):
 
 
 def create_bq_view_of_joined_features_and_entities(
-        source: BigQuerySource, entity_source: BigQuerySource, entity_names: List[str]
+    source: BigQuerySource, entity_source: BigQuerySource, entity_names: List[str]
 ) -> BigQuerySource:
     """
     Creates BQ view that joins tables from `source` and `entity_source` with join key derived from `entity_names`.
     Returns BigQuerySource with reference to created view.
     """
-    import bigquery
+    from google.cloud import bigquery
+
     bq_client = bigquery.Client()
 
     source_ref = table_reference_from_string(source.bigquery_options.table_ref)
