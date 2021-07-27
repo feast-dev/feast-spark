@@ -17,7 +17,6 @@
 package feast.ingestion.stores.redis
 
 import java.util
-
 import com.google.protobuf.Timestamp
 import com.google.protobuf.util.Timestamps
 import com.redislabs.provider.redis.util.PipelineUtils.{foreachWithPipeline, mapWithPipeline}
@@ -25,7 +24,7 @@ import com.redislabs.provider.redis.{ReadWriteConfig, RedisConfig, RedisEndpoint
 import feast.ingestion.utils.TypeConversion
 import feast.proto.storage.RedisProto.RedisKeyV2
 import feast.proto.types.ValueProto
-import org.apache.spark.SparkEnv
+import org.apache.spark.{SparkConf, SparkEnv}
 import org.apache.spark.metrics.source.RedisSinkMetricSource
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
@@ -51,21 +50,13 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
 
   import RedisSinkRelation._
 
-  private implicit val redisConfig: RedisConfig = {
-    new RedisConfig(
-      new RedisEndpoint(sqlContext.sparkContext.getConf)
-    )
-  }
-
-  private implicit val readWriteConfig: ReadWriteConfig = {
-    ReadWriteConfig.fromSparkConf(sqlContext.sparkContext.getConf)
-  }
-
   override def schema: StructType = ???
 
   val MAX_EXPIRED_TIMESTAMP = new java.sql.Timestamp(Timestamps.MAX_VALUE.getSeconds * 1000)
 
   val persistence: Persistence = new HashTypePersistence(config)
+
+  val sparkConf: SparkConf = sqlContext.sparkContext.getConf
 
   override def insert(data: DataFrame, overwrite: Boolean): Unit = {
     // repartition for deduplication
@@ -77,6 +68,16 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
       else data
 
     dataToStore.foreachPartition { partition: Iterator[Row] =>
+      implicit val redisConfig: RedisConfig = {
+        new RedisConfig(
+          new RedisEndpoint(sparkConf)
+        )
+      }
+
+      implicit val readWriteConfig: ReadWriteConfig = {
+        ReadWriteConfig.fromSparkConf(sparkConf)
+      }
+
       // grouped iterator to only allocate memory for a portion of rows
       partition.grouped(config.iteratorGroupingSize).foreach { batch =>
         // group by key and keep only latest row per each key
