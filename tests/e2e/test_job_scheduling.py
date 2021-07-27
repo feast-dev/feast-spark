@@ -1,3 +1,4 @@
+import hashlib
 import uuid
 
 import pytest as pytest
@@ -36,12 +37,17 @@ def test_schedule_batch_ingestion_jobs(
     k8s_api = client.CustomObjectsApi()
 
     def get_scheduled_spark_application():
+        job_hash = hashlib.md5(
+            f"{feast_client.project}-{feature_table.name}".encode()
+        ).hexdigest()
+        resource_name = f"feast-{job_hash}"
+
         return k8s_api.get_namespaced_custom_object(
             group="sparkoperator.k8s.io",
             version="v1beta2",
             namespace=pytestconfig.getoption("k8s_namespace"),
             plural="scheduledsparkapplications",
-            name=f"feast-{feast_client.project}-{feature_table.name}".replace("_", "-"),
+            name=resource_name,
         )
 
     response = get_scheduled_spark_application()
