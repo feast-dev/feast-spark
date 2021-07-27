@@ -25,7 +25,8 @@ import com.google.cloud.bigtable.hbase.BigtableOptionsFactory.{
   BIGTABLE_BUFFERED_MUTATOR_THROTTLING_THRESHOLD_MILLIS,
   BIGTABLE_BULK_MAX_ROW_KEY_COUNT,
   BIGTABLE_DATA_CHANNEL_COUNT_KEY,
-  BIGTABLE_EMULATOR_HOST_KEY
+  BIGTABLE_EMULATOR_HOST_KEY,
+  MAX_INFLIGHT_RPCS_KEY
 }
 import org.apache.hadoop.conf.Configuration
 
@@ -33,11 +34,11 @@ class DefaultSource extends CreatableRelationProvider {
   import DefaultSource._
 
   override def createRelation(
-      sqlContext: SQLContext,
-      mode: SaveMode,
-      parameters: Map[String, String],
-      data: DataFrame
-  ): BaseRelation = {
+                               sqlContext: SQLContext,
+                               mode: SaveMode,
+                               parameters: Map[String, String],
+                               data: DataFrame
+                             ): BaseRelation = {
     val bigtableConf = BigtableConfiguration.configure(
       sqlContext.getConf(PROJECT_KEY),
       sqlContext.getConf(INSTANCE_KEY)
@@ -70,6 +71,7 @@ class DefaultSource extends CreatableRelationProvider {
 
     confs.get(CHANNEL_COUNT_KEY).foreach(bigtableConf.set(BIGTABLE_DATA_CHANNEL_COUNT_KEY, _))
     confs.get(MAX_ROW_COUNT_KEY).foreach(bigtableConf.set(BIGTABLE_BULK_MAX_ROW_KEY_COUNT, _))
+    confs.get(MAX_INFLIGHT_KEY).foreach(bigtableConf.set(MAX_INFLIGHT_RPCS_KEY, _))
 
     confs
       .get(ENABLE_THROTTLING_KEY)
@@ -92,4 +94,5 @@ object DefaultSource {
   private val ENABLE_THROTTLING_KEY           = "spark.bigtable.enableThrottling"
   private val THROTTLING_THRESHOLD_MILLIS_KEY = "spark.bigtable.throttlingThresholdMs"
   private val MAX_ROW_COUNT_KEY               = "spark.bigtable.maxRowCount"
+  private val MAX_INFLIGHT_KEY                = "spark.bigtable.maxInflightRpcs"
 }
