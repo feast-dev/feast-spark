@@ -143,6 +143,14 @@ def _source_to_argument(source: DataSource, config: Config):
 def _feature_table_to_argument(
     client: "Client", project: str, feature_table: FeatureTable
 ):
+    max_age = feature_table.max_age.ToSeconds() if feature_table.max_age else None
+    try:
+        gc_threshold = int(feature_table.labels["gcThresholdSec"])
+    except (KeyError, ValueError, TypeError):
+        pass
+    else:
+        max_age = max(max_age or 0, gc_threshold)
+
     return {
         "features": [
             {"name": f.name, "type": ValueType(f.dtype).name}
@@ -157,7 +165,7 @@ def _feature_table_to_argument(
             }
             for n in feature_table.entities
         ],
-        "max_age": feature_table.max_age.ToSeconds() if feature_table.max_age else None,
+        "max_age": max_age,
         "labels": dict(feature_table.labels),
     }
 
