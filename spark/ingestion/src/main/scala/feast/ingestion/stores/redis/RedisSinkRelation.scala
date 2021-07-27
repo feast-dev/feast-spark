@@ -68,6 +68,7 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
       else data
 
     dataToStore.foreachPartition { partition: Iterator[Row] =>
+      // refresh redis cluster topology for each batch
       implicit val redisConfig: RedisConfig = {
         new RedisConfig(
           new RedisEndpoint(sparkConf)
