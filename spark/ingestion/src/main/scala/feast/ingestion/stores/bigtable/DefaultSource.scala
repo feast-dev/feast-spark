@@ -34,11 +34,11 @@ class DefaultSource extends CreatableRelationProvider {
   import DefaultSource._
 
   override def createRelation(
-                               sqlContext: SQLContext,
-                               mode: SaveMode,
-                               parameters: Map[String, String],
-                               data: DataFrame
-                             ): BaseRelation = {
+      sqlContext: SQLContext,
+      mode: SaveMode,
+      parameters: Map[String, String],
+      data: DataFrame
+  ): BaseRelation = {
     val bigtableConf = BigtableConfiguration.configure(
       sqlContext.getConf(PROJECT_KEY),
       sqlContext.getConf(INSTANCE_KEY)
