@@ -1,0 +1,9 @@
+cryptography==3.1
+pyspark==3.0.2
+pandas~=1.0.0
+great-expectations==0.13.2
+adlfs==0.5.9
+avro==1.10.0
+s3fs
+boto3
+urllib3>=1.25.4

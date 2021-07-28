@@ -13,9 +13,8 @@ RUN apt-get update && apt-get -y install make git wget
 # Install Feast SDK
 RUN git init .
 COPY README.md README.md
-RUN make install-python-ci-dependencies
-RUN make install-python
-RUN pip install "s3fs" "boto3" "urllib3>=1.25.4"
+RUN pip install -U -r python/requirements-js.txt
+RUN python -m pip install -e python
 
 #
 # Download grpc_health_probe to run health checks

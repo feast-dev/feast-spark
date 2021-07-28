@@ -8,9 +8,18 @@ from datetime import timedelta
 from logging.config import dictConfig
 from typing import Any, Dict, List, NamedTuple, Optional
 
+import numpy as np
+import pandas as pd
 from pyspark.sql import DataFrame, SparkSession, Window
-from pyspark.sql.functions import col, expr, monotonically_increasing_id, row_number
-from pyspark.sql.types import LongType
+from pyspark.sql.functions import (
+    col,
+    expr,
+    monotonically_increasing_id,
+    row_number,
+    struct,
+)
+from pyspark.sql.pandas.functions import PandasUDFType, pandas_udf
+from pyspark.sql.types import BooleanType, LongType
 
 EVENT_TIMESTAMP_ALIAS = "event_timestamp"
 CREATED_TIMESTAMP_ALIAS = "created_timestamp"
@@ -548,19 +557,50 @@ class SchemaError(Exception):
     pass
 
 
+def _make_time_filter_pandas_udf(
+    spark: SparkSession,
+    entity_pandas: pd.DataFrame,
+    feature_table: FeatureTable,
+    entity_event_timestamp_column: str,
+):
+    entity_br = spark.sparkContext.broadcast(
+        entity_pandas.rename(
+            columns={entity_event_timestamp_column: EVENT_TIMESTAMP_ALIAS}
+        )
+    )
+    entity_names = feature_table.entity_names
+    max_age = feature_table.max_age
+
+    @pandas_udf(BooleanType(), PandasUDFType.SCALAR)
+    def within_time_boundaries(features: pd.DataFrame) -> pd.Series:
+        features["_row_id"] = np.arange(len(features))
+        merged = features.merge(
+            entity_br.value,
+            how="left",
+            on=entity_names,
+            suffixes=("_feature", "_entity"),
+        )
+        merged["distance"] = (
+            merged[f"{EVENT_TIMESTAMP_ALIAS}_entity"]
+            - merged[f"{EVENT_TIMESTAMP_ALIAS}_feature"]
+        )
+        merged["within"] = merged["distance"].dt.total_seconds().between(0, max_age)
+
+        return merged.groupby(["_row_id"]).max()["within"]
+
+    return within_time_boundaries
+
+
 def _filter_feature_table_by_time_range(
+    spark: SparkSession,
     feature_table_df: DataFrame,
     feature_table: FeatureTable,
     feature_event_timestamp_column: str,
-    entity_df: DataFrame,
+    entity_pandas: pd.DataFrame,
     entity_event_timestamp_column: str,
 ):
-    entity_max_timestamp = entity_df.agg(
-        {entity_event_timestamp_column: "max"}
-    ).collect()[0][0]
-    entity_min_timestamp = entity_df.agg(
-        {entity_event_timestamp_column: "min"}
-    ).collect()[0][0]
+    entity_max_timestamp = entity_pandas[entity_event_timestamp_column].max()
+    entity_min_timestamp = entity_pandas[entity_event_timestamp_column].min()
 
     feature_table_timestamp_filter = (
         col(feature_event_timestamp_column).between(
@@ -572,6 +612,18 @@ def _filter_feature_table_by_time_range(
     )
 
     time_range_filtered_df = feature_table_df.filter(feature_table_timestamp_filter)
+
+    if feature_table.max_age:
+        within_time_boundaries_udf = _make_time_filter_pandas_udf(
+            spark, entity_pandas, feature_table, entity_event_timestamp_column
+        )
+
+        time_range_filtered_df = time_range_filtered_df.withColumn(
+            "within_time_boundaries",
+            within_time_boundaries_udf(
+                struct(feature_table.entity_names + [feature_event_timestamp_column])
+            ),
+        ).filter("within_time_boundaries = true")
 
     return time_range_filtered_df
 
@@ -755,12 +807,15 @@ def retrieve_historical_features(
                 f"{expected_entity.name} ({expected_entity.spark_type}) is not present in the entity dataframe."
             )
 
+    entity_pandas = entity_df.toPandas()
+
     feature_table_dfs = [
         _filter_feature_table_by_time_range(
+            spark,
             feature_table_df,
             feature_table,
             feature_table_source.event_timestamp_column,
-            entity_df,
+            entity_pandas,
             entity_source.event_timestamp_column,
         )
         for feature_table_df, feature_table, feature_table_source in zip(
