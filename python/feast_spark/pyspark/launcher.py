@@ -141,15 +141,16 @@ def _source_to_argument(source: DataSource, config: Config):
 
 
 def _feature_table_to_argument(
-    client: "Client", project: str, feature_table: FeatureTable
+    client: "Client", project: str, feature_table: FeatureTable, use_gc_threshold=True,
 ):
     max_age = feature_table.max_age.ToSeconds() if feature_table.max_age else None
-    try:
-        gc_threshold = int(feature_table.labels["gcThresholdSec"])
-    except (KeyError, ValueError, TypeError):
-        pass
-    else:
-        max_age = max(max_age or 0, gc_threshold)
+    if use_gc_threshold:
+        try:
+            gc_threshold = int(feature_table.labels["gcThresholdSec"])
+        except (KeyError, ValueError, TypeError):
+            pass
+        else:
+            max_age = max(max_age or 0, gc_threshold)
 
     return {
         "features": [
@@ -191,7 +192,9 @@ def start_historical_feature_retrieval_spark_session(
             for feature_table in feature_tables
         ],
         feature_tables_conf=[
-            _feature_table_to_argument(client, project, feature_table)
+            _feature_table_to_argument(
+                client, project, feature_table, use_gc_threshold=False
+            )
             for feature_table in feature_tables
         ],
     )
@@ -223,7 +226,9 @@ def start_historical_feature_retrieval_job(
             entity_source=_source_to_argument(entity_source, client.config),
             feature_tables_sources=feature_sources,
             feature_tables=[
-                _feature_table_to_argument(client, project, feature_table)
+                _feature_table_to_argument(
+                    client, project, feature_table, use_gc_threshold=False
+                )
                 for feature_table in feature_tables
             ],
             destination={"format": output_format, "path": output_path},
