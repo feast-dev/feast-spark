@@ -13,7 +13,7 @@ RUN apt-get update && apt-get -y install make git wget
 # Install Feast SDK
 RUN git init .
 COPY README.md README.md
-RUN pip install -U -r python/requirements-js.txt
+RUN pip install -U -r python/requirements-ci.txt
 RUN python -m pip install -e python
 
 #
