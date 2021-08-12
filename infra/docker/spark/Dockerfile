@@ -35,6 +35,10 @@ RUN echo 'spark.driver.extraJavaOptions="-Dcom.google.cloud.spark.bigquery.repac
 RUN echo 'spark.executor.extraJavaOptions="-Dio.netty.tryReflectionSetAccessible=true"' >> $SPARK_HOME/conf/spark-defaults.conf
 RUN echo 'spark.executor.extraJavaOptions="-Dcom.google.cloud.spark.bigquery.repackaged.io.netty.tryReflectionSetAccessible=true"' >> $SPARK_HOME/conf/spark-defaults.conf
 
+# python dependencies
+RUN pip3 install -U pip wheel
+RUN pip3 install pandas pyarrow==2.0.0 'numpy<1.20.0'
+
 # For logging to /dev/termination-log
 RUN mkdir -p /dev
 
