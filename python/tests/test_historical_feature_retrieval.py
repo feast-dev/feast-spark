@@ -601,6 +601,7 @@ def test_historical_feature_retrieval(spark: SparkSession):
         "name": "bookings",
         "entities": [{"name": "driver_id", "type": "int32"}],
         "features": [{"name": "completed_bookings", "type": "int32"}],
+        "max_age": 365 * 86400,
     }
     transaction_table = {
         "name": "transactions",

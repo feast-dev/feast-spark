@@ -31,7 +31,9 @@ ADD https://repo1.maven.org/maven2/com/google/cloud/spark/spark-bigquery-with-de
 # Fix arrow issue for jdk-11
 RUN mkdir -p /opt/spark/conf
 RUN echo 'spark.driver.extraJavaOptions="-Dio.netty.tryReflectionSetAccessible=true"' >> $SPARK_HOME/conf/spark-defaults.conf
+RUN echo 'spark.driver.extraJavaOptions="-Dcom.google.cloud.spark.bigquery.repackaged.io.netty.tryReflectionSetAccessible=true"' >> $SPARK_HOME/conf/spark-defaults.conf
 RUN echo 'spark.executor.extraJavaOptions="-Dio.netty.tryReflectionSetAccessible=true"' >> $SPARK_HOME/conf/spark-defaults.conf
+RUN echo 'spark.executor.extraJavaOptions="-Dcom.google.cloud.spark.bigquery.repackaged.io.netty.tryReflectionSetAccessible=true"' >> $SPARK_HOME/conf/spark-defaults.conf
 
 # For logging to /dev/termination-log
 RUN mkdir -p /dev
