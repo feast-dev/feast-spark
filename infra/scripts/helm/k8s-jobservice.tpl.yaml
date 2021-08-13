@@ -37,7 +37,7 @@ feast-jobservice:
           memory: "600m"
           labels:
             version: 3.0.2
-          javaOptions: "-Dio.netty.tryReflectionSetAccessible=true"
+          javaOptions: "-Dio.netty.tryReflectionSetAccessible=true -Dcom.google.cloud.spark.bigquery.repackaged.io.netty.tryReflectionSetAccessible=true"
           secrets:
             - name: feast-gcp-service-account
               path: /mnt/secrets
@@ -48,7 +48,7 @@ feast-jobservice:
           memory: "800m"
           labels:
             version: 3.0.2
-          javaOptions: "-Dio.netty.tryReflectionSetAccessible=true"
+          javaOptions: "-Dio.netty.tryReflectionSetAccessible=true -Dcom.google.cloud.spark.bigquery.repackaged.io.netty.tryReflectionSetAccessible=true"
           secrets:
             - name: feast-gcp-service-account
               path: /mnt/secrets
