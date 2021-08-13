@@ -1,4 +1,47 @@
 # Changelog
+
+## [v0.2.10](https://github.com/feast-dev/feast-spark/tree/v0.2.9) (2021-08-13)
+[Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.9...v0.2.10)
+
+**Implemented enhancements:**
+- Optimize historical retrieval by filtering rows only within timestamp boundaries from entity dataframe [\#87](https://github.com/feast-dev/feast-spark/pull/87) ([pyalex](https://github.com/pyalex))
+
+**Fixed bugs:**
+
+- Pandas is missing in spark job base image [\#88](https://github.com/feast-dev/feast-spark/pull/88) ([pyalex](https://github.com/pyalex))
+- Do not use gcThreshold for historical retrieval jobs [\#86](https://github.com/feast-dev/feast-spark/pull/86) ([pyalex](https://github.com/pyalex))
+
+## [v0.2.9](https://github.com/feast-dev/feast-spark/tree/v0.2.9) (2021-07-28)
+[Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.8...v0.2.9)
+
+**Fixed bugs:**
+- Refresh redis topology on write [\#83](https://github.com/feast-dev/feast-spark/pull/83) ([khorshuheng]
+- Use hash for schedule job id [\#80](https://github.com/feast-dev/feast-spark/pull/80) ([khorshuheng]
+
+**Implemented enhancements:**
+- Make max inflight RPCs in bigtable client configurable through spark config [\#81](https://github.com/feast-dev/feast-spark/pull/81) ([pyalex])
+- Use gcThresholdSec label instead of max_age if present [\#82](https://github.com/feast-dev/feast-spark/pull/82) ([pyalex])
+
+## [v0.2.8](https://github.com/feast-dev/feast-spark/tree/v0.2.8) (2021-07-07)
+[Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.7...v0.2.8)
+
+**Implemented enhancements:**
+- Use entity source project dataset for bigquery view creation [\#79](https://github.com/feast-dev/feast-spark/pull/79) ([khorshuheng])(https://github.com/khorshuheng))
+
+## [v0.2.7](https://github.com/feast-dev/feast-spark/tree/v0.2.7) (2021-06-15)
+[Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.6...v0.2.7)
+
+**Implemented enhancements:**
+- Extra configuration for bigtable client [\#78](https://github.com/feast-dev/feast-spark/pull/78) ([pyalex])(https://github.com/pyalex))
+- Add configuration for bigquery entity staging location [\#77](https://github.com/feast-dev/feast-spark/pull/77) ([khorshuheng])(https://github.com/khorshuheng))
+
+
+## [v0.2.6](https://github.com/feast-dev/feast-spark/tree/v0.2.6) (2021-05-20)
+[Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.5...v0.2.6)
+
+**Fixed bugs:**
+- Fix broken scheduled batch ingestion jobs [\#72](https://github.com/feast-dev/feast-spark/pull/72) ([khorshuheng](https://github.com/khorshuheng))
+
 ## [v0.2.5](https://github.com/feast-dev/feast-spark/tree/v0.2.5) (2021-05-11)
 
 [Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.4...v0.2.5)
