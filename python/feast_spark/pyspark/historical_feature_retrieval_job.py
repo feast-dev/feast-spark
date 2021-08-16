@@ -563,22 +563,21 @@ def _make_time_filter_pandas_udf(
     feature_table: FeatureTable,
     entity_event_timestamp_column: str,
 ):
+    entity_names = feature_table.entity_names
+    max_age = feature_table.max_age
+
     entity_br = spark.sparkContext.broadcast(
         entity_pandas.rename(
             columns={entity_event_timestamp_column: EVENT_TIMESTAMP_ALIAS}
-        )
+        ).set_index(entity_names)
     )
-    entity_names = feature_table.entity_names
-    max_age = feature_table.max_age
 
     @pandas_udf(BooleanType(), PandasUDFType.SCALAR)
     def within_time_boundaries(features: pd.DataFrame) -> pd.Series:
         features["_row_id"] = np.arange(len(features))
-        merged = features.merge(
-            entity_br.value,
-            how="left",
-            on=entity_names,
-            suffixes=("_feature", "_entity"),
+        features.set_index(entity_names, inplace=True)
+        merged = features.join(
+            entity_br.value, how="left", lsuffix="_feature", rsuffix="_entity",
         )
         merged["distance"] = (
             merged[f"{EVENT_TIMESTAMP_ALIAS}_entity"]
