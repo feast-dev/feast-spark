@@ -581,18 +581,21 @@ def _filter_feature_table_by_time_range(
                     entity_event_timestamp_column, f"{EVENT_TIMESTAMP_ALIAS}_entity"
                 ),
                 on=feature_table.entity_names,
-                how="left",
+                how="inner",
             )
-            .filter(f"{EVENT_TIMESTAMP_ALIAS}_entity is not null")
             .withColumn(
-                "within_time_boundaries",
-                func.abs(
-                    col(f"{EVENT_TIMESTAMP_ALIAS}_entity").cast("long")
-                    - col(EVENT_TIMESTAMP_ALIAS).cast("long")
-                )
-                <= feature_table.max_age,
+                "distance",
+                col(f"{EVENT_TIMESTAMP_ALIAS}_entity").cast("long")
+                - col(EVENT_TIMESTAMP_ALIAS).cast("long"),
             )
-            .filter("within_time_boundaries = true")
+            .where((col("distance") >= 0) & (col("distance") <= feature_table.max_age))
+            .withColumn(
+                "min_distance",
+                func.min("distance").over(
+                    Window.partitionBy(feature_table.entity_names)
+                ),
+            )
+            .where(col("distance") == col("min_distance"))
             .select(time_range_filtered_df.columns)
         )
 
