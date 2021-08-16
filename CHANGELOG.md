@@ -1,6 +1,12 @@
 # Changelog
 
-## [v0.2.10](https://github.com/feast-dev/feast-spark/tree/v0.2.9) (2021-08-13)
+## [v0.2.11](https://github.com/feast-dev/feast-spark/tree/v0.2.11) (2021-08-16)
+[Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.10...v0.2.11)
+
+**Implemented enhancements:**
+- Speed-up join in historical retrieval by replacing pandas with native spark [\#89](https://github.com/feast-dev/feast-spark/pull/89) ([pyalex](https://github.com/pyalex))
+
+## [v0.2.10](https://github.com/feast-dev/feast-spark/tree/v0.2.10) (2021-08-13)
 [Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.9...v0.2.10)
 
 **Implemented enhancements:**

@@ -1,6 +1,6 @@
 # feast-jobservice
 
-![Version: 0.2.10](https://img.shields.io/badge/Version-0.2.10-informational?style=flat-square)
+![Version: 0.2.11](https://img.shields.io/badge/Version-0.2.11-informational?style=flat-square)
 
 Feast Job Service manage ingestion jobs.
 
