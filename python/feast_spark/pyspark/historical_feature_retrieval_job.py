@@ -569,7 +569,7 @@ def _make_time_filter_pandas_udf(
     entity_br = spark.sparkContext.broadcast(
         entity_pandas.rename(
             columns={entity_event_timestamp_column: EVENT_TIMESTAMP_ALIAS}
-        ).set_index(entity_names)
+        ).set_index(entity_names).sort_index()
     )
 
     @pandas_udf(BooleanType(), PandasUDFType.SCALAR)
