@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.2.12](https://github.com/feast-dev/feast-spark/tree/v0.2.12) (2021-08-17)
+[Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.11...v0.2.12)
+
+**Implemented enhancements:**
+- Omit skewness in spark join by broadcasting entity dataframe [\#90](https://github.com/feast-dev/feast-spark/pull/90) ([pyalex](https://github.com/pyalex))
+
 ## [v0.2.11](https://github.com/feast-dev/feast-spark/tree/v0.2.11) (2021-08-16)
 [Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.10...v0.2.11)
 
