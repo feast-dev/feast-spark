@@ -10,7 +10,12 @@ from typing import Any, Dict, List, NamedTuple, Optional
 
 from pyspark.sql import DataFrame, SparkSession, Window
 from pyspark.sql import functions as func
-from pyspark.sql.functions import col, monotonically_increasing_id, row_number
+from pyspark.sql.functions import (
+    broadcast,
+    col,
+    monotonically_increasing_id,
+    row_number,
+)
 from pyspark.sql.types import LongType
 
 EVENT_TIMESTAMP_ALIAS = "event_timestamp"
@@ -571,9 +576,12 @@ def filter_feature_table_by_time_range(
     time_range_filtered_df = feature_table_df.filter(feature_table_timestamp_filter)
 
     time_range_filtered_df = (
-        time_range_filtered_df.join(
-            entity_df.withColumnRenamed(
-                entity_event_timestamp_column, ENTITY_EVENT_TIMESTAMP_ALIAS
+        time_range_filtered_df.repartition(200)
+        .join(
+            broadcast(
+                entity_df.withColumnRenamed(
+                    entity_event_timestamp_column, ENTITY_EVENT_TIMESTAMP_ALIAS
+                )
             ),
             on=feature_table.entity_names,
             how="inner",
