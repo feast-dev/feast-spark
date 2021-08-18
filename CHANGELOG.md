@@ -4,6 +4,7 @@
 [Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.11...v0.2.12)
 
 **Implemented enhancements:**
+- Add checkpoint in each iteration of join loop (historical retrieval job) to truncate logical plan [\#92](https://github.com/feast-dev/feast-spark/pull/92) ([pyalex](https://github.com/pyalex))
 - Add persistent checkpoint in historical retrieval [\#91](https://github.com/feast-dev/feast-spark/pull/91) ([pyalex](https://github.com/pyalex))
 - Omit skewness in spark join by broadcasting entity dataframe [\#90](https://github.com/feast-dev/feast-spark/pull/90) ([pyalex](https://github.com/pyalex))
 
