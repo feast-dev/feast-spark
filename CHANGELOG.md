@@ -4,6 +4,7 @@
 [Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.11...v0.2.12)
 
 **Implemented enhancements:**
+- Add persistent checkpoint in historical retrieval [\#91](https://github.com/feast-dev/feast-spark/pull/91) ([pyalex](https://github.com/pyalex))
 - Omit skewness in spark join by broadcasting entity dataframe [\#90](https://github.com/feast-dev/feast-spark/pull/90) ([pyalex](https://github.com/pyalex))
 
 ## [v0.2.11](https://github.com/feast-dev/feast-spark/tree/v0.2.11) (2021-08-16)
