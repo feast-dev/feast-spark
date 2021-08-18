@@ -539,6 +539,9 @@ def join_entity_to_feature_tables(
         joined_df = as_of_join(
             joined_df, entity_event_timestamp_column, feature_table_df, feature_table,
         )
+        if SparkContext._active_spark_context._jsc.sc().getCheckpointDir().nonEmpty():
+            joined_df = joined_df.checkpoint()
+
     return joined_df
 
 
