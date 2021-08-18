@@ -8,6 +8,7 @@ from datetime import timedelta
 from logging.config import dictConfig
 from typing import Any, Dict, List, NamedTuple, Optional
 
+from pyspark import SparkContext
 from pyspark.sql import DataFrame, SparkSession, Window
 from pyspark.sql import functions as func
 from pyspark.sql.functions import (
@@ -602,8 +603,9 @@ def filter_feature_table_by_time_range(
         )
         .where(col("distance") == col("min_distance"))
         .select(time_range_filtered_df.columns + [ENTITY_EVENT_TIMESTAMP_ALIAS])
-        .localCheckpoint()
     )
+    if SparkContext._active_spark_context._jsc.sc().getCheckpointDir().nonEmpty():
+        time_range_filtered_df = time_range_filtered_df.checkpoint()
 
     return time_range_filtered_df
 
@@ -848,6 +850,7 @@ def _get_args():
     parser.add_argument(
         "--destination", type=str, help="Retrieval result destination in json string"
     )
+    parser.add_argument("--checkpoint", type=str, help="Spark Checkpoint location")
     return parser.parse_args()
 
 
@@ -876,6 +879,9 @@ if __name__ == "__main__":
     feature_tables_sources_conf = json_b64_decode(args.feature_tables_sources)
     entity_source_conf = json_b64_decode(args.entity_source)
     destination_conf = json_b64_decode(args.destination)
+    if args.checkpoint:
+        spark.sparkContext.setCheckpointDir(args.checkpoint)
+
     try:
         start_job(
             spark,

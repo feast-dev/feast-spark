@@ -233,6 +233,7 @@ def start_historical_feature_retrieval_job(
             ],
             destination={"format": output_format, "path": output_path},
             extra_packages=extra_packages,
+            checkpoint_path=client.config.get(opt.CHECKPOINT_PATH),
         )
     )
 

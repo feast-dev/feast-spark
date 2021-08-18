@@ -151,6 +151,7 @@ class RetrievalJobParameters(SparkJobParameters):
         entity_source: Dict,
         destination: Dict,
         extra_packages: Optional[List[str]] = None,
+        checkpoint_path: Optional[str] = None,
     ):
         """
         Args:
@@ -265,6 +266,7 @@ class RetrievalJobParameters(SparkJobParameters):
         self._entity_source = entity_source
         self._destination = destination
         self._extra_packages = extra_packages if extra_packages else []
+        self._checkpoint_path = checkpoint_path
 
     def get_name(self) -> str:
         all_feature_tables_names = [ft["name"] for ft in self._feature_tables]
@@ -285,7 +287,7 @@ class RetrievalJobParameters(SparkJobParameters):
         def json_b64_encode(obj) -> str:
             return b64encode(json.dumps(obj).encode("utf8")).decode("ascii")
 
-        return [
+        args = [
             "--feature-tables",
             json_b64_encode(self._feature_tables),
             "--feature-tables-sources",
@@ -295,6 +297,9 @@ class RetrievalJobParameters(SparkJobParameters):
             "--destination",
             json_b64_encode(self._destination),
         ]
+        if self._checkpoint_path:
+            args.extend(["--checkpoint", self._checkpoint_path])
+        return args
 
     def get_destination_path(self) -> str:
         return self._destination["path"]
