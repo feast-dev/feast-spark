@@ -1,6 +1,6 @@
 import os
 import tempfile
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, List, Optional, Union
 from urllib.parse import urlparse, urlunparse
 
@@ -8,7 +8,6 @@ from feast.config import Config
 from feast.data_format import ParquetFormat
 from feast.data_source import BigQuerySource, DataSource, FileSource, KafkaSource
 from feast.feature_table import FeatureTable
-from feast.staging.entities import create_bq_view_of_joined_features_and_entities
 from feast.staging.storage_client import get_staging_client
 from feast.value_type import ValueType
 from feast_spark.constants import ConfigOptions as opt
@@ -155,8 +154,17 @@ def _source_to_argument(source: DataSource, config: Config):
 
 
 def _feature_table_to_argument(
-    client: "Client", project: str, feature_table: FeatureTable
+    client: "Client", project: str, feature_table: FeatureTable, use_gc_threshold=True,
 ):
+    max_age = feature_table.max_age.ToSeconds() if feature_table.max_age else None
+    if use_gc_threshold:
+        try:
+            gc_threshold = int(feature_table.labels["gcThresholdSec"])
+        except (KeyError, ValueError, TypeError):
+            pass
+        else:
+            max_age = max(max_age or 0, gc_threshold)
+
     return {
         "features": [
             {"name": f.name, "type": ValueType(f.dtype).name}
@@ -171,7 +179,7 @@ def _feature_table_to_argument(
             }
             for n in feature_table.entities
         ],
-        "max_age": feature_table.max_age.ToSeconds() if feature_table.max_age else None,
+        "max_age": max_age,
         "labels": dict(feature_table.labels),
     }
 
@@ -197,7 +205,9 @@ def start_historical_feature_retrieval_spark_session(
             for feature_table in feature_tables
         ],
         feature_tables_conf=[
-            _feature_table_to_argument(client, project, feature_table)
+            _feature_table_to_argument(
+                client, project, feature_table, use_gc_threshold=False
+            )
             for feature_table in feature_tables
         ],
     )
@@ -229,11 +239,14 @@ def start_historical_feature_retrieval_job(
             entity_source=_source_to_argument(entity_source, client.config),
             feature_tables_sources=feature_sources,
             feature_tables=[
-                _feature_table_to_argument(client, project, feature_table)
+                _feature_table_to_argument(
+                    client, project, feature_table, use_gc_threshold=False
+                )
                 for feature_table in feature_tables
             ],
             destination={"format": output_format, "path": output_path},
             extra_packages=extra_packages,
+            checkpoint_path=client.config.get(opt.CHECKPOINT_PATH),
         )
     )
 
@@ -264,6 +277,65 @@ def replace_bq_table_with_joined_view(
 
     return create_bq_view_of_joined_features_and_entities(
         feature_table.batch_source, entity_source, feature_table.entities,
+    )
+
+
+def table_reference_from_string(table_ref: str):
+    """
+    Parses reference string with format "{project}:{dataset}.{table}" into bigquery.TableReference
+    """
+    from google.cloud import bigquery
+
+    project, dataset_and_table = table_ref.split(":")
+    dataset, table_id = dataset_and_table.split(".")
+    return bigquery.TableReference(
+        bigquery.DatasetReference(project, dataset), table_id
+    )
+
+
+def create_bq_view_of_joined_features_and_entities(
+    source: BigQuerySource, entity_source: BigQuerySource, entity_names: List[str]
+) -> BigQuerySource:
+    """
+    Creates BQ view that joins tables from `source` and `entity_source` with join key derived from `entity_names`.
+Returns BigQuerySource with reference to created view. The BQ view will be created in the same BQ dataset as `entity_source`.
+    """
+    from google.cloud import bigquery
+
+    bq_client = bigquery.Client()
+
+    source_ref = table_reference_from_string(source.bigquery_options.table_ref)
+    entities_ref = table_reference_from_string(entity_source.bigquery_options.table_ref)
+
+    destination_ref = bigquery.TableReference(
+        bigquery.DatasetReference(entities_ref.project, entities_ref.dataset_id),
+        f"_view_{source_ref.table_id}_{datetime.now():%Y%m%d%H%M%s}",
+    )
+
+    view = bigquery.Table(destination_ref)
+
+    join_template = """
+    SELECT source.* FROM
+    `{entities.project}.{entities.dataset_id}.{entities.table_id}` entities
+    JOIN
+    `{source.project}.{source.dataset_id}.{source.table_id}` source
+    ON
+    ({entity_key})"""
+
+    view.view_query = join_template.format(
+        entities=entities_ref,
+        source=source_ref,
+        entity_key=" AND ".join([f"source.{e} = entities.{e}" for e in entity_names]),
+    )
+    view.expires = datetime.now() + timedelta(days=1)
+    bq_client.create_table(view)
+
+    return BigQuerySource(
+        event_timestamp_column=source.event_timestamp_column,
+        created_timestamp_column=source.created_timestamp_column,
+        table_ref=f"{view.project}:{view.dataset_id}.{view.table_id}",
+        field_mapping=source.field_mapping,
+        date_partition_column=source.date_partition_column,
     )
 
 

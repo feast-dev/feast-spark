@@ -21,6 +21,7 @@ from feast_spark.pyspark.historical_feature_retrieval_job import (
     Field,
     SchemaError,
     as_of_join,
+    filter_feature_table_by_time_range,
     join_entity_to_feature_tables,
     retrieve_historical_features,
 )
@@ -182,91 +183,6 @@ def assert_dataframe_equal(left: DataFrame, right: DataFrame):
     assert is_content_equal
 
 
-def test_join_without_max_age(
-    spark: SparkSession,
-    single_entity_schema: StructType,
-    customer_feature_schema: StructType,
-):
-    entity_data = [
-        (1001, datetime(year=2020, month=8, day=31)),
-        (1001, datetime(year=2020, month=9, day=1)),
-        (1001, datetime(year=2020, month=9, day=2)),
-        (1001, datetime(year=2020, month=9, day=3)),
-        (2001, datetime(year=2020, month=9, day=2)),
-        (3001, datetime(year=2020, month=9, day=1)),
-    ]
-    entity_df = spark.createDataFrame(
-        spark.sparkContext.parallelize(entity_data), single_entity_schema
-    )
-
-    feature_table_data = [
-        (
-            1001,
-            datetime(year=2020, month=9, day=1),
-            datetime(year=2020, month=9, day=1),
-            50.0,
-        ),
-        (
-            1001,
-            datetime(year=2020, month=9, day=1),
-            datetime(year=2020, month=9, day=2),
-            100.0,
-        ),
-        (
-            2001,
-            datetime(year=2020, month=9, day=1),
-            datetime(year=2020, month=9, day=1),
-            400.0,
-        ),
-        (
-            1001,
-            datetime(year=2020, month=9, day=2),
-            datetime(year=2020, month=9, day=1),
-            200.0,
-        ),
-        (
-            1001,
-            datetime(year=2020, month=9, day=4),
-            datetime(year=2020, month=9, day=1),
-            300.0,
-        ),
-    ]
-    feature_table_df = spark.createDataFrame(
-        spark.sparkContext.parallelize(feature_table_data), customer_feature_schema
-    )
-
-    feature_table = FeatureTable(
-        name="transactions",
-        features=[Field("daily_transactions", "double")],
-        entities=[Field("customer_id", "int32")],
-    )
-
-    joined_df = as_of_join(
-        entity_df, "event_timestamp", feature_table_df, feature_table,
-    )
-
-    expected_joined_schema = StructType(
-        [
-            StructField("customer_id", IntegerType()),
-            StructField("event_timestamp", TimestampType()),
-            StructField("transactions__daily_transactions", FloatType()),
-        ]
-    )
-    expected_joined_data = [
-        (1001, datetime(year=2020, month=8, day=31), None),
-        (1001, datetime(year=2020, month=9, day=1), 100.0,),
-        (1001, datetime(year=2020, month=9, day=2), 200.0,),
-        (1001, datetime(year=2020, month=9, day=3), 200.0,),
-        (2001, datetime(year=2020, month=9, day=2), 400.0,),
-        (3001, datetime(year=2020, month=9, day=1), None),
-    ]
-    expected_joined_df = spark.createDataFrame(
-        spark.sparkContext.parallelize(expected_joined_data), expected_joined_schema
-    )
-
-    assert_dataframe_equal(joined_df, expected_joined_df)
-
-
 def test_join_with_max_age(
     spark: SparkSession,
     single_entity_schema: StructType,
@@ -303,6 +219,14 @@ def test_join_with_max_age(
         features=[Field("daily_transactions", "double")],
         entities=[Field("customer_id", "int32")],
         max_age=86400,
+    )
+
+    feature_table_df = filter_feature_table_by_time_range(
+        feature_table_df,
+        feature_table,
+        "event_timestamp",
+        entity_df,
+        "event_timestamp",
     )
 
     joined_df = as_of_join(
@@ -378,7 +302,13 @@ def test_join_with_composite_entity(
         entities=[Field("customer_id", "int32"), Field("driver_id", "int32")],
         max_age=86400,
     )
-
+    feature_table_df = filter_feature_table_by_time_range(
+        feature_table_df,
+        feature_table,
+        "event_timestamp",
+        entity_df,
+        "event_timestamp",
+    )
     joined_df = as_of_join(
         entity_df, "event_timestamp", feature_table_df, feature_table,
     )
@@ -439,8 +369,15 @@ def test_select_subset_of_columns_as_entity_primary_keys(
         name="transactions",
         features=[Field("daily_transactions", "double")],
         entities=[Field("customer_id", "int32")],
+        max_age=86400,
     )
-
+    feature_table_df = filter_feature_table_by_time_range(
+        feature_table_df,
+        feature_table,
+        "event_timestamp",
+        entity_df,
+        "event_timestamp",
+    )
     joined_df = as_of_join(
         entity_df, "event_timestamp", feature_table_df, feature_table,
     )
@@ -503,6 +440,13 @@ def test_multiple_join(
         entities=[Field("customer_id", "int32")],
         max_age=86400,
     )
+    customer_table_df = filter_feature_table_by_time_range(
+        customer_table_df,
+        customer_table,
+        "event_timestamp",
+        entity_df,
+        "event_timestamp",
+    )
 
     driver_table_data = [
         (
@@ -538,8 +482,11 @@ def test_multiple_join(
         name="bookings",
         features=[Field("completed_bookings", "int32")],
         entities=[Field("driver_id", "int32")],
+        max_age=7 * 86400,
     )
-
+    driver_table_df = filter_feature_table_by_time_range(
+        driver_table_df, driver_table, "event_timestamp", entity_df, "event_timestamp",
+    )
     joined_df = join_entity_to_feature_tables(
         entity_df,
         "event_timestamp",
@@ -601,6 +548,7 @@ def test_historical_feature_retrieval(spark: SparkSession):
         "name": "bookings",
         "entities": [{"name": "driver_id", "type": "int32"}],
         "features": [{"name": "completed_bookings", "type": "int32"}],
+        "max_age": 365 * 86400,
     }
     transaction_table = {
         "name": "transactions",
@@ -664,6 +612,7 @@ def test_historical_feature_retrieval_with_mapping(spark: SparkSession):
         "name": "bookings",
         "entities": [{"name": "customer_id", "type": "int32"}],
         "features": [{"name": "total_bookings", "type": "int32"}],
+        "max_age": 86400,
     }
 
     joined_df = retrieve_historical_features(
@@ -734,6 +683,7 @@ def test_large_historical_feature_retrieval(
         "name": "feature",
         "entities": [{"name": "customer_id", "type": "int32"}],
         "features": [{"name": "total_bookings", "type": "int32"}],
+        "max_age": 86400,
     }
 
     joined_df = retrieve_historical_features(
@@ -791,11 +741,13 @@ def test_historical_feature_retrieval_with_schema_errors(spark: SparkSession):
         "name": "bookings",
         "entities": [{"name": "driver_id", "type": "int32"}],
         "features": [{"name": "completed_bookings", "type": "int32"}],
+        "max_age": 86400,
     }
     booking_table_missing_features = {
         "name": "bookings",
         "entities": [{"name": "driver_id", "type": "int32"}],
         "features": [{"name": "nonexist_feature", "type": "int32"}],
+        "max_age": 86400,
     }
 
     with pytest.raises(SchemaError):
@@ -842,6 +794,7 @@ def test_implicit_type_conversion(spark: SparkSession,):
         "name": "transactions",
         "entities": [{"name": "customer_id", "type": "int32"}],
         "features": [{"name": "daily_transactions", "type": "float"}],
+        "max_age": 86400,
     }
 
     joined_df = retrieve_historical_features(

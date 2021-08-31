@@ -1,4 +1,74 @@
 # Changelog
+
+## [v0.2.12](https://github.com/feast-dev/feast-spark/tree/v0.2.12) (2021-08-19)
+[Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.11...v0.2.12)
+
+**Implemented enhancements:**
+- Keep only unique entity rows in entity dataframe in historical retrieval job [\#93](https://github.com/feast-dev/feast-spark/pull/93) ([pyalex](https://github.com/pyalex))
+- Add checkpoint in each iteration of join loop (historical retrieval job) to truncate logical plan [\#92](https://github.com/feast-dev/feast-spark/pull/92) ([pyalex](https://github.com/pyalex))
+- Add persistent checkpoint in historical retrieval [\#91](https://github.com/feast-dev/feast-spark/pull/91) ([pyalex](https://github.com/pyalex))
+- Omit skewness in spark join by broadcasting entity dataframe [\#90](https://github.com/feast-dev/feast-spark/pull/90) ([pyalex](https://github.com/pyalex))
+
+## [v0.2.11](https://github.com/feast-dev/feast-spark/tree/v0.2.11) (2021-08-16)
+[Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.10...v0.2.11)
+
+**Implemented enhancements:**
+- Speed-up join in historical retrieval by replacing pandas with native spark [\#89](https://github.com/feast-dev/feast-spark/pull/89) ([pyalex](https://github.com/pyalex))
+
+## [v0.2.10](https://github.com/feast-dev/feast-spark/tree/v0.2.10) (2021-08-13)
+[Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.9...v0.2.10)
+
+**Implemented enhancements:**
+- Optimize historical retrieval by filtering rows only within timestamp boundaries from entity dataframe [\#87](https://github.com/feast-dev/feast-spark/pull/87) ([pyalex](https://github.com/pyalex))
+
+**Fixed bugs:**
+
+- Pandas is missing in spark job base image [\#88](https://github.com/feast-dev/feast-spark/pull/88) ([pyalex](https://github.com/pyalex))
+- Do not use gcThreshold for historical retrieval jobs [\#86](https://github.com/feast-dev/feast-spark/pull/86) ([pyalex](https://github.com/pyalex))
+
+## [v0.2.9](https://github.com/feast-dev/feast-spark/tree/v0.2.9) (2021-07-28)
+[Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.8...v0.2.9)
+
+**Fixed bugs:**
+- Refresh redis topology on write [\#83](https://github.com/feast-dev/feast-spark/pull/83) ([khorshuheng]
+- Use hash for schedule job id [\#80](https://github.com/feast-dev/feast-spark/pull/80) ([khorshuheng]
+
+**Implemented enhancements:**
+- Make max inflight RPCs in bigtable client configurable through spark config [\#81](https://github.com/feast-dev/feast-spark/pull/81) ([pyalex])
+- Use gcThresholdSec label instead of max_age if present [\#82](https://github.com/feast-dev/feast-spark/pull/82) ([pyalex])
+
+## [v0.2.8](https://github.com/feast-dev/feast-spark/tree/v0.2.8) (2021-07-07)
+[Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.7...v0.2.8)
+
+**Implemented enhancements:**
+- Use entity source project dataset for bigquery view creation [\#79](https://github.com/feast-dev/feast-spark/pull/79) ([khorshuheng])(https://github.com/khorshuheng))
+
+## [v0.2.7](https://github.com/feast-dev/feast-spark/tree/v0.2.7) (2021-06-15)
+[Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.6...v0.2.7)
+
+**Implemented enhancements:**
+- Extra configuration for bigtable client [\#78](https://github.com/feast-dev/feast-spark/pull/78) ([pyalex])(https://github.com/pyalex))
+- Add configuration for bigquery entity staging location [\#77](https://github.com/feast-dev/feast-spark/pull/77) ([khorshuheng])(https://github.com/khorshuheng))
+
+
+## [v0.2.6](https://github.com/feast-dev/feast-spark/tree/v0.2.6) (2021-05-20)
+[Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.5...v0.2.6)
+
+**Fixed bugs:**
+- Fix broken scheduled batch ingestion jobs [\#72](https://github.com/feast-dev/feast-spark/pull/72) ([khorshuheng](https://github.com/khorshuheng))
+
+## [v0.2.5](https://github.com/feast-dev/feast-spark/tree/v0.2.5) (2021-05-11)
+
+[Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.4...v0.2.5)
+
+**Fixed bugs:**
+
+- Fix SSTable name length restrictions during ingestion [\#70](https://github.com/feast-dev/feast-spark/pull/70) ([terryyylim](https://github.com/terryyylim))
+
+**Merged pull requests:**
+
+- Test long entity names in e2e tests [\#71](https://github.com/feast-dev/feast-spark/pull/71) ([pyalex](https://github.com/pyalex))
+
 ## [v0.2.4](https://github.com/feast-dev/feast-spark/tree/v0.2.4) (2021-05-05)
 
 [Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.3...v0.2.4)

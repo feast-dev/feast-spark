@@ -50,7 +50,7 @@ REQUIRED = [
     "google-cloud-dataproc==2.0.2",
     "kubernetes==12.0.*",
     "grpcio-tools==1.31.0",
-    "mypy-protobuf",
+    "mypy-protobuf==2.5",
     "croniter==1.*",
 ]
 
@@ -149,7 +149,7 @@ setup(
     ],
     entry_points={"console_scripts": ["feast-spark=feast_spark.cli:cli"]},
     use_scm_version={"root": "../", "relative_to": __file__, "tag_regex": TAG_REGEX},
-    setup_requires=["setuptools_scm", "grpcio-tools==1.31.0", "feast==0.9.5.2", "mypy-protobuf"],
+    setup_requires=["setuptools_scm", "grpcio-tools==1.31.0", "feast==0.9.5.2", "mypy-protobuf==2.5"],
     cmdclass={
         "build_proto": BuildProtoCommand,
         "build_py": BuildCommand,

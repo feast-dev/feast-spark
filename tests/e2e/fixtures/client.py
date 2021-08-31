@@ -74,7 +74,7 @@ def feast_client(
             **job_service_env,
         )
     elif pytestconfig.getoption("env") == "aws":
-        return Client(
+        c = Client(
             core_url=f"{feast_core[0]}:{feast_core[1]}",
             serving_url=f"{feast_serving[0]}:{feast_serving[1]}",
             spark_launcher="emr",
@@ -92,7 +92,7 @@ def feast_client(
             enable_auth=pytestconfig.getoption("enable_auth"),
         )
     elif pytestconfig.getoption("env") == "k8s":
-        return Client(
+        c = Client(
             core_url=f"{feast_core[0]}:{feast_core[1]}",
             serving_url=f"{feast_serving[0]}:{feast_serving[1]}",
             historical_feature_output_location=os.path.join(

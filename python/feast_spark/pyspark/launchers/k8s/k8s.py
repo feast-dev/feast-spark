@@ -1,3 +1,4 @@
+import hashlib
 import random
 import string
 import time
@@ -63,14 +64,8 @@ def _generate_job_id() -> str:
 
 
 def _generate_scheduled_job_id(project: str, feature_table_name: str) -> str:
-    scheduled_job_id = f"feast-{project}-{feature_table_name}".replace("_", "-")
-    k8s_res_name_char_limit = 253
-
-    return (
-        scheduled_job_id
-        if len(scheduled_job_id) <= k8s_res_name_char_limit
-        else scheduled_job_id[:k8s_res_name_char_limit]
-    )
+    job_hash = hashlib.md5(f"{project}-{feature_table_name}".encode()).hexdigest()
+    return f"feast-{job_hash}"
 
 
 def _truncate_label(label: str) -> str:
@@ -85,6 +80,11 @@ class KubernetesJobMixin:
 
     def get_id(self) -> str:
         return self._job_id
+
+    def get_error_message(self) -> str:
+        job = _get_job_by_id(self._api, self._namespace, self._job_id)
+        assert job is not None
+        return job.job_error_message
 
     def get_status(self) -> SparkJobStatus:
         job = _get_job_by_id(self._api, self._namespace, self._job_id)
@@ -394,6 +394,7 @@ class KubernetesJobLauncher(JobLauncher):
         resource = _prepare_scheduled_job_resource(
             scheduled_job_template=self._scheduled_resource_template,
             scheduled_job_id=schedule_job_id,
+            job_schedule=ingestion_job_params.get_job_schedule(),
             job_template=self._resource_template,
             job_type=OFFLINE_TO_ONLINE_JOB_TYPE,
             main_application_file=jar_s3_path,
@@ -486,7 +487,7 @@ class KubernetesJobLauncher(JobLauncher):
     def get_job_by_id(self, job_id: str) -> SparkJob:
         job_info = _get_job_by_id(self._api, self._namespace, job_id)
         if job_info is None:
-            raise KeyError(f"Job iwth id {job_id} not found")
+            raise KeyError(f"Job with id {job_id} not found")
         else:
             return self._job_from_job_info(job_info)
 

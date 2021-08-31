@@ -1,16 +1,58 @@
 import abc
 import argparse
 import json
+import logging
+import os
 from base64 import b64decode
 from datetime import timedelta
+from logging.config import dictConfig
 from typing import Any, Dict, List, NamedTuple, Optional
 
+from pyspark import SparkContext
 from pyspark.sql import DataFrame, SparkSession, Window
-from pyspark.sql.functions import col, expr, monotonically_increasing_id, row_number
+from pyspark.sql import functions as func
+from pyspark.sql.functions import (
+    broadcast,
+    col,
+    monotonically_increasing_id,
+    row_number,
+)
 from pyspark.sql.types import LongType
 
 EVENT_TIMESTAMP_ALIAS = "event_timestamp"
+ENTITY_EVENT_TIMESTAMP_ALIAS = "event_timestamp_entity"
 CREATED_TIMESTAMP_ALIAS = "created_timestamp"
+
+
+def get_termination_log_path():
+    if os.access("/dev/termination-log", os.W_OK):
+        return "/dev/termination-log"
+    return "/dev/stderr"
+
+
+DEFAULT_LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {"standard": {"format": "%(asctime)s [%(levelname)s] %(message)s"}},
+    "handlers": {
+        "default": {
+            "class": "logging.StreamHandler",
+            "level": "INFO",
+            "formatter": "standard",
+        },
+        "file": {
+            "class": "logging.FileHandler",
+            "level": "ERROR",
+            "formatter": "standard",
+            "filename": get_termination_log_path(),
+            "mode": "a",
+        },
+    },
+    "loggers": {"__main__": {"level": "INFO", "handlers": ["default", "file"]}},
+}
+
+dictConfig(DEFAULT_LOGGING)
+logger = logging.getLogger(__name__)
 
 
 class Source(abc.ABC):
@@ -240,14 +282,13 @@ class FeatureTable(NamedTuple):
         entities (List[Field]): Primary keys for the features.
         features (List[Field]): Feature list.
         max_age (int): In seconds. determines the lower bound of the timestamp of the retrieved feature.
-            If not specified, this would be unbounded
         project (str): Feast project name.
     """
 
     name: str
     entities: List[Field]
     features: List[Field]
-    max_age: Optional[int] = None
+    max_age: int
     project: Optional[str] = None
 
     @property
@@ -384,14 +425,10 @@ def as_of_join(
 
     join_cond = (
         entity_with_id[entity_event_timestamp_column]
-        >= aliased_feature_table_df[feature_event_timestamp_column_with_prefix]
+        == aliased_feature_table_df[
+            f"{feature_table.name}__{ENTITY_EVENT_TIMESTAMP_ALIAS}"
+        ]
     )
-    if feature_table.max_age:
-        join_cond = join_cond & (
-            aliased_feature_table_df[feature_event_timestamp_column_with_prefix]
-            >= entity_with_id[entity_event_timestamp_column]
-            - expr(f"INTERVAL {feature_table.max_age} seconds")
-        )
 
     for key in feature_table.entity_names:
         join_cond = join_cond & (
@@ -502,6 +539,9 @@ def join_entity_to_feature_tables(
         joined_df = as_of_join(
             joined_df, entity_event_timestamp_column, feature_table_df, feature_table,
         )
+        if SparkContext._active_spark_context._jsc.sc().getCheckpointDir().nonEmpty():
+            joined_df = joined_df.checkpoint()
+
     return joined_df
 
 
@@ -514,13 +554,13 @@ class SchemaError(Exception):
     pass
 
 
-def _filter_feature_table_by_time_range(
+def filter_feature_table_by_time_range(
     feature_table_df: DataFrame,
     feature_table: FeatureTable,
     feature_event_timestamp_column: str,
     entity_df: DataFrame,
     entity_event_timestamp_column: str,
-):
+) -> DataFrame:
     entity_max_timestamp = entity_df.agg(
         {entity_event_timestamp_column: "max"}
     ).collect()[0][0]
@@ -538,6 +578,38 @@ def _filter_feature_table_by_time_range(
     )
 
     time_range_filtered_df = feature_table_df.filter(feature_table_timestamp_filter)
+
+    entities_projected = (
+        entity_df.withColumnRenamed(
+            entity_event_timestamp_column, ENTITY_EVENT_TIMESTAMP_ALIAS
+        )
+        .select(feature_table.entity_names + [ENTITY_EVENT_TIMESTAMP_ALIAS])
+        .distinct()
+    )
+
+    time_range_filtered_df = (
+        time_range_filtered_df.repartition(200)
+        .join(
+            broadcast(entities_projected), on=feature_table.entity_names, how="inner",
+        )
+        .withColumn(
+            "distance",
+            col(ENTITY_EVENT_TIMESTAMP_ALIAS).cast("long")
+            - col(EVENT_TIMESTAMP_ALIAS).cast("long"),
+        )
+        .where((col("distance") >= 0) & (col("distance") <= feature_table.max_age))
+        .withColumn(
+            "min_distance",
+            func.min("distance").over(
+                Window.partitionBy(
+                    feature_table.entity_names + [ENTITY_EVENT_TIMESTAMP_ALIAS]
+                )
+            ),
+        )
+        .where(col("distance") == col("min_distance"))
+    )
+    if SparkContext._active_spark_context._jsc.sc().getCheckpointDir().nonEmpty():
+        time_range_filtered_df = time_range_filtered_df.checkpoint()
 
     return time_range_filtered_df
 
@@ -721,8 +793,10 @@ def retrieve_historical_features(
                 f"{expected_entity.name} ({expected_entity.spark_type}) is not present in the entity dataframe."
             )
 
+    entity_df.cache()
+
     feature_table_dfs = [
-        _filter_feature_table_by_time_range(
+        filter_feature_table_by_time_range(
             feature_table_df,
             feature_table,
             feature_table_source.event_timestamp_column,
@@ -780,15 +854,20 @@ def _get_args():
     parser.add_argument(
         "--destination", type=str, help="Retrieval result destination in json string"
     )
+    parser.add_argument("--checkpoint", type=str, help="Spark Checkpoint location")
     return parser.parse_args()
 
 
 def _feature_table_from_dict(dct: Dict[str, Any]) -> FeatureTable:
+    assert (
+        dct.get("max_age") is not None and dct["max_age"] > 0
+    ), "FeatureTable.maxAge must not be None and should be a positive number"
+
     return FeatureTable(
         name=dct["name"],
         entities=[Field(**e) for e in dct["entities"]],
         features=[Field(**f) for f in dct["features"]],
-        max_age=dct.get("max_age"),
+        max_age=dct["max_age"],
         project=dct.get("project"),
     )
 
@@ -804,11 +883,18 @@ if __name__ == "__main__":
     feature_tables_sources_conf = json_b64_decode(args.feature_tables_sources)
     entity_source_conf = json_b64_decode(args.entity_source)
     destination_conf = json_b64_decode(args.destination)
-    start_job(
-        spark,
-        entity_source_conf,
-        feature_tables_sources_conf,
-        feature_tables_conf,
-        destination_conf,
-    )
+    if args.checkpoint:
+        spark.sparkContext.setCheckpointDir(args.checkpoint)
+
+    try:
+        start_job(
+            spark,
+            entity_source_conf,
+            feature_tables_sources_conf,
+            feature_tables_conf,
+            destination_conf,
+        )
+    except Exception as e:
+        logger.exception(e)
+        raise e
     spark.stop()
