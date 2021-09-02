@@ -54,7 +54,8 @@ REQUIRED = [
     "croniter==1.*",
     "azure-synapse-spark",
     "azure-identity",
-    "azure-storage",
+    "azure-storage-file-datalake",
+    "azure-storage-blob",
 ]
 
 # README file from Feast repo root directory
