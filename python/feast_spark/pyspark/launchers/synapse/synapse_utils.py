@@ -13,7 +13,7 @@ from azure.synapse.spark.models import SparkBatchJobOptions, SparkBatchJob
 
 from azure.storage.filedatalake import DataLakeServiceClient
 
-from feast_spark.pyspark.abc import SparkJobStatus, RetrievalJobParameters,BQ_SPARK_PACKAGE
+from feast_spark.pyspark.abc import SparkJobStatus
 
 __all__ = [
     "_cancel_job_by_id",
@@ -147,15 +147,23 @@ class SynapseJobRunner(object):
 
         # SDK source code is here: https://github.com/Azure/azure-sdk-for-python/tree/master/sdk/synapse/azure-synapse
         # Exact code is here: https://github.com/Azure/azure-sdk-for-python/blob/master/sdk/synapse/azure-synapse-spark/azure/synapse/spark/operations/_spark_batch_operations.py#L114
-        
-        arguments = [elem.replace("}", " }") for elem in arguments]
+        # Adding spaces between brackets. This is to workaround this known YARN issue (when running Spark on YARN):
+        # https://issues.apache.org/jira/browse/SPARK-17814?focusedCommentId=15567964&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-15567964
+        # print(arguments)
+        updated_arguments = []
+        for elem in arguments:
+            if type(elem) == str:
+                updated_arguments.append(elem.replace("}", " }"))
+            else:
+                updated_arguments.append(elem)
+
 
         spark_batch_job_options = SparkBatchJobOptions(
             tags=tags,
             name=job_name,
             file=file,
             class_name=class_name,
-            arguments=arguments,
+            arguments=updated_arguments,
             jars=jars,
             files=files,
             archives=archives,
@@ -165,13 +173,6 @@ class SynapseJobRunner(object):
             executor_memory=executor_memory,
             executor_cores=executor_cores,
             executor_count=self._executors)
-
-        # print("spark_batch_job_options", spark_batch_job_options)
-        # print("arguments", arguments, type(arguments))
-
-        # print(tags,job_name,file,class_name,arguments,jars,files,archives,configuration,driver_memory,driver_cores,executor_memory,executor_cores,self._executors)
-        
-        print("Final input argument:", arguments)
 
         return self.client.spark_batch.create_spark_batch_job(spark_batch_job_options, detailed=True)
 

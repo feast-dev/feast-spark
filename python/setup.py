@@ -53,6 +53,7 @@ REQUIRED = [
     "mypy-protobuf==2.5",
     "croniter==1.*",
     "azure-synapse-spark",
+    "azure-synapse",
     "azure-identity",
     "azure-storage-file-datalake",
     "azure-storage-blob",

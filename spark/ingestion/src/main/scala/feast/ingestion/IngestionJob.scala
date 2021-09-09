@@ -126,15 +126,14 @@ object IngestionJob {
   }
 
   def main(args: Array[String]): Unit = {
-    println("Debug... Received following argument:")
-    println(args.toList)
     val args_modified = new Array[String](args.length)
     for ( i <- 0 to (args_modified.length - 1)) {
+      // Removing spaces between brackets. This is to workaround this known YARN issue (when running Spark on YARN):
+      // https://issues.apache.org/jira/browse/SPARK-17814?focusedCommentId=15567964&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-15567964
+      // Also remove the unncessary back slashes
       args_modified(i) = args(i).replace(" }", "}");
       args_modified(i) = args_modified(i).replace("\\", "\\\"");
     }
-    println("Remove additional spaces in args:")
-    println(args_modified.toList)
     parser.parse(args_modified, IngestionJobConfig()) match {
       case Some(config) =>
         println(s"Starting with config $config")

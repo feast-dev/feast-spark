@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import List, Optional, cast
 
 from azure.synapse.spark.models import SparkBatchJob
+from azure.identity import DefaultAzureCredential, DeviceCodeCredential
 
 from feast_spark.pyspark.abc import (
     BatchIngestionJob,
@@ -137,6 +138,7 @@ class SynapseStreamIngestionJob(SynapseJobMixin, StreamIngestionJob):
     def get_feature_table(self) -> str:
         return self._feature_table
 
+login_credential_cache = None
 
 class SynapseJobLauncher(JobLauncher):
     """
@@ -151,7 +153,23 @@ class SynapseJobLauncher(JobLauncher):
         executor_size: str,
         executors: int
     ):
-        self._api = SynapseJobRunner(synapse_dev_url, pool_name, executor_size = executor_size, executors = executors)
+        tenant_id='72f988bf-86f1-41af-91ab-2d7cd011db47'
+        authority_host_uri = 'login.microsoftonline.com'
+        client_id = '04b07795-8ddb-461a-bbee-02f9e1bf7b46' 
+
+        global login_credential_cache
+        # use a global cache to store the credential, to avoid users from multiple login
+            
+        if login_credential_cache is None:
+            # self.credential = DefaultAzureCredential() 
+            # use DeviceCodeCredential if DefaultAzureCredential is not available
+            # if self.credential is None:
+            self.credential = DeviceCodeCredential(client_id, authority=authority_host_uri, tenant=tenant_id)  
+            login_credential_cache = self.credential
+        else:
+            self.credential = login_credential_cache
+
+        self._api = SynapseJobRunner(synapse_dev_url, pool_name, executor_size = executor_size, executors = executors, credential=self.credential)
         self._datalake = DataLakeFiler(datalake_dir)
 
     def _job_from_job_info(self, job_info: SparkBatchJob) -> SparkJob:
@@ -219,12 +237,6 @@ class SynapseJobLauncher(JobLauncher):
         """
 
         main_file = self._datalake.upload_file(ingestion_job_params.get_main_file_path())
-        print(main_file, ingestion_job_params.get_main_file_path())
-        print(ingestion_job_params.get_class_name())
-        # for arg in ingestion_job_params.get_arguments():
-        #     print(len(arg), arg)
-        # args = [x.replace(' ', '') for x in ingestion_job_params.get_arguments()]
-        # print(args)
 
         job_info = _submit_job(self._api, ingestion_job_params.get_project(), main_file,
             main_class = ingestion_job_params.get_class_name(),
