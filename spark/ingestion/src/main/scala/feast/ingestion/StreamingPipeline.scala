@@ -63,7 +63,7 @@ object StreamingPipeline extends BasePipeline with Serializable {
     val metrics       = new IngestionPipelineMetrics
     val validationUDF = createValidationUDF(sparkSession, config)
 
-    val EH_SASL = "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"$ConnectionString\" password=\"Endpoint=sb://xiaoyzhufeasttest.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=z9obEAyVvD36fZIEvvtNlCRBEDjIrsfNfDAbgDyTbDg=;EntityPath=driver_trips\";"
+    val EH_SASL = "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"$ConnectionString\" password=\"Endpoint=sb://xxx.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=yyy=;EntityPath=driver_trips\";"
 
     val input = config.source match {
       case source: KafkaSource =>
