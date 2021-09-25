@@ -147,7 +147,8 @@ def _prepare_job_resource(
     _add_keys(job, ("spec", "sparkConf"), extra_metadata)
     _add_keys(job, ("spec", "sparkConf"), azure_credentials)
 
-    _append_items(job, ("spec", "deps", "packages"), packages)
+    if len(packages) > 1:
+        _append_items(job, ("spec", "deps", "packages"), packages)
     _append_items(job, ("spec", "deps", "jars"), jars)
 
     return job
