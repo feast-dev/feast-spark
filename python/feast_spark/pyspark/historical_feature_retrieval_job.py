@@ -14,6 +14,7 @@ from pyspark.sql import functions as func
 from pyspark.sql.functions import (
     broadcast,
     col,
+    expr,
     monotonically_increasing_id,
     row_number,
 )
@@ -322,7 +323,9 @@ class FileDestination(NamedTuple):
 def _map_column(df: DataFrame, col_mapping: Dict[str, str]):
     source_to_alias_map = {v: k for k, v in col_mapping.items()}
     projection = [
-        col(col_name).alias(source_to_alias_map.get(col_name, col_name))
+        expr(col_mapping.get(col_name, col_name)).alias(
+            source_to_alias_map.get(col_name, col_name)
+        )
         for col_name in df.columns
     ]
     return df.select(projection)
