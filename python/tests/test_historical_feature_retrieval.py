@@ -47,7 +47,7 @@ def large_entity_csv_file(pytestconfig, spark):
     file_path = os.path.join(temp_dir, "large_entity")
     entity_schema = StructType(
         [
-            StructField("customer_id", IntegerType()),
+            StructField("id", IntegerType()),
             StructField("event_timestamp", TimestampType()),
         ]
     )
