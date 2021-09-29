@@ -35,6 +35,7 @@ import org.apache.spark.sql.types.BooleanType
 import org.apache.spark.{SparkEnv, SparkFiles}
 
 import java.io.File
+import java.sql.Timestamp
 import java.util.concurrent.TimeUnit
 
 /**
@@ -150,12 +151,17 @@ object StreamingPipeline extends BasePipeline with Serializable {
 
         config.source match {
           case _: KafkaSource =>
-            Option(
-              rowsAfterValidation
-                .agg(max("timestamp") as "latest_timestamp")
-                .collect()(0)
-                .getTimestamp(0)
-            ).foreach { t =>
+            val timestamp: Option[Timestamp] = if (rowsAfterValidation.isEmpty) {
+              None
+            } else {
+              Option(
+                rowsAfterValidation
+                  .agg(max("timestamp") as "latest_timestamp")
+                  .collect()(0)
+                  .getTimestamp(0)
+              )
+            }
+            timestamp.foreach { t =>
               streamingMetrics.updateKafkaTimestamp(t.getTime)
             }
           case _ => ()
