@@ -153,7 +153,7 @@ object StreamingPipeline extends BasePipeline with Serializable {
             Option(
               rowsAfterValidation
                 .agg(max("timestamp") as "latest_timestamp")
-                .head()
+                .collect()(0)
                 .getTimestamp(0)
             ).foreach { t =>
               streamingMetrics.updateKafkaTimestamp(t.getTime)

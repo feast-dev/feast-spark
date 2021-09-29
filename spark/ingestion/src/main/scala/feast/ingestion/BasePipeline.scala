@@ -77,6 +77,16 @@ object BasePipeline {
       case None => ()
     }
 
+    (jobConfig.metrics, jobConfig.mode) match {
+      case (Some(_), Modes.Online) =>
+        conf
+          .set(
+            "spark.metrics.conf.*.source.jvm.class",
+            "org.apache.spark.metrics.source.StreamingMetricSource"
+          )
+      case (_, _) => ()
+    }
+
     jobConfig.stencilURL match {
       case Some(url: String) =>
         conf

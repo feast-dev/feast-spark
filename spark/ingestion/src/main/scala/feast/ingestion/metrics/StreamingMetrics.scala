@@ -22,13 +22,8 @@ import org.apache.spark.sql.streaming.StreamingQueryProgress
 
 class StreamingMetrics extends Serializable {
 
-  private lazy val metricSource: Option[StreamingMetricSource] = {
+  private val metricSource: Option[StreamingMetricSource] = {
     val metricsSystem = SparkEnv.get.metricsSystem
-    StreamingMetricsLock.synchronized {
-      if (metricsSystem.getSourcesByName(StreamingMetricSource.sourceName).isEmpty) {
-        metricsSystem.registerSource(new StreamingMetricSource)
-      }
-    }
 
     metricsSystem.getSourcesByName(StreamingMetricSource.sourceName) match {
       case Seq(head) => Some(head.asInstanceOf[StreamingMetricSource])
