@@ -160,19 +160,15 @@ class SynapseJobLauncher(JobLauncher):
         global login_credential_cache
         # use a global cache to store the credential, to avoid users from multiple login
 
-        # if self.credential is None:  
-        # prioritize using service principal
-        self.credential = DefaultAzureCredential() 
-        login_credential_cache = self.credential
         if login_credential_cache is None:
-            # use DeviceCodeCredential if DefaultAzureCredential is not available
-            self.credential = DeviceCodeCredential(client_id, authority=authority_host_uri, tenant=tenant_id)  
+            # use DeviceCodeCredential if EnvironmentCredential is not available
+            self.credential = ChainedTokenCredential(EnvironmentCredential(), DeviceCodeCredential(client_id, authority=authority_host_uri, tenant=tenant_id))
             login_credential_cache = self.credential
         else:
             self.credential = login_credential_cache
 
         self._api = SynapseJobRunner(synapse_dev_url, pool_name, executor_size = executor_size, executors = executors, credential=self.credential)
-        self._datalake = DataLakeFiler(datalake_dir)
+        self._datalake = DataLakeFiler(datalake_dir,credential=self.credential)
 
     def _job_from_job_info(self, job_info: SparkBatchJob) -> SparkJob:
         job_type = job_info.tags[LABEL_JOBTYPE]
