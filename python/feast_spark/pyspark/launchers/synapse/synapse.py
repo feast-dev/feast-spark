@@ -159,11 +159,13 @@ class SynapseJobLauncher(JobLauncher):
 
         global login_credential_cache
         # use a global cache to store the credential, to avoid users from multiple login
-            
+
+        # if self.credential is None:  
+        # prioritize using service principal
+        self.credential = DefaultAzureCredential() 
+        login_credential_cache = self.credential
         if login_credential_cache is None:
-            # self.credential = DefaultAzureCredential() 
             # use DeviceCodeCredential if DefaultAzureCredential is not available
-            # if self.credential is None:
             self.credential = DeviceCodeCredential(client_id, authority=authority_host_uri, tenant=tenant_id)  
             login_credential_cache = self.credential
         else:
