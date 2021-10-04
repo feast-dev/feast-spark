@@ -47,4 +47,12 @@ class BaseMetricSource extends Source {
       s"$name#$metricLabels"
     }
   }
+
+  protected def gaugeWithLabels(name: String) = {
+    if (metricLabels.isEmpty) {
+      name
+    } else {
+      s"$name#$metricLabels"
+    }
+  }
 }

@@ -16,10 +16,7 @@
  */
 package feast.ingestion
 
-import java.io.File
-import java.util.concurrent.TimeUnit
-
-import feast.ingestion.metrics.IngestionPipelineMetrics
+import feast.ingestion.metrics.{IngestionPipelineMetrics, StreamingMetrics}
 import feast.ingestion.registry.proto.ProtoRegistryFactory
 import feast.ingestion.utils.ProtoReflection
 import feast.ingestion.utils.testing.MemoryStreamingSource
@@ -32,13 +29,17 @@ import org.apache.spark.sql.avro.functions.from_avro
 import org.apache.spark.sql.catalyst.encoders.RowEncoder
 import org.apache.spark.sql.execution.python.UserDefinedPythonFunction
 import org.apache.spark.sql.execution.streaming.ProcessingTimeTrigger
-import org.apache.spark.sql.functions.{expr, lit, struct, udf, coalesce}
-import org.apache.spark.sql.streaming.StreamingQuery
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.streaming.{StreamingQuery, StreamingQueryListener}
 import org.apache.spark.sql.types.BooleanType
 import org.apache.spark.{SparkEnv, SparkFiles}
 import org.apache.spark.eventhubs._
 import org.apache.kafka.common.security.plain.PlainLoginModule
 import org.apache.kafka.common.security.JaasContext
+
+import java.io.File
+import java.sql.Timestamp
+import java.util.concurrent.TimeUnit
 
 /**
   * Streaming pipeline (currently in micro-batches mode only, since we need to have multiple sinks: redis & deadletters).
@@ -59,8 +60,20 @@ object StreamingPipeline extends BasePipeline with Serializable {
     val featureTable = config.featureTable
     val projection =
       BasePipeline.inputProjection(config.source, featureTable.features, featureTable.entities)
-    val rowValidator  = new RowValidator(featureTable, config.source.eventTimestampColumn)
-    val metrics       = new IngestionPipelineMetrics
+    val rowValidator     = new RowValidator(featureTable, config.source.eventTimestampColumn)
+    val metrics          = new IngestionPipelineMetrics
+    val streamingMetrics = new StreamingMetrics
+
+    sparkSession.streams.addListener(new StreamingQueryListener {
+      override def onQueryStarted(event: StreamingQueryListener.QueryStartedEvent): Unit = ()
+
+      override def onQueryProgress(event: StreamingQueryListener.QueryProgressEvent): Unit = {
+        streamingMetrics.updateStreamingProgress(event.progress)
+      }
+
+      override def onQueryTerminated(event: StreamingQueryListener.QueryTerminatedEvent): Unit = ()
+    })
+
     val validationUDF = createValidationUDF(sparkSession, config)
 
     val EH_SASL = "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"$ConnectionString\" password=\"Endpoint=sb://xxx.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=yyy=;EntityPath=driver_trips\";"
@@ -94,20 +107,29 @@ object StreamingPipeline extends BasePipeline with Serializable {
         source.read        
     }
 
-    val parsed = config.source.asInstanceOf[StreamingSource].format match {
+    val featureStruct = config.source.asInstanceOf[StreamingSource].format match {
       case ProtoFormat(classPath) =>
         val parser = protoParser(sparkSession, classPath)
-        input.withColumn("features", parser($"value"))
+        parser($"value")
       case AvroFormat(schemaJson) =>
-        input.select(from_avro($"value", schemaJson).alias("features"))
+        from_avro($"value", schemaJson)
       case _ =>
         val columns = input.columns.map(input(_))
-        input.select(struct(columns: _*).alias("features"))
+        struct(columns: _*)
     }
 
+    val metadata: Array[Column] = config.source match {
+      case _: KafkaSource =>
+        Array(col("timestamp"))
+      case _ => Array()
+    }
+
+    val parsed = input
+      .withColumn("features", featureStruct)
+      .select(metadata :+ col("features.*"): _*)
+
     val projected = parsed
-      .select("features.*")
-      .select(projection: _*)
+      .select(projection ++ metadata: _*)
 
     TypeCheck.allTypesMatch(projected.schema, featureTable) match {
       case Some(error) =>
@@ -130,9 +152,12 @@ object StreamingPipeline extends BasePipeline with Serializable {
 
         implicit val rowEncoder: Encoder[Row] = RowEncoder(rowsAfterValidation.schema)
 
+        val metadataColName: Array[String] = metadata.map(_.toString)
+
         rowsAfterValidation
           .map(metrics.incrementRead)
           .filter(if (config.doNotIngestInvalidRows) expr("_isValid") else rowValidator.allChecks)
+          .drop(metadataColName: _*)
           .write
           .format(config.store match {
             case _: RedisConfig     => "feast.ingestion.stores.redis"
@@ -146,6 +171,24 @@ object StreamingPipeline extends BasePipeline with Serializable {
           .option("max_age", config.featureTable.maxAge.getOrElse(0L))
           .option("entity_repartition", "false")
           .save()
+
+        config.source match {
+          case _: KafkaSource =>
+            val timestamp: Option[Timestamp] = if (rowsAfterValidation.isEmpty) {
+              None
+            } else {
+              Option(
+                rowsAfterValidation
+                  .agg(max("timestamp") as "latest_timestamp")
+                  .collect()(0)
+                  .getTimestamp(0)
+              )
+            }
+            timestamp.foreach { t =>
+              streamingMetrics.updateKafkaTimestamp(t.getTime)
+            }
+          case _ => ()
+        }
 
         config.deadLetterPath match {
           case Some(path) =>
