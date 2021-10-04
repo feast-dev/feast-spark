@@ -93,6 +93,27 @@ class ConfigOptions(metaclass=ConfigMeta):
     # SparkApplication resource template
     SPARK_K8S_JOB_TEMPLATE_PATH = None
 
+    # Synapse dev url
+    AZURE_SYNAPSE_DEV_URL: Optional[str] = None 
+
+    # Synapse pool name
+    AZURE_SYNAPSE_POOL_NAME: Optional[str] = None
+
+    # Datalake directory that linked to Synapse
+    AZURE_SYNAPSE_DATALAKE_DIR: Optional[str] = None
+
+    # Synapse pool executor size: Small, Medium or Large
+    AZURE_SYNAPSE_EXECUTOR_SIZE = "Small"
+
+    # Synapse pool executor count
+    AZURE_SYNAPSE_EXECUTORS = "2"
+
+    # Azure EventHub Connection String (with Kafka API). See more details here:
+    # https://docs.microsoft.com/en-us/azure/event-hubs/apache-kafka-migration-guide
+    # Code Sample is here: 
+    # https://github.com/Azure/azure-event-hubs-for-kafka/blob/master/tutorials/spark/sparkConsumer.scala
+    AZURE_EVENTHUB_KAFKA_CONNECTION_STRING = ""
+
     #: File format of historical retrieval features
     HISTORICAL_FEATURE_OUTPUT_FORMAT: str = "parquet"
 
@@ -107,6 +128,9 @@ class ConfigOptions(metaclass=ConfigMeta):
 
     #: Enable or disable TLS/SSL to Redis
     REDIS_SSL: Optional[str] = "False"
+
+    #: Auth string for redis
+    REDIS_AUTH: str = ""
 
     #: BigTable Project ID
     BIGTABLE_PROJECT: Optional[str] = ""

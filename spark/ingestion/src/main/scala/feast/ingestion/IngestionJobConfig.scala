@@ -90,10 +90,21 @@ case class KafkaSource(
     override val datePartitionColumn: Option[String] = None
 ) extends StreamingSource
 
+case class EventHubSource(
+                        bootstrapServers: String,
+                        topic: String,
+                        override val format: DataFormat,
+                        override val fieldMapping: Map[String, String],
+                        override val eventTimestampColumn: String,
+                        override val createdTimestampColumn: Option[String] = None,
+                        override val datePartitionColumn: Option[String] = None
+                      ) extends StreamingSource
+
 case class Sources(
     file: Option[FileSource] = None,
     bq: Option[BQSource] = None,
-    kafka: Option[KafkaSource] = None
+    kafka: Option[KafkaSource] = None,
+    eventhub: Option[EventHubSource] = None
 )
 
 case class Field(name: String, `type`: feast.proto.types.ValueProto.ValueType.Enum)
@@ -119,7 +130,7 @@ case class IngestionJobConfig(
     source: Source = null,
     startTime: DateTime = DateTime.now(),
     endTime: DateTime = DateTime.now(),
-    store: StoreConfig = RedisConfig("localhost", 6379, false),
+    store: StoreConfig = RedisConfig("localhost", 6379, "", false),
     metrics: Option[MetricConfig] = None,
     deadLetterPath: Option[String] = None,
     stencilURL: Option[String] = None,
@@ -127,4 +138,5 @@ case class IngestionJobConfig(
     validationConfig: Option[ValidationConfig] = None,
     doNotIngestInvalidRows: Boolean = false,
     checkpointPath: Option[String] = None
+    kafkaSASL: Option[String] = None
 )

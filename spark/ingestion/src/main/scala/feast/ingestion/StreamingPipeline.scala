@@ -33,6 +33,9 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.streaming.{StreamingQuery, StreamingQueryListener}
 import org.apache.spark.sql.types.BooleanType
 import org.apache.spark.{SparkEnv, SparkFiles}
+import org.apache.spark.eventhubs._
+import org.apache.kafka.common.security.plain.PlainLoginModule
+import org.apache.kafka.common.security.JaasContext
 
 import java.io.File
 import java.sql.Timestamp
@@ -73,15 +76,35 @@ object StreamingPipeline extends BasePipeline with Serializable {
 
     val validationUDF = createValidationUDF(sparkSession, config)
 
+    val EH_SASL = "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"$ConnectionString\" password=\"Endpoint=sb://xxx.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=yyy=;EntityPath=driver_trips\";"
+
     val input = config.source match {
       case source: KafkaSource =>
-        sparkSession.readStream
-          .format("kafka")
-          .option("kafka.bootstrap.servers", source.bootstrapServers)
-          .option("subscribe", source.topic)
-          .load()
+        if (config.kafkaSASL.nonEmpty)
+        {
+          // if we have authentication enabled
+          sparkSession.readStream
+            .format("kafka")
+            .option("subscribe", source.topic)
+            .option("kafka.bootstrap.servers", source.bootstrapServers)
+            .option("kafka.sasl.mechanism", "PLAIN")
+            .option("kafka.security.protocol", "SASL_SSL")
+            .option("kafka.sasl.jaas.config", config.kafkaSASL.get)
+            .option("kafka.request.timeout.ms", "60000")
+            .option("kafka.session.timeout.ms", "60000")
+            .option("failOnDataLoss", "false")
+            .load()
+        }
+        else
+        {
+          sparkSession.readStream
+            .format("kafka")
+            .option("kafka.bootstrap.servers", source.bootstrapServers)
+            .option("subscribe", source.topic)
+            .load()     
+        }
       case source: MemoryStreamingSource =>
-        source.read
+        source.read        
     }
 
     val featureStruct = config.source.asInstanceOf[StreamingSource].format match {

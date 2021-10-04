@@ -22,6 +22,8 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.json4s._
 import org.json4s.ext.JavaEnumNameSerializer
 import org.json4s.jackson.JsonMethods.{parse => parseJSON}
+import org.json4s.ext.JavaEnumNameSerializer
+import scala.collection.mutable.ArrayBuffer
 
 object IngestionJob {
   import Modes._
@@ -51,9 +53,10 @@ object IngestionJob {
             case (_, x) => x
           }
           .extract[Sources] match {
-          case Sources(file: Some[FileSource], _, _)   => c.copy(source = file.get)
-          case Sources(_, bq: Some[BQSource], _)       => c.copy(source = bq.get)
-          case Sources(_, _, kafka: Some[KafkaSource]) => c.copy(source = kafka.get)
+          case Sources(file: Some[FileSource], _, _, _)   => c.copy(source = file.get)
+          case Sources(_, bq: Some[BQSource], _, _)       => c.copy(source = bq.get)
+          case Sources(_, _, kafka: Some[KafkaSource], _) => c.copy(source = kafka.get)
+          case Sources(_, _, _, eventhub: Some[EventHubSource]) => c.copy(source = eventhub.get)
         }
       })
       .required()
@@ -118,8 +121,20 @@ object IngestionJob {
       .action((x, c) => c.copy(streamingTriggeringSecs = x))
   }
 
+    opt[String](name = "kafka_sasl_auth")
+      .action((x, c) => c.copy(kafkaSASL = Some(x)))
+  }
+
   def main(args: Array[String]): Unit = {
-    parser.parse(args, IngestionJobConfig()) match {
+    val args_modified = new Array[String](args.length)
+    for ( i <- 0 to (args_modified.length - 1)) {
+      // Removing spaces between brackets. This is to workaround this known YARN issue (when running Spark on YARN):
+      // https://issues.apache.org/jira/browse/SPARK-17814?focusedCommentId=15567964&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-15567964
+      // Also remove the unncessary back slashes
+      args_modified(i) = args(i).replace(" }", "}");
+      args_modified(i) = args_modified(i).replace("\\", "\\\"");
+    }
+    parser.parse(args_modified, IngestionJobConfig()) match {
       case Some(config) =>
         println(s"Starting with config $config")
         config.mode match {

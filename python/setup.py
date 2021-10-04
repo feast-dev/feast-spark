@@ -52,6 +52,11 @@ REQUIRED = [
     "grpcio-tools==1.31.0",
     "mypy-protobuf==2.5",
     "croniter==1.*",
+    "azure-synapse-spark",
+    "azure-synapse",
+    "azure-identity",
+    "azure-storage-file-datalake",
+    "azure-storage-blob",
 ]
 
 # README file from Feast repo root directory

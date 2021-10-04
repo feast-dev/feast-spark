@@ -51,6 +51,20 @@
             <version>${protobuf.version}</version>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/org.glassfish/javax.el -->
+        <dependency>
+            <groupId>org.glassfish</groupId>
+            <artifactId>javax.el</artifactId>
+            <version>3.0.1-b08</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.microsoft.azure</groupId>
+            <artifactId>azure-eventhubs-spark_2.12</artifactId>
+            <version>2.3.18</version>
+        </dependency>
+
+
         <dependency>
             <groupId>com.gojek</groupId>
             <artifactId>stencil</artifactId>
