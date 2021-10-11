@@ -51,7 +51,10 @@ from .k8s_utils import (
 )
 
 
-def _load_resource_template(job_template_path: Path) -> Dict[str, Any]:
+def _load_resource_template(job_template_path: Optional[str]) -> Dict[str, Any]:
+    if not job_template_path or not Path(job_template_path).exists():
+        return {}
+
     with open(job_template_path, "rt") as f:
         return yaml.safe_load(f)
 
@@ -189,7 +192,10 @@ class KubernetesJobLauncher(JobLauncher):
         namespace: str,
         incluster: bool,
         staging_location: str,
-        resource_template_path: Optional[Path],
+        generic_resource_template_path: Optional[str],
+        batch_ingestion_resource_template_path: Optional[str],
+        stream_ingestion_resource_template_path: Optional[str],
+        historical_retrieval_resource_template_path: Optional[str],
         staging_client: AbstractStagingClient,
         azure_account_name: str,
         azure_account_key: str,
@@ -200,10 +206,26 @@ class KubernetesJobLauncher(JobLauncher):
         self._staging_client = staging_client
         self._azure_account_name = azure_account_name
         self._azure_account_key = azure_account_key
-        if resource_template_path is not None:
-            self._resource_template = _load_resource_template(resource_template_path)
-        else:
-            self._resource_template = yaml.safe_load(DEFAULT_JOB_TEMPLATE)
+
+        generic_template = _load_resource_template(
+            generic_resource_template_path
+        ) or yaml.safe_load(DEFAULT_JOB_TEMPLATE)
+
+        self._batch_ingestion_template = (
+            _load_resource_template(batch_ingestion_resource_template_path)
+            or generic_template
+        )
+
+        self._stream_ingestion_template = (
+            _load_resource_template(stream_ingestion_resource_template_path)
+            or generic_template
+        )
+
+        self._historical_retrieval_template = (
+            _load_resource_template(historical_retrieval_resource_template_path)
+            or generic_template
+        )
+
         self._scheduled_resource_template = yaml.safe_load(
             DEFAULT_SCHEDULED_JOB_TEMPLATE
         )
@@ -281,7 +303,7 @@ class KubernetesJobLauncher(JobLauncher):
         job_id = _generate_job_id()
 
         resource = _prepare_job_resource(
-            job_template=self._resource_template,
+            job_template=self._historical_retrieval_template,
             job_id=job_id,
             job_type=HISTORICAL_RETRIEVAL_JOB_TYPE,
             main_application_file=pyspark_script_path,
@@ -341,7 +363,7 @@ class KubernetesJobLauncher(JobLauncher):
         job_id = _generate_job_id()
 
         resource = _prepare_job_resource(
-            job_template=self._resource_template,
+            job_template=self._batch_ingestion_template,
             job_id=job_id,
             job_type=OFFLINE_TO_ONLINE_JOB_TYPE,
             main_application_file=jar_s3_path,
@@ -394,7 +416,7 @@ class KubernetesJobLauncher(JobLauncher):
             scheduled_job_template=self._scheduled_resource_template,
             scheduled_job_id=schedule_job_id,
             job_schedule=ingestion_job_params.get_job_schedule(),
-            job_template=self._resource_template,
+            job_template=self._batch_ingestion_template,
             job_type=OFFLINE_TO_ONLINE_JOB_TYPE,
             main_application_file=jar_s3_path,
             main_class=ingestion_job_params.get_class_name(),
@@ -454,7 +476,7 @@ class KubernetesJobLauncher(JobLauncher):
         job_id = _generate_job_id()
 
         resource = _prepare_job_resource(
-            job_template=self._resource_template,
+            job_template=self._stream_ingestion_template,
             job_id=job_id,
             job_type=STREAM_TO_ONLINE_JOB_TYPE,
             main_application_file=jar_s3_path,

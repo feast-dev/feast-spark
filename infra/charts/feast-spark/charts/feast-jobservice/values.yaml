@@ -26,6 +26,10 @@ sparkOperator:
   enabled: false
   # sparkOperator.jobTemplate -- Content of the job template, in yaml format
   jobTemplate: {}
+  # specialized job templates by job types
+  batchJobTemplate: {}
+  streamJobTemplate: {}
+  historicalJobTemplate: {}
 
 prometheus:
   # prometheus.enabled -- Flag to enable scraping of metrics

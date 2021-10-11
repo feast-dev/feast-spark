@@ -93,6 +93,15 @@ class ConfigOptions(metaclass=ConfigMeta):
     # SparkApplication resource template
     SPARK_K8S_JOB_TEMPLATE_PATH = None
 
+    # SparkApplication resource template for Batch Ingestion Jobs
+    SPARK_K8S_BATCH_INGESTION_TEMPLATE_PATH: Optional[str] = ""
+
+    # SparkApplication resource template for Stream Ingestion Jobs
+    SPARK_K8S_STREAM_INGESTION_TEMPLATE_PATH: Optional[str] = ""
+
+    # SparkApplication resource template for Historical Retrieval Jobs
+    SPARK_K8S_HISTORICAL_RETRIEVAL_TEMPLATE_PATH: Optional[str] = ""
+
     #: File format of historical retrieval features
     HISTORICAL_FEATURE_OUTPUT_FORMAT: str = "parquet"
 
