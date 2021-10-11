@@ -13,4 +13,10 @@ metadata:
 data:
   jobTemplate.yaml: |
 {{- toYaml .Values.sparkOperator.jobTemplate | nindent 4 }}
+  batchJobTemplate.yaml: |
+{{- toYaml .Values.sparkOperator.batchJobTemplate | nindent 4 }}
+  streamJobTemplate.yaml: |
+{{- toYaml .Values.sparkOperator.streamJobTemplate | nindent 4 }}
+  historicalJobTemplate.yaml: |
+{{- toYaml .Values.sparkOperator.historicalJobTemplate | nindent 4 }}
 {{- end }}

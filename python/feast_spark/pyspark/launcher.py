@@ -73,7 +73,16 @@ def _k8s_launcher(config: Config) -> JobLauncher:
 
     return k8s.KubernetesJobLauncher(
         namespace=config.get(opt.SPARK_K8S_NAMESPACE),
-        resource_template_path=config.get(opt.SPARK_K8S_JOB_TEMPLATE_PATH, None),
+        generic_resource_template_path=config.get(opt.SPARK_K8S_JOB_TEMPLATE_PATH),
+        batch_ingestion_resource_template_path=config.get(
+            opt.SPARK_K8S_BATCH_INGESTION_TEMPLATE_PATH, None
+        ),
+        stream_ingestion_resource_template_path=config.get(
+            opt.SPARK_K8S_STREAM_INGESTION_TEMPLATE_PATH, None
+        ),
+        historical_retrieval_resource_template_path=config.get(
+            opt.SPARK_K8S_HISTORICAL_RETRIEVAL_TEMPLATE_PATH, None
+        ),
         staging_location=staging_location,
         incluster=config.getboolean(opt.SPARK_K8S_USE_INCLUSTER_CONFIG),
         staging_client=get_staging_client(staging_uri.scheme, config),
