@@ -76,11 +76,11 @@ spec:
         {{- if .Values.sparkOperator.enabled }}
         - name: FEAST_SPARK_K8S_JOB_TEMPLATE_PATH
           value: /etc/configs/jobTemplate.yaml
-        - name: SPARK_K8S_BATCH_INGESTION_TEMPLATE_PATH
+        - name: FEAST_SPARK_K8S_BATCH_INGESTION_TEMPLATE_PATH
           value: /etc/configs/batchJobTemplate.yaml
-        - name: SPARK_K8S_STREAM_INGESTION_TEMPLATE_PATH
+        - name: FEAST_SPARK_K8S_STREAM_INGESTION_TEMPLATE_PATH
           value: /etc/configs/streamJobTemplate.yaml
-        - name: SPARK_K8S_HISTORICAL_RETRIEVAL_TEMPLATE_PATH
+        - name: FEAST_SPARK_K8S_HISTORICAL_RETRIEVAL_TEMPLATE_PATH
           value: /etc/configs/historicalJobTemplate.yaml
         {{- end }}
         {{- range $key, $value := .Values.envOverrides }}
