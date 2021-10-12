@@ -236,7 +236,7 @@ class SynapseJobLauncher(JobLauncher):
 
         main_file = self._datalake.upload_file(ingestion_job_params.get_main_file_path())
 
-        job_info = _submit_job(self._api, ingestion_job_params.get_project(), main_file,
+        job_info = _submit_job(self._api, ingestion_job_params.get_project()+"_offline_to_online_ingestion", main_file,
             main_class = ingestion_job_params.get_class_name(),
             arguments = ingestion_job_params.get_arguments(),
             reference_files=[main_file],
@@ -266,7 +266,7 @@ class SynapseJobLauncher(JobLauncher):
 
         tags = _prepare_job_tags(ingestion_job_params, STREAM_TO_ONLINE_JOB_TYPE)
         tags[METADATA_JOBHASH] = ingestion_job_params.get_job_hash()
-        job_info = _submit_job(self._api, ingestion_job_params.get_project(), main_file,
+        job_info = _submit_job(self._api, ingestion_job_params.get_project()+"_stream_to_online_ingestion", main_file,
             main_class = ingestion_job_params.get_class_name(),
             arguments = ingestion_job_params.get_arguments(),
             reference_files = extra_jar_paths,

@@ -565,6 +565,7 @@ class StreamIngestionJobParameters(IngestionJobParameters):
         )
         self._extra_jars = extra_jars
         self._checkpoint_path = checkpoint_path
+        self._kafka_sasl_auth = kafka_sasl_auth
 
     def get_name(self) -> str:
         return f"{self.get_job_type().to_pascal_case()}-{self.get_feature_table_name()}"
@@ -580,6 +581,8 @@ class StreamIngestionJobParameters(IngestionJobParameters):
         args.extend(["--mode", "online"])
         if self._checkpoint_path:
             args.extend(["--checkpoint-path", self._checkpoint_path])
+        if self._kafka_sasl_auth:
+            args.extend(["--kafka_sasl_auth", self._kafka_sasl_auth])
         return args
 
     def get_job_hash(self) -> str:
