@@ -31,7 +31,8 @@ def main():
 
     blob_service_client = BlobServiceClient.from_connection_string(CONNECTION_STRING)
     copied_blob = blob_service_client.get_blob_client("feastjar", 'feast-ingestion-spark-latest.jar')
-    SOURCE_FILE = "../../feast-ingestion-spark-latest.jar"
+    # hard code to the current path
+    SOURCE_FILE = "./feast-ingestion-spark-latest.jar"
 
     with open(SOURCE_FILE, "rb") as data:
             copied_blob.upload_blob(data, blob_type="BlockBlob",overwrite=True)

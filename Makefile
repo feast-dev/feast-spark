@@ -75,4 +75,4 @@ build-ingestion-jar-push:
 	docker create -ti --name dummy $(REGISTRY)/feast-spark:latest bash
 	docker cp dummy:/opt/spark/jars/feast-ingestion-spark-latest.jar feast-ingestion-spark-latest.jar
 	docker rm -f dummy
-	python copy_to_azure_blob.py
+	python python/feast_spark/copy_to_azure_blob.py

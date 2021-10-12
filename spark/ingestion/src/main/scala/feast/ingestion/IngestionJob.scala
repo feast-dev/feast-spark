@@ -53,10 +53,9 @@ object IngestionJob {
             case (_, x) => x
           }
           .extract[Sources] match {
-          case Sources(file: Some[FileSource], _, _, _)   => c.copy(source = file.get)
-          case Sources(_, bq: Some[BQSource], _, _)       => c.copy(source = bq.get)
-          case Sources(_, _, kafka: Some[KafkaSource], _) => c.copy(source = kafka.get)
-          case Sources(_, _, _, eventhub: Some[EventHubSource]) => c.copy(source = eventhub.get)
+          case Sources(file: Some[FileSource], _, _)   => c.copy(source = file.get)
+          case Sources(_, bq: Some[BQSource], _)       => c.copy(source = bq.get)
+          case Sources(_, _, kafka: Some[KafkaSource]) => c.copy(source = kafka.get)
         }
       })
       .required()
@@ -119,7 +118,6 @@ object IngestionJob {
 
     opt[Int](name = "triggering-interval")
       .action((x, c) => c.copy(streamingTriggeringSecs = x))
-  }
 
     opt[String](name = "kafka_sasl_auth")
       .action((x, c) => c.copy(kafkaSASL = Some(x)))
