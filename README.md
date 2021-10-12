@@ -58,3 +58,13 @@ client.apply(entity, ft)
 # Start spark streaming ingestion job that reads from kafka and writes to the online store
 feast_spark.Client(client).start_stream_to_online_ingestion(ft)
 ```
+
+Build and push to BLOB storage
+
+In order to build the Spark Ingestion jar and copy it to BLOB storage, you have to set these 3 environment variables:
+
+```bash
+export VERSION=latest
+export REGISTRY=your_registry_name
+export AZURE_STORAGE_CONNECTION_STRING="your_azure_storage_connection_string"
+```
