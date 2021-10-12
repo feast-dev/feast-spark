@@ -34,7 +34,7 @@ object IngestionJob {
 
   val parser = new scopt.OptionParser[IngestionJobConfig]("IngestionJob") {
     // ToDo: read version from Manifest
-    head("feastSpark.ingestion.IngestionJob", "0.2.5")
+    head("feastSpark.ingestion.IngestionJob", "0.2.15")
 
     opt[Modes]("mode")
       .action((x, c) => c.copy(mode = x))

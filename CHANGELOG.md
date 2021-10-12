@@ -1,5 +1,31 @@
 # Changelog
 
+## [v0.2.15](https://github.com/feast-dev/feast-spark/tree/v0.2.15) (2021-10-12)
+[Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.14...v0.2.15)
+
+**Implemented enhancements:**
+
+- Configurable templates by job type for spark kubernetes jobs [\#99](https://github.com/feast-dev/feast-spark/pull/99) ([pyalex](https://github.com/pyalex))
+
+## [v0.2.14](https://github.com/feast-dev/feast-spark/tree/v0.2.14) (2021-09-27)
+[Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.13...v0.2.14)
+
+**Implemented enhancements:**
+
+- Enable sql expression evaluation in fieldMapping for historical retrieval [\#98](https://github.com/feast-dev/feast-spark/pull/98) ([pyalex](https://github.com/pyalex))
+
+## [v0.2.13](https://github.com/feast-dev/feast-spark/tree/v0.2.13) (2021-09-25)
+[Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.12...v0.2.13)
+
+**Implemented enhancements:**
+
+- Add streaming metrics [\#95](https://github.com/feast-dev/feast-spark/pull/95) ([khorshuheng](https://github.com/khorshuheng))
+
+**Fixed bugs:**
+
+- Fix setup requirement [\#97](https://github.com/feast-dev/feast-spark/pull/97) ([khorshuheng](https://github.com/khorshuheng))
+- Remove spark bigquery package download at run time [\#96](https://github.com/feast-dev/feast-spark/pull/96) ([khorshuheng](https://github.com/khorshuheng))
+
 ## [v0.2.12](https://github.com/feast-dev/feast-spark/tree/v0.2.12) (2021-08-19)
 [Full Changelog](https://github.com/feast-dev/feast-spark/compare/v0.2.11...v0.2.12)
 
