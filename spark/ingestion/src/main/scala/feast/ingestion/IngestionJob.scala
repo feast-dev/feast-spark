@@ -134,6 +134,7 @@ object IngestionJob {
       args_modified(i) = args(i).replace(" }", "}");
       args_modified(i) = args_modified(i).replace("\\", "\\\"");
     }
+    println("arguments received:",args_modified.toList)
     parser.parse(args_modified, IngestionJobConfig()) match {
       case Some(config) =>
         println(s"Starting with config $config")

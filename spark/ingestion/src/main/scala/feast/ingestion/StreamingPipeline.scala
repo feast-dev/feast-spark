@@ -83,6 +83,7 @@ object StreamingPipeline extends BasePipeline with Serializable {
         if (config.kafkaSASL.nonEmpty)
         {
           // if we have authentication enabled
+          println("config.kafkaSASL value:", config.kafkaSASL.get)
           sparkSession.readStream
             .format("kafka")
             .option("subscribe", source.topic)
@@ -97,6 +98,7 @@ object StreamingPipeline extends BasePipeline with Serializable {
         }
         else
         {
+          println("config.kafkaSASL is empty.")
           sparkSession.readStream
             .format("kafka")
             .option("kafka.bootstrap.servers", source.bootstrapServers)
@@ -106,7 +108,6 @@ object StreamingPipeline extends BasePipeline with Serializable {
       case source: MemoryStreamingSource =>
         source.read        
     }
-
     val featureStruct = config.source.asInstanceOf[StreamingSource].format match {
       case ProtoFormat(classPath) =>
         val parser = protoParser(sparkSession, classPath)

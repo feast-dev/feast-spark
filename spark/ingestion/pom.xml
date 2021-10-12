@@ -51,6 +51,12 @@
             <version>${protobuf.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.microsoft.azure</groupId>
+            <artifactId>azure-eventhubs-spark_2.12</artifactId>
+            <version>2.3.18</version>
+        </dependency>
+
         <!-- https://mvnrepository.com/artifact/org.glassfish/javax.el -->
         <dependency>
             <groupId>org.glassfish</groupId>

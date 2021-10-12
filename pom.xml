@@ -18,8 +18,8 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <scala.version>2.12</scala.version>
-        <scala.fullVersion>${scala.version}.12</scala.fullVersion>
-        <spark.version>3.0.2</spark.version>
+        <scala.fullVersion>${scala.version}.10</scala.fullVersion>
+        <spark.version>3.1.2</spark.version>
         <scala-maven-plugin.version>4.4.0</scala-maven-plugin.version>
         <maven-assembly-plugin.version>3.3.0</maven-assembly-plugin.version>
         <protobuf.version>3.12.2</protobuf.version>

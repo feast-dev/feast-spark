@@ -53,7 +53,7 @@ build-local-test-docker:
 	docker build -t feast:local -f infra/docker/tests/Dockerfile .
 
 build-ingestion-jar-no-tests:
-	cd spark/ingestion && ${MVN} --no-transfer-progress -Dmaven.javadoc.skip=true -Dgpg.skip -DskipUTs=true -DskipITs=true -Drevision=${REVISION} clean package
+	cd spark/ingestion && ${MVN} --no-transfer-progress -Dmaven.javadoc.skip=true -Dgpg.skip -DskipUTs=true -D"spotless.check.skip"=true -DskipITs=true -Drevision=${REVISION} clean package
 
 build-jobservice-docker:
 	docker build -t $(REGISTRY)/feast-jobservice:$(VERSION) -f infra/docker/jobservice/Dockerfile .
@@ -68,3 +68,11 @@ push-spark-docker:
 	docker push $(REGISTRY)/feast-spark:$(VERSION)
 
 install-ci-dependencies: install-python-ci-dependencies
+
+build-ingestion-jar-push:
+	docker build -t $(REGISTRY)/feast-spark:$(VERSION) --build-arg VERSION=$(VERSION) -f infra/docker/spark/Dockerfile .
+	rm -f feast-ingestion-spark-latest.jar
+	docker create -ti --name dummy $(REGISTRY)/feast-spark:latest bash
+	docker cp dummy:/opt/spark/jars/feast-ingestion-spark-latest.jar feast-ingestion-spark-latest.jar
+	docker rm -f dummy
+	python copy_to_azure_blob.py
