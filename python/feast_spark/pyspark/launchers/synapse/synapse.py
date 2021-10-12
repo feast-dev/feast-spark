@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List, Optional, cast
 
 from azure.synapse.spark.models import SparkBatchJob
-from azure.identity import DefaultAzureCredential, DeviceCodeCredential
+from azure.identity import DefaultAzureCredential, DeviceCodeCredential, ChainedTokenCredential, ManagedIdentityCredential,EnvironmentCredential
 
 from feast_spark.pyspark.abc import (
     BatchIngestionJob,
@@ -239,6 +239,7 @@ class SynapseJobLauncher(JobLauncher):
         job_info = _submit_job(self._api, ingestion_job_params.get_project(), main_file,
             main_class = ingestion_job_params.get_class_name(),
             arguments = ingestion_job_params.get_arguments(),
+            reference_files=[main_file],
             tags = _prepare_job_tags(ingestion_job_params, OFFLINE_TO_ONLINE_JOB_TYPE),configuration=None)
 
         return cast(BatchIngestionJob, self._job_from_job_info(job_info))
@@ -269,6 +270,7 @@ class SynapseJobLauncher(JobLauncher):
             main_class = ingestion_job_params.get_class_name(),
             arguments = ingestion_job_params.get_arguments(),
             reference_files = extra_jar_paths,
+            configuration=None,
             tags = tags)
 
         return cast(StreamIngestionJob, self._job_from_job_info(job_info))
