@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 import time
 from datetime import datetime
 from typing import List, Optional, cast
