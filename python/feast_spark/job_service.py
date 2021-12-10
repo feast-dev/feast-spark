@@ -104,6 +104,7 @@ def _job_to_proto(spark_job: SparkJob) -> JobProto:
 class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
     def __init__(self, client: Client):
         self.client = client
+        self._whitelisted_project_feature_table_pairs_cached: List[Tuple[str, str]] = []
 
     @property
     def _whitelisted_projects(self) -> Optional[List[str]]:
@@ -112,11 +113,39 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
             return whitelisted_projects.split(",")
         return None
 
+    @property
+    def _whitelisted_project_feature_table_pairs(
+        self,
+    ) -> Optional[List[Tuple[str, str]]]:
+        if self._whitelisted_project_feature_table_pairs_cached:
+            return self._whitelisted_project_feature_table_pairs_cached
+
+        if self.client.config.exists(opt.WHITELISTED_FEATURE_TABLES_PATH):
+            _whitelisted_feature_tables = self.client.config.get(
+                opt.WHITELISTED_FEATURE_TABLES_PATH
+            )
+            with open(str(_whitelisted_feature_tables), "r") as whitelist:
+                whitelist.seek(0)
+                whitelisted_feature_tables = [
+                    (line.strip().split(":")[0], line.strip().split(":")[-1])
+                    for line in whitelist.readlines()
+                ]
+                self._whitelisted_project_feature_table_pairs_cached = (
+                    whitelisted_feature_tables
+                )
+                return whitelisted_feature_tables
+        return None
+
     def is_whitelisted(self, project: str):
         # Whitelisted projects not specified, allow all projects
         if not self._whitelisted_projects:
             return True
         return project in self._whitelisted_projects
+
+    def is_feature_table_whitelisted(self, project: str, feature_table: str):
+        if not self._whitelisted_project_feature_table_pairs:
+            return True
+        return (project, feature_table) in self._whitelisted_project_feature_table_pairs
 
     def StartOfflineToOnlineIngestionJob(
         self, request: StartOfflineToOnlineIngestionJobRequest, context
@@ -126,6 +155,11 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
         if not self.is_whitelisted(request.project):
             raise ValueError(
                 f"Project {request.project} is not whitelisted. Please contact your Feast administrator to whitelist it."
+            )
+
+        if not self.is_feature_table_whitelisted(request.project, request.table_name):
+            raise ValueError(
+                f"Project {request.project}:{request.table_name} is not whitelisted. Please contact your Feast administrator to whitelist it."
             )
 
         feature_table = self.client.feature_store.get_feature_table(

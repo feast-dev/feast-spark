@@ -137,3 +137,13 @@ podLabels: {}
 
 # secrets -- Arbitrary secrets to mount on the job service pod, on /etc/secrets/<secret name>
 secrets: []
+
+# configMaps -- Arbitrary config maps to be mounted on the job service pod, on /etc/configs/<config name>
+configMaps: []
+
+# whitelist -- If enabled, only <project>:<feature table> in the whitelist can be ingested
+whitelist:
+  # whitelist.enabled -- Flag to create and mount whitelist as configmap
+  enabled: false
+  # whitelist.featureTables -- Whitelisted feature tables, in the form of <project>:<feature table>
+  featureTables: []

@@ -1,0 +1,18 @@
+{{- if .Values.whitelist.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "feast-jobservice.fullname" . }}-whitelist
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ template "feast-jobservice.name" . }}
+    component: jobservice
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+  whitelist.txt: |
+    {{- range $featureTable := .Values.whitelist.featureTables }}
+    {{ $featureTable }}
+    {{- end }}
+{{- end }}

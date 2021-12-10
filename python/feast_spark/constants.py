@@ -169,6 +169,10 @@ class ConfigOptions(metaclass=ConfigMeta):
     #: Whitelisted Feast projects
     WHITELISTED_PROJECTS: Optional[str] = None
 
+    #: File path to a whitelist containing all the feature tables allowed for ingestion.
+    #: Each line in the file should be in the format of <project>:<feature table>
+    WHITELISTED_FEATURE_TABLES_PATH: Optional[str] = None
+
     #: If set - streaming ingestion job will be consuming incoming rows not continuously,
     #: but periodically with configured interval (in seconds).
     #: That may help to control amount of write requests to storage
