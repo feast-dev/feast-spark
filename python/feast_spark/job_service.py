@@ -159,7 +159,7 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
         """Start job to ingest data from offline store into online store"""
 
         job_submission_count.labels(
-            ["batch_ingestion", request.project, request.table_name]
+            "batch_ingestion", request.project, request.table_name
         ).inc()
 
         if not self.is_whitelisted(request.project):
