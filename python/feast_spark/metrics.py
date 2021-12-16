@@ -7,9 +7,9 @@ job_whitelist_failure_count = Counter(
 )
 job_submission_count = Counter(
     "feast_job_submission_count",
-    "attempts to submit feast job",
+    "request to submit feast job",
     ["job_type", "project", "table"],
 )
 job_schedule_count = Counter(
-    "feast_job_schedule_count", "attempts to schedule feast job", ["project", "table"]
+    "feast_job_schedule_count", "request to schedule feast job", ["project", "table"]
 )
