@@ -10,6 +10,7 @@ from typing import Dict, List, Optional, Tuple, cast
 import grpc
 from google.api_core.exceptions import FailedPrecondition
 from google.protobuf.timestamp_pb2 import Timestamp
+from prometheus_client import start_http_server
 
 from feast import Client as FeastClient
 from feast import FeatureTable
@@ -38,6 +39,11 @@ from feast_spark.api.JobService_pb2 import (
     UnscheduleOfflineToOnlineIngestionJobResponse,
 )
 from feast_spark.constants import ConfigOptions as opt
+from feast_spark.metrics import (
+    job_schedule_count,
+    job_submission_count,
+    job_whitelist_failure_count,
+)
 from feast_spark.pyspark.abc import (
     BatchIngestionJob,
     RetrievalJob,
@@ -152,12 +158,22 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
     ):
         """Start job to ingest data from offline store into online store"""
 
+        job_submission_count.labels(
+            "batch_ingestion", request.project, request.table_name
+        ).inc()
+
         if not self.is_whitelisted(request.project):
+            job_whitelist_failure_count.labels(
+                request.project, request.table_name
+            ).inc()
             raise ValueError(
                 f"Project {request.project} is not whitelisted. Please contact your Feast administrator to whitelist it."
             )
 
         if not self.is_feature_table_whitelisted(request.project, request.table_name):
+            job_whitelist_failure_count.labels(
+                request.project, request.table_name
+            ).inc()
             raise ValueError(
                 f"Project {request.project}:{request.table_name} is not whitelisted. Please contact your Feast administrator to whitelist it."
             )
@@ -187,6 +203,8 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
         self, request: ScheduleOfflineToOnlineIngestionJobRequest, context
     ):
         """Schedule job to ingest data from offline store into online store periodically"""
+
+        job_schedule_count.labels(request.project, request.table_name).inc()
         feature_table = self.client.feature_store.get_feature_table(
             request.table_name, request.project
         )
@@ -213,6 +231,8 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
 
     def GetHistoricalFeatures(self, request: GetHistoricalFeaturesRequest, context):
         """Produce a training dataset, return a job id that will provide a file reference"""
+
+        job_submission_count.labels("historical_retrieval", request.project, "").inc()
 
         if not self.is_whitelisted(request.project):
             raise ValueError(
@@ -245,6 +265,10 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
         self, request: StartStreamToOnlineIngestionJobRequest, context
     ):
         """Start job to ingest data from stream into online store"""
+
+        job_submission_count.labels(
+            "streaming", request.project, request.table_name
+        ).inc()
 
         if not self.is_whitelisted(request.project):
             raise ValueError(
@@ -321,6 +345,11 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
         return GetJobResponse(job=_job_to_proto(job))
 
 
+def start_prometheus_serving(port: int = 8080) -> None:
+    """Initialize Prometheus metric server"""
+    start_http_server(port)
+
+
 def start_control_loop() -> None:
     """Starts control loop that continuously ensures that correct jobs are being run.
 
@@ -367,6 +396,13 @@ def start_job_service() -> None:
         # Start the control loop thread only if it's enabled from configs
         thread = threading.Thread(target=start_control_loop, daemon=True)
         thread.start()
+
+    metricServerThread = threading.Thread(
+        target=start_prometheus_serving,
+        daemon=True,
+        args=[client.config.getint(opt.JOB_SERVICE_PROMETHEUS_METRIC_PORT)],
+    )
+    metricServerThread.start()
 
     server = grpc.server(ThreadPoolExecutor(), interceptors=(LoggingInterceptor(),))
     JobService_pb2_grpc.add_JobServiceServicer_to_server(

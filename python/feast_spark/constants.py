@@ -22,6 +22,9 @@ class ConfigOptions(metaclass=ConfigMeta):
     #: Pause in seconds between starting new jobs in Control Loop
     JOB_SERVICE_PAUSE_BETWEEN_JOBS: str = "5"
 
+    #: Port for which Prometheus metric server will be running on
+    JOB_SERVICE_PROMETHEUS_METRIC_PORT: int = 8080
+
     #: Default timeout when running batch ingestion
     BATCH_INGESTION_PRODUCTION_TIMEOUT: str = "120"
 
