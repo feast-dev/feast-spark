@@ -204,7 +204,7 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
     ):
         """Schedule job to ingest data from offline store into online store periodically"""
 
-        job_schedule_count.labels([request.project, request.table_name]).inc()
+        job_schedule_count.labels(request.project, request.table_name).inc()
         feature_table = self.client.feature_store.get_feature_table(
             request.table_name, request.project
         )
@@ -232,7 +232,7 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
     def GetHistoricalFeatures(self, request: GetHistoricalFeaturesRequest, context):
         """Produce a training dataset, return a job id that will provide a file reference"""
 
-        job_submission_count.labels(["historical_retrieval", request.project, ""]).inc()
+        job_submission_count.labels("historical_retrieval", request.project, "").inc()
 
         if not self.is_whitelisted(request.project):
             raise ValueError(
