@@ -26,8 +26,8 @@ object Modes extends Enumeration {
 
 abstract class StoreConfig
 
-case class RedisConfig(host: String, port: Int, ssl: Boolean)    extends StoreConfig
-case class BigTableConfig(projectId: String, instanceId: String) extends StoreConfig
+case class RedisConfig(host: String, port: Int, auth: String, ssl: Boolean) extends StoreConfig
+case class BigTableConfig(projectId: String, instanceId: String)            extends StoreConfig
 case class CassandraConfig(
     connection: CassandraConnection,
     keyspace: String,
@@ -119,7 +119,7 @@ case class IngestionJobConfig(
     source: Source = null,
     startTime: DateTime = DateTime.now(),
     endTime: DateTime = DateTime.now(),
-    store: StoreConfig = RedisConfig("localhost", 6379, false),
+    store: StoreConfig = RedisConfig("localhost", 6379, "", false),
     metrics: Option[MetricConfig] = None,
     deadLetterPath: Option[String] = None,
     stencilURL: Option[String] = None,

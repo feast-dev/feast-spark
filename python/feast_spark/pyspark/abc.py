@@ -342,6 +342,7 @@ class IngestionJobParameters(SparkJobParameters):
         jar: str,
         redis_host: Optional[str] = None,
         redis_port: Optional[int] = None,
+        redis_auth: Optional[str] = None,
         redis_ssl: Optional[bool] = None,
         bigtable_project: Optional[str] = None,
         bigtable_instance: Optional[str] = None,
@@ -358,6 +359,7 @@ class IngestionJobParameters(SparkJobParameters):
         self._jar = jar
         self._redis_host = redis_host
         self._redis_port = redis_port
+        self._redis_auth = redis_auth
         self._redis_ssl = redis_ssl
         self._bigtable_project = bigtable_project
         self._bigtable_instance = bigtable_instance
@@ -370,7 +372,12 @@ class IngestionJobParameters(SparkJobParameters):
         self._drop_invalid_rows = drop_invalid_rows
 
     def _get_redis_config(self):
-        return dict(host=self._redis_host, port=self._redis_port, ssl=self._redis_ssl)
+        return dict(
+            host=self._redis_host,
+            port=self._redis_port,
+            auth=self._redis_auth,
+            ssl=self._redis_ssl,
+        )
 
     def _get_bigtable_config(self):
         return dict(
@@ -446,6 +453,7 @@ class BatchIngestionJobParameters(IngestionJobParameters):
         jar: str,
         redis_host: Optional[str],
         redis_port: Optional[int],
+        redis_auth: Optional[str],
         redis_ssl: Optional[bool],
         bigtable_project: Optional[str],
         bigtable_instance: Optional[str],
@@ -462,6 +470,7 @@ class BatchIngestionJobParameters(IngestionJobParameters):
             jar,
             redis_host,
             redis_port,
+            redis_auth,
             redis_ssl,
             bigtable_project,
             bigtable_instance,
@@ -505,6 +514,7 @@ class ScheduledBatchIngestionJobParameters(IngestionJobParameters):
         jar: str,
         redis_host: Optional[str],
         redis_port: Optional[int],
+        redis_auth: Optional[str],
         redis_ssl: Optional[bool],
         bigtable_project: Optional[str],
         bigtable_instance: Optional[str],
@@ -521,6 +531,7 @@ class ScheduledBatchIngestionJobParameters(IngestionJobParameters):
             jar,
             redis_host,
             redis_port,
+            redis_auth,
             redis_ssl,
             bigtable_project,
             bigtable_instance,
@@ -561,6 +572,7 @@ class StreamIngestionJobParameters(IngestionJobParameters):
         extra_jars: List[str],
         redis_host: Optional[str],
         redis_port: Optional[int],
+        redis_auth: Optional[str],
         redis_ssl: Optional[bool],
         bigtable_project: Optional[str],
         bigtable_instance: Optional[str],
@@ -580,6 +592,7 @@ class StreamIngestionJobParameters(IngestionJobParameters):
             jar,
             redis_host,
             redis_port,
+            redis_auth,
             redis_ssl,
             bigtable_project,
             bigtable_instance,
