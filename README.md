@@ -1,7 +1,7 @@
 # Feast Spark
 
 Contains
-* Spark ingestion jobs for [Feast](https://github.com/feast-dev/feast)
+* Spark ingestion jobs for [Feast](https://github.com/feast-dev/feast) versions 0.9 and below
 * Feast Job Service
 * Feast Python SDK Spark extensions 
 
