@@ -34,7 +34,7 @@ install-python-ci-dependencies:
 
 # Supports feast-dev repo master branch
 install-python: install-python-ci-dependencies
-	cd ${ROOT_DIR}; python -m pip install -e python
+	cd ${ROOT_DIR}/python; python setup.py install
 
 lint-python:
 	cd ${ROOT_DIR}/python ; mypy feast_spark/ tests/
