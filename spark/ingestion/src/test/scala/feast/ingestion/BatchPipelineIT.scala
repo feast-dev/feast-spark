@@ -39,16 +39,23 @@ import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 
 class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
 
-  override val container = GenericContainer("redis:6.0.8", exposedPorts = Seq(6379))
-  val statsDStub         = new StatsDStub
+  val password = "password"
+  override val container = GenericContainer(
+    "redis:6.0.8",
+    exposedPorts = Seq(6379),
+    command = Seq("redis-server", "--requirepass", password)
+  )
+  val statsDStub = new StatsDStub
 
   override def withSparkConfOverrides(conf: SparkConf): SparkConf = conf
     .set("spark.redis.host", container.host)
     .set("spark.redis.port", container.mappedPort(6379).toString)
+    .set("spark.redis.auth", password)
     .set("spark.metrics.conf.*.sink.statsd.port", statsDStub.port.toString)
 
   trait Scope {
     val jedis = new Jedis("localhost", container.mappedPort(6379))
+    jedis.auth(password)
     jedis.flushAll()
 
     statsDStub.receivedMetrics // clean the buffer
