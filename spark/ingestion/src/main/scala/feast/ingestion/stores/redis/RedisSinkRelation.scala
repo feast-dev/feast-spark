@@ -19,8 +19,6 @@ package feast.ingestion.stores.redis
 import java.util
 import com.google.protobuf.Timestamp
 import com.google.protobuf.util.Timestamps
-import com.redislabs.provider.redis.util.PipelineUtils.{foreachWithPipeline, mapWithPipeline}
-import com.redislabs.provider.redis.{ReadWriteConfig, RedisConfig, RedisEndpoint, RedisNode}
 import feast.ingestion.utils.TypeConversion
 import feast.proto.storage.RedisProto.RedisKeyV2
 import feast.proto.types.ValueProto
@@ -30,7 +28,7 @@ import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Row, SQLContext}
-import redis.clients.jedis.util.JedisClusterCRC16
+import redis.clients.jedis.Jedis
 
 import scala.collection.JavaConverters._
 
@@ -68,66 +66,61 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
       else data
 
     dataToStore.foreachPartition { partition: Iterator[Row] =>
-      // refresh redis cluster topology for each batch
-      implicit val redisConfig: RedisConfig = {
-        new RedisConfig(
-          new RedisEndpoint(sparkConf)
-        )
+      val endpoint = RedisEndpoint(
+        host = sparkConf.get("spark.redis.host"),
+        port = sparkConf.get("spark.redis.port").toInt,
+        password = sparkConf.get("spark.redis.auth", "")
+      )
+      val jedis = new Jedis(endpoint.host, endpoint.port)
+      if (endpoint.password.nonEmpty) {
+        jedis.auth(endpoint.password)
       }
-
-      implicit val readWriteConfig: ReadWriteConfig = {
-        ReadWriteConfig.fromSparkConf(sparkConf)
-      }
-
       // grouped iterator to only allocate memory for a portion of rows
       partition.grouped(config.iteratorGroupingSize).foreach { batch =>
         // group by key and keep only latest row per each key
         val rowsWithKey: Map[RedisKeyV2, Row] =
           compactRowsToLatestTimestamp(batch.map(row => dataKeyId(row) -> row)).toMap
 
-        groupKeysByNode(redisConfig.hosts, rowsWithKey.keysIterator).foreach { case (node, keys) =>
-          val conn = node.connect()
-          // retrieve latest stored values
-          val storedValues = mapWithPipeline(conn, keys) { (pipeline, key) =>
-            persistence.get(pipeline, key.toByteArray)
-          }.map(_.asInstanceOf[util.Map[Array[Byte], Array[Byte]]])
-
-          val timestamps     = storedValues.map(persistence.storedTimestamp)
-          val timestampByKey = keys.zip(timestamps).toMap
-
-          val expiryTimestampByKey = keys
-            .zip(storedValues)
-            .map { case (key, storedValue) =>
-              (key, newExpiryTimestamp(rowsWithKey(key), storedValue))
-            }
-            .toMap
-
-          foreachWithPipeline(conn, keys) { (pipeline, key) =>
-            val row = rowsWithKey(key)
-
-            timestampByKey(key) match {
-              case Some(t) if (t.after(row.getAs[java.sql.Timestamp](config.timestampColumn))) =>
-                ()
-              case _ =>
-                if (metricSource.nonEmpty) {
-                  val lag = System.currentTimeMillis() - row
-                    .getAs[java.sql.Timestamp](config.timestampColumn)
-                    .getTime
-
-                  metricSource.get.METRIC_TOTAL_ROWS_INSERTED.inc()
-                  metricSource.get.METRIC_ROWS_LAG.update(lag)
-                }
-                persistence.save(
-                  pipeline,
-                  key.toByteArray,
-                  row,
-                  expiryTimestampByKey(key),
-                  MAX_EXPIRED_TIMESTAMP
-                )
-            }
+        val keys          = rowsWithKey.keysIterator.toList
+        val readPipeline  = jedis.pipelined()
+        val readResponses = keys.map(key => persistence.get(readPipeline, key.toByteArray))
+        readPipeline.sync()
+        val storedValues = readResponses.map(_.get())
+        readPipeline.close()
+        val timestamps     = storedValues.map(persistence.storedTimestamp)
+        val timestampByKey = keys.zip(timestamps).toMap
+        val expiryTimestampByKey = keys
+          .zip(storedValues)
+          .map { case (key, storedValue) =>
+            (key, newExpiryTimestamp(rowsWithKey(key), storedValue))
           }
-          conn.close()
+          .toMap
+
+        val writePipeline = jedis.pipelined()
+        rowsWithKey.foreach { case (key, row) =>
+          timestampByKey(key) match {
+            case Some(t) if (t.after(row.getAs[java.sql.Timestamp](config.timestampColumn))) =>
+              ()
+            case _ =>
+              if (metricSource.nonEmpty) {
+                val lag = System.currentTimeMillis() - row
+                  .getAs[java.sql.Timestamp](config.timestampColumn)
+                  .getTime
+
+                metricSource.get.METRIC_TOTAL_ROWS_INSERTED.inc()
+                metricSource.get.METRIC_ROWS_LAG.update(lag)
+              }
+              persistence.save(
+                writePipeline,
+                key.toByteArray,
+                row,
+                expiryTimestampByKey(key),
+                MAX_EXPIRED_TIMESTAMP
+              )
+          }
         }
+        writePipeline.sync()
+        writePipeline.close()
       }
     }
     dataToStore.unpersist()
@@ -173,24 +166,6 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
       case Seq(source: RedisSinkMetricSource) => Some(source)
       case _                                  => None
     }
-  }
-
-  private def groupKeysByNode(
-      nodes: Array[RedisNode],
-      keys: Iterator[RedisKeyV2]
-  ): Iterator[(RedisNode, Array[RedisKeyV2])] = {
-    keys
-      .map(key => (getMasterNode(nodes, key), key))
-      .toArray
-      .groupBy(_._1)
-      .map(x => (x._1, x._2.map(_._2)))
-      .iterator
-  }
-
-  private def getMasterNode(nodes: Array[RedisNode], key: RedisKeyV2): RedisNode = {
-    val slot = JedisClusterCRC16.getSlot(key.toByteArray)
-
-    nodes.filter { node => node.startSlot <= slot && node.endSlot >= slot }.filter(_.idx == 0)(0)
   }
 
   private def newExpiryTimestamp(
