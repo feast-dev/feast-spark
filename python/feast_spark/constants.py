@@ -118,7 +118,7 @@ class ConfigOptions(metaclass=ConfigMeta):
     REDIS_PORT: Optional[str] = ""
 
     #: Redis credentials
-    REDIS_AUTH: Optional[str] = ""
+    REDIS_PASSWORD: Optional[str] = ""
 
     #: Enable or disable TLS/SSL to Redis
     REDIS_SSL: Optional[str] = "False"
