@@ -28,7 +28,8 @@ import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Row, SQLContext}
-import redis.clients.jedis.Jedis
+import redis.clients.jedis.providers.ClusterConnectionProvider
+import redis.clients.jedis.{DefaultJedisClientConfig, HostAndPort, Jedis}
 
 import scala.collection.JavaConverters._
 
@@ -75,15 +76,20 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
       if (endpoint.password.nonEmpty) {
         jedis.auth(endpoint.password)
       }
+      val clusterEnabled = jedis.configGet("cluster-enabled").get(1) == "yes"
+      val pipelineProvider =
+        if (clusterEnabled) ClusterPipelineProvider(endpoint) else SingleNodePipelineProvider(jedis)
+
       // grouped iterator to only allocate memory for a portion of rows
       partition.grouped(config.iteratorGroupingSize).foreach { batch =>
         // group by key and keep only latest row per each key
         val rowsWithKey: Map[RedisKeyV2, Row] =
           compactRowsToLatestTimestamp(batch.map(row => dataKeyId(row) -> row)).toMap
 
-        val keys          = rowsWithKey.keysIterator.toList
-        val readPipeline  = jedis.pipelined()
-        val readResponses = keys.map(key => persistence.get(readPipeline, key.toByteArray))
+        val keys         = rowsWithKey.keysIterator.toList
+        val readPipeline = pipelineProvider.pipeline()
+        val readResponses =
+          keys.map(key => persistence.get(readPipeline.commands(), key.toByteArray))
         readPipeline.sync()
         val storedValues = readResponses.map(_.get())
         readPipeline.close()
@@ -96,7 +102,7 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
           }
           .toMap
 
-        val writePipeline = jedis.pipelined()
+        val writePipeline = pipelineProvider.pipeline()
         rowsWithKey.foreach { case (key, row) =>
           timestampByKey(key) match {
             case Some(t) if (t.after(row.getAs[java.sql.Timestamp](config.timestampColumn))) =>
@@ -111,7 +117,7 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
                 metricSource.get.METRIC_ROWS_LAG.update(lag)
               }
               persistence.save(
-                writePipeline,
+                writePipeline.commands(),
                 key.toByteArray,
                 row,
                 expiryTimestampByKey(key),

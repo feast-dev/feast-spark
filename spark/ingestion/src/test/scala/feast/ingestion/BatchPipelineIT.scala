@@ -264,7 +264,8 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
           )
         )
         val keyTTL = jedis.ttl(encodedEntityKey).toLong
-        keyTTL should (be <= (expectedExpiryTimestamp1.getTime - ingestionTimeUnix) / 1000 and
+        val toleranceMs = 10
+        keyTTL should (be <= (expectedExpiryTimestamp1.getTime - ingestionTimeUnix + toleranceMs) / 1000 and
           be > (expectedExpiryTimestamp2.getTime - ingestionTimeUnix) / 1000)
 
       })
