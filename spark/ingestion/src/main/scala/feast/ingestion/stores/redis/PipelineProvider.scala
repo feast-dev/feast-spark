@@ -16,10 +16,16 @@
  */
 package feast.ingestion.stores.redis
 
+import redis.clients.jedis.commands.PipelineBinaryCommands
+
+import java.io.Closeable
+
 /**
   * Provide either a pipeline or cluster pipeline to read and write data into Redis.
   */
 trait PipelineProvider {
+
+  type UnifiedPipeline = PipelineBinaryCommands with Closeable
 
   /**
     * @return an interface for executing pipeline commands

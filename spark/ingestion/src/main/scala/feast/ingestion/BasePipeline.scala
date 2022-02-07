@@ -42,7 +42,7 @@ object BasePipeline {
         conf
           .set("spark.redis.host", host)
           .set("spark.redis.port", port.toString)
-          .set("spark.redis.auth", password)
+          .set("spark.redis.password", password)
           .set("spark.redis.ssl", ssl.toString)
       case BigTableConfig(projectId, instanceId) =>
         conf

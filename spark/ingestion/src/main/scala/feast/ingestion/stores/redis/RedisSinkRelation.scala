@@ -28,8 +28,7 @@ import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Row, SQLContext}
-import redis.clients.jedis.providers.ClusterConnectionProvider
-import redis.clients.jedis.{DefaultJedisClientConfig, HostAndPort, Jedis}
+import redis.clients.jedis.Jedis
 
 import scala.collection.JavaConverters._
 
@@ -70,7 +69,7 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
       val endpoint = RedisEndpoint(
         host = sparkConf.get("spark.redis.host"),
         port = sparkConf.get("spark.redis.port").toInt,
-        password = sparkConf.get("spark.redis.auth", "")
+        password = sparkConf.get("spark.redis.password", "")
       )
       val jedis = new Jedis(endpoint.host, endpoint.port)
       if (endpoint.password.nonEmpty) {
@@ -89,10 +88,9 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
         val keys         = rowsWithKey.keysIterator.toList
         val readPipeline = pipelineProvider.pipeline()
         val readResponses =
-          keys.map(key => persistence.get(readPipeline.commands(), key.toByteArray))
-        readPipeline.sync()
-        val storedValues = readResponses.map(_.get())
+          keys.map(key => persistence.get(readPipeline, key.toByteArray))
         readPipeline.close()
+        val storedValues   = readResponses.map(_.get())
         val timestamps     = storedValues.map(persistence.storedTimestamp)
         val timestampByKey = keys.zip(timestamps).toMap
         val expiryTimestampByKey = keys
@@ -117,7 +115,7 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
                 metricSource.get.METRIC_ROWS_LAG.update(lag)
               }
               persistence.save(
-                writePipeline.commands(),
+                writePipeline,
                 key.toByteArray,
                 row,
                 expiryTimestampByKey(key),
@@ -125,7 +123,6 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
               )
           }
         }
-        writePipeline.sync()
         writePipeline.close()
       }
     }
