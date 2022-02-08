@@ -18,9 +18,9 @@ package feast.ingestion.stores.redis
 
 import java.sql.Timestamp
 import java.util
-
 import org.apache.spark.sql.Row
-import redis.clients.jedis.{Pipeline, Response}
+import redis.clients.jedis.commands.PipelineBinaryCommands
+import redis.clients.jedis.Response
 
 /**
   * Determine how a Spark row should be serialized and stored on Redis.
@@ -38,7 +38,7 @@ trait Persistence {
     *                              is equal to the maxExpiryTimestamp
     */
   def save(
-      pipeline: Pipeline,
+      pipeline: PipelineBinaryCommands,
       key: Array[Byte],
       row: Row,
       expiryTimestamp: Timestamp,
@@ -56,7 +56,7 @@ trait Persistence {
     * @return                      Redis response representing the row value
     */
   def get(
-      pipeline: Pipeline,
+      pipeline: PipelineBinaryCommands,
       key: Array[Byte]
   ): Response[util.Map[Array[Byte], Array[Byte]]]
 

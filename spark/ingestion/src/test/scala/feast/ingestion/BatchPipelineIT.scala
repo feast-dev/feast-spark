@@ -50,7 +50,7 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
   override def withSparkConfOverrides(conf: SparkConf): SparkConf = conf
     .set("spark.redis.host", container.host)
     .set("spark.redis.port", container.mappedPort(6379).toString)
-    .set("spark.redis.auth", password)
+    .set("spark.redis.password", password)
     .set("spark.metrics.conf.*.sink.statsd.port", statsDStub.port.toString)
 
   trait Scope {
@@ -161,8 +161,9 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
             "_ex:test-fs"                 -> expectedExpiryTimestamp
           )
         )
-        val keyTTL = jedis.ttl(encodedEntityKey).toLong
-        keyTTL should (be <= (expectedExpiryTimestamp.getTime - ingestionTimeUnix) / 1000 and be > 0L)
+        val toleranceMs = 10
+        val keyTTL      = jedis.ttl(encodedEntityKey)
+        keyTTL should (be <= (expectedExpiryTimestamp.getTime - ingestionTimeUnix + toleranceMs) / 1000 and be > 0L)
 
       })
 
@@ -202,8 +203,9 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
             "_ex:test-fs-2"                          -> expectedExpiryTimestamp2
           )
         )
-        val keyTTL = jedis.ttl(encodedEntityKey).toLong
-        keyTTL should (be <= (expectedExpiryTimestamp2.getTime - secondIngestionTimeUnix) / 1000 and be > (expectedExpiryTimestamp1.getTime - secondIngestionTimeUnix) / 1000)
+        val keyTTL      = jedis.ttl(encodedEntityKey).toLong
+        val toleranceMs = 10
+        keyTTL should (be <= (expectedExpiryTimestamp2.getTime - secondIngestionTimeUnix + toleranceMs) / 1000 and be > (expectedExpiryTimestamp1.getTime - secondIngestionTimeUnix) / 1000)
 
       })
     }
@@ -262,8 +264,9 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
             "_ex:test-fs-2"                          -> expectedExpiryTimestamp2
           )
         )
-        val keyTTL = jedis.ttl(encodedEntityKey).toLong
-        keyTTL should (be <= (expectedExpiryTimestamp1.getTime - ingestionTimeUnix) / 1000 and
+        val keyTTL      = jedis.ttl(encodedEntityKey).toLong
+        val toleranceMs = 10
+        keyTTL should (be <= (expectedExpiryTimestamp1.getTime - ingestionTimeUnix + toleranceMs) / 1000 and
           be > (expectedExpiryTimestamp2.getTime - ingestionTimeUnix) / 1000)
 
       })

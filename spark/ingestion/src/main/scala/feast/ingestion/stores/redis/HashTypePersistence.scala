@@ -18,13 +18,13 @@ package feast.ingestion.stores.redis
 
 import java.nio.charset.StandardCharsets
 import java.util
-
 import com.google.common.hash.Hashing
 import com.google.protobuf.Timestamp
 import feast.ingestion.utils.TypeConversion
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
-import redis.clients.jedis.{Pipeline, Response}
+import redis.clients.jedis.commands.PipelineBinaryCommands
+import redis.clients.jedis.Response
 
 import scala.jdk.CollectionConverters._
 
@@ -103,7 +103,7 @@ class HashTypePersistence(config: SparkRedisConfig) extends Persistence with Ser
   }
 
   override def save(
-      pipeline: Pipeline,
+      pipeline: PipelineBinaryCommands,
       key: Array[Byte],
       row: Row,
       expiryTimestamp: java.sql.Timestamp,
@@ -119,7 +119,7 @@ class HashTypePersistence(config: SparkRedisConfig) extends Persistence with Ser
   }
 
   override def get(
-      pipeline: Pipeline,
+      pipeline: PipelineBinaryCommands,
       key: Array[Byte]
   ): Response[util.Map[Array[Byte], Array[Byte]]] = {
     pipeline.hgetAll(key)
