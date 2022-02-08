@@ -34,7 +34,7 @@ case class ClusterPipelineProvider(endpoint: RedisEndpoint) extends PipelineProv
   val provider = new ClusterConnectionProvider(nodes, DEFAULT_CLIENT_CONFIG)
 
   /**
-    * @return a cluster pipeline wrapped within the unified interface
+    * @return a cluster pipeline
     */
   override def pipeline(): UnifiedPipeline = new ClusterPipeline(provider)
 

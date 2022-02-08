@@ -24,7 +24,7 @@ import redis.clients.jedis.Jedis
 case class SingleNodePipelineProvider(jedis: Jedis) extends PipelineProvider {
 
   /**
-    * @return a single node redis pipeline wrapped within a unified interface
+    * @return a single node redis pipeline
     */
   override def pipeline(): UnifiedPipeline = jedis.pipelined()
 
