@@ -75,7 +75,8 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
       if (endpoint.password.nonEmpty) {
         jedis.auth(endpoint.password)
       }
-      val clusterEnabled = jedis.configGet("cluster-enabled").get(1) == "yes"
+      val clusterEnabled =
+        jedis.configGet("cluster-enabled").asScala.toList.reverse.headOption.contains("yes")
       val pipelineProvider =
         if (clusterEnabled) ClusterPipelineProvider(endpoint) else SingleNodePipelineProvider(jedis)
 
