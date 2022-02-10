@@ -96,6 +96,14 @@ object TypeConversion {
     }).build
   }
 
+  def sqlTypeToString(value: Any, `type`: DataType): String = {
+    `type` match {
+      case IntegerType => value.asInstanceOf[Int].toString
+      case LongType    => value.asInstanceOf[Long].toString
+      case StringType  => value.asInstanceOf[String]
+    }
+  }
+
   class AsScala[A](op: => A) {
     def asScala: A = op
   }
