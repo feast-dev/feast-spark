@@ -19,13 +19,13 @@ package feast.ingestion
 import java.nio.file.Paths
 import java.sql.Timestamp
 import java.util.Date
-
 import com.dimafeng.testcontainers.{ForAllTestContainer, GenericContainer}
 import feast.ingestion.helpers.DataHelper.generateTempPath
 import feast.ingestion.utils.testing.MemoryStreamingSource
 import feast.proto.storage.RedisProto.RedisKeyV2
 import feast.proto.types.ValueProto
 import feast.proto.types.ValueProto.ValueType
+import org.apache.commons.codec.digest.DigestUtils
 import org.apache.spark.SparkConf
 import org.apache.spark.api.python.DynamicPythonFunction
 import org.apache.spark.sql.{Encoder, Row, SQLContext}
@@ -59,13 +59,7 @@ class PandasUDF extends SparkSpec with ForAllTestContainer {
     val rand                  = new Random()
 
     def encodeEntityKey(key: String): Array[Byte] =
-      RedisKeyV2
-        .newBuilder()
-        .setProject("default")
-        .addAllEntityNames(Seq("key").asJava)
-        .addEntityValues(ValueProto.Value.newBuilder().setStringVal(key))
-        .build
-        .toByteArray
+      DigestUtils.md5Hex(s"default#key:${key}").getBytes()
 
     // Function checks that num between 0 and 10 and num2 between 0 and 20
     // See the code test/resources/python/udf.py

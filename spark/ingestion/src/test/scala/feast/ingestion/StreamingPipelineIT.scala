@@ -18,7 +18,6 @@ package feast.ingestion
 
 import java.nio.file.Paths
 import java.util.Properties
-
 import com.dimafeng.testcontainers.{
   ForAllTestContainer,
   GenericContainer,
@@ -41,6 +40,7 @@ import feast.ingestion.helpers.DataHelper._
 import feast.ingestion.helpers.TestRow
 import feast.proto.storage.RedisProto.RedisKeyV2
 import feast.proto.types.ValueProto
+import org.apache.commons.codec.digest.DigestUtils
 import org.apache.spark.sql.Encoder
 import org.apache.spark.sql.avro.to_avro
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
@@ -95,14 +95,11 @@ class StreamingPipelineIT extends SparkSpec with ForAllTestContainer {
     )
 
     def encodeEntityKey(row: TestMessage, featureTable: FeatureTable): Array[Byte] = {
-      RedisKeyV2
-        .newBuilder()
-        .setProject(featureTable.project)
-        .addAllEntityNames(featureTable.entities.map(_.name).sorted.asJava)
-        .addEntityValues(ValueProto.Value.newBuilder().setInt64Val(row.getS2Id))
-        .addEntityValues(ValueProto.Value.newBuilder().setStringVal(row.getVehicleType.toString))
-        .build
-        .toByteArray
+      val entities = featureTable.entities.map(_.name).mkString("#")
+      val key = DigestUtils.md5Hex(
+        s"${featureTable.project}#${entities}:${row.getS2Id.toString}#${row.getVehicleType.toString}"
+      )
+      key.getBytes()
     }
 
     def groupByEntity(row: TestMessage) =
@@ -329,13 +326,8 @@ class StreamingPipelineIT extends SparkSpec with ForAllTestContainer {
     query.processAllAvailable()
 
     val allTypesKeyEncoder: String => String = encodeFeatureKey(configWithKafka.featureTable)
-    val redisKey = RedisKeyV2
-      .newBuilder()
-      .setProject("default")
-      .addEntityNames("string")
-      .addEntityValues(ValueProto.Value.newBuilder().setStringVal("test"))
-      .build()
-    val storedValues = jedis.hgetAll(redisKey.toByteArray).asScala.toMap
+    val redisKey                             = DigestUtils.md5Hex(s"default#string:test").getBytes()
+    val storedValues                         = jedis.hgetAll(redisKey).asScala.toMap
     storedValues should beStoredRow(
       Map(
         allTypesKeyEncoder("double")        -> 1,
@@ -432,14 +424,9 @@ class StreamingPipelineIT extends SparkSpec with ForAllTestContainer {
 
     query.processAllAvailable()
 
-    val redisKey = RedisKeyV2
-      .newBuilder()
-      .setProject("default")
-      .addEntityNames("customer")
-      .addEntityValues(ValueProto.Value.newBuilder().setStringVal("aaa"))
-      .build()
+    val redisKey = DigestUtils.md5Hex(s"default#customer:aaa").getBytes()
 
-    val storedValues                              = jedis.hgetAll(redisKey.toByteArray).asScala.toMap
+    val storedValues                              = jedis.hgetAll(redisKey).asScala.toMap
     val customFeatureKeyEncoder: String => String = encodeFeatureKey(avroConfig.featureTable)
     storedValues should beStoredRow(
       Map(
