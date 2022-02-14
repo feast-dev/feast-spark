@@ -72,6 +72,7 @@ function helm_install {
     if ! time helm install --wait "${FEAST_RELEASE_NAME:-feast-release}" feast-charts/feast "$@" \
         --timeout 10m \
         --set "prometheus-statsd-exporter.enabled=false" \
+        --set "feast-online-serving.image.tag=0.26.11-alpha"
         --set "feast-jobservice.enabled=false" \
         --set "prometheus.enabled=false" \
         --set "grafana.enabled=false" \
