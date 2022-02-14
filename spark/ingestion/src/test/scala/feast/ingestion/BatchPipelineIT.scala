@@ -18,7 +18,6 @@ package feast.ingestion
 
 import java.nio.file.Paths
 import java.sql.Timestamp
-
 import collection.JavaConverters._
 import com.dimafeng.testcontainers.{ForAllTestContainer, GenericContainer}
 import com.google.protobuf.util.Timestamps
@@ -32,10 +31,15 @@ import feast.ingestion.helpers.RedisStorageHelper._
 import feast.ingestion.helpers.DataHelper._
 import feast.ingestion.helpers.TestRow
 import feast.ingestion.metrics.StatsDStub
+import feast.ingestion.utils.TypeConversion
 import feast.proto.storage.RedisProto.RedisKeyV2
 import feast.proto.types.ValueProto
+import org.apache.commons.codec.digest.DigestUtils
 import org.apache.spark.sql.Encoder
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
+
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
 
@@ -62,14 +66,13 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
 
     implicit def testRowEncoder: Encoder[TestRow] = ExpressionEncoder()
 
+    def getCurrentTimeToSecondPrecision: Long =
+      Instant.now().truncatedTo(ChronoUnit.SECONDS).toEpochMilli
+
     def encodeEntityKey(row: TestRow, featureTable: FeatureTable): Array[Byte] = {
-      RedisKeyV2
-        .newBuilder()
-        .setProject(featureTable.project)
-        .addAllEntityNames(featureTable.entities.map(_.name).sorted.asJava)
-        .addEntityValues(ValueProto.Value.newBuilder().setStringVal(row.customer))
-        .build
-        .toByteArray
+      val entities = featureTable.entities.map(_.name).mkString("#")
+      val key      = DigestUtils.md5Hex(s"${featureTable.project}#${entities}:${row.customer}")
+      key.getBytes()
     }
 
     def groupByEntity(row: TestRow) =
@@ -143,7 +146,7 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
         endTime = endDate
       )
 
-      val ingestionTimeUnix = System.currentTimeMillis()
+      val ingestionTimeUnix = getCurrentTimeToSecondPrecision
       BatchPipeline.createPipeline(sparkSession, configWithMaxAge)
 
       val featureKeyEncoder: String => String = encodeFeatureKey(config.featureTable)
@@ -161,9 +164,8 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
             "_ex:test-fs"                 -> expectedExpiryTimestamp
           )
         )
-        val toleranceMs = 10
-        val keyTTL      = jedis.ttl(encodedEntityKey)
-        keyTTL should (be <= (expectedExpiryTimestamp.getTime - ingestionTimeUnix + toleranceMs) / 1000 and be > 0L)
+        val keyTTL = jedis.ttl(encodedEntityKey)
+        keyTTL should (be <= (expectedExpiryTimestamp.getTime - ingestionTimeUnix) / 1000 and be > 0L)
 
       })
 
@@ -178,7 +180,7 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
         endTime = endDate
       )
 
-      val secondIngestionTimeUnix = System.currentTimeMillis()
+      val secondIngestionTimeUnix = getCurrentTimeToSecondPrecision
       BatchPipeline.createPipeline(sparkSession, configWithSecondFeatureTable)
 
       val featureKeyEncoderSecondTable: String => String =
@@ -203,9 +205,8 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
             "_ex:test-fs-2"                          -> expectedExpiryTimestamp2
           )
         )
-        val keyTTL      = jedis.ttl(encodedEntityKey).toLong
-        val toleranceMs = 10
-        keyTTL should (be <= (expectedExpiryTimestamp2.getTime - secondIngestionTimeUnix + toleranceMs) / 1000 and be > (expectedExpiryTimestamp1.getTime - secondIngestionTimeUnix) / 1000)
+        val keyTTL = jedis.ttl(encodedEntityKey)
+        keyTTL should (be <= (expectedExpiryTimestamp2.getTime - secondIngestionTimeUnix) and be > (expectedExpiryTimestamp1.getTime - secondIngestionTimeUnix) / 1000)
 
       })
     }
@@ -225,7 +226,7 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
         endTime = endDate
       )
 
-      val ingestionTimeUnix = System.currentTimeMillis()
+      val ingestionTimeUnix = getCurrentTimeToSecondPrecision
       BatchPipeline.createPipeline(sparkSession, configWithMaxAge)
 
       val reducedMaxAge = 86400 * 2
@@ -264,9 +265,9 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
             "_ex:test-fs-2"                          -> expectedExpiryTimestamp2
           )
         )
-        val keyTTL      = jedis.ttl(encodedEntityKey).toLong
+        val keyTTL      = jedis.ttl(encodedEntityKey)
         val toleranceMs = 10
-        keyTTL should (be <= (expectedExpiryTimestamp1.getTime - ingestionTimeUnix + toleranceMs) / 1000 and
+        keyTTL should (be <= (expectedExpiryTimestamp1.getTime - ingestionTimeUnix) / 1000 and
           be > (expectedExpiryTimestamp2.getTime - ingestionTimeUnix) / 1000)
 
       })
@@ -286,7 +287,7 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
       endTime = endDate
     )
 
-    val ingestionTimeUnix = System.currentTimeMillis()
+    val ingestionTimeUnix = getCurrentTimeToSecondPrecision
     BatchPipeline.createPipeline(sparkSession, configWithMaxAge)
 
     val reducedMaxAge = 86400 * 2
@@ -316,7 +317,7 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
           "_ex:test-fs"                 -> expiryTimestampAfterUpdate
         )
       )
-      val keyTTL = jedis.ttl(encodedEntityKey).toLong
+      val keyTTL = jedis.ttl(encodedEntityKey)
       keyTTL should (be <= (expiryTimestampAfterUpdate.getTime - ingestionTimeUnix) / 1000 and be > 0L)
 
     })

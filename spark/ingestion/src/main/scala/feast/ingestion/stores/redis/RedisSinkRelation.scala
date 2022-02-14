@@ -20,8 +20,7 @@ import java.util
 import com.google.protobuf.Timestamp
 import com.google.protobuf.util.Timestamps
 import feast.ingestion.utils.TypeConversion
-import feast.proto.storage.RedisProto.RedisKeyV2
-import feast.proto.types.ValueProto
+import org.apache.commons.codec.digest.DigestUtils
 import org.apache.spark.{SparkConf, SparkEnv}
 import org.apache.spark.metrics.source.RedisSinkMetricSource
 import org.apache.spark.sql.functions.col
@@ -83,13 +82,13 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
       // grouped iterator to only allocate memory for a portion of rows
       partition.grouped(config.iteratorGroupingSize).foreach { batch =>
         // group by key and keep only latest row per each key
-        val rowsWithKey: Map[RedisKeyV2, Row] =
+        val rowsWithKey: Map[String, Row] =
           compactRowsToLatestTimestamp(batch.map(row => dataKeyId(row) -> row)).toMap
 
         val keys         = rowsWithKey.keysIterator.toList
         val readPipeline = pipelineProvider.pipeline()
         val readResponses =
-          keys.map(key => persistence.get(readPipeline, key.toByteArray))
+          keys.map(key => persistence.get(readPipeline, key.getBytes()))
         readPipeline.close()
         val storedValues   = readResponses.map(_.get())
         val timestamps     = storedValues.map(persistence.storedTimestamp)
@@ -117,7 +116,7 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
               }
               persistence.save(
                 writePipeline,
-                key.toByteArray,
+                key.getBytes(),
                 row,
                 expiryTimestampByKey(key),
                 MAX_EXPIRED_TIMESTAMP
@@ -130,7 +129,7 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
     dataToStore.unpersist()
   }
 
-  private def compactRowsToLatestTimestamp(rows: Seq[(RedisKeyV2, Row)]) = rows
+  private def compactRowsToLatestTimestamp(rows: Seq[(String, Row)]) = rows
     .groupBy(_._1)
     .values
     .map(_.maxBy(_._2.getAs[java.sql.Timestamp](config.timestampColumn).getTime))
@@ -138,22 +137,18 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
   /**
     * Key is built from entities columns values with prefix of entities columns names.
     */
-  private def dataKeyId(row: Row): RedisKeyV2 = {
+  private def dataKeyId(row: Row): String = {
     val types = row.schema.fields.map(f => (f.name, f.dataType)).toMap
 
     val sortedEntities = config.entityColumns.sorted.toSeq
     val entityValues = sortedEntities
       .map(entity => (row.getAs[Any](entity), types(entity)))
       .map { case (value, v_type) =>
-        TypeConversion.sqlTypeToProtoValue(value, v_type).asInstanceOf[ValueProto.Value]
+        TypeConversion.sqlTypeToString(value, v_type)
       }
-
-    RedisKeyV2
-      .newBuilder()
-      .setProject(config.projectName)
-      .addAllEntityNames(sortedEntities.asJava)
-      .addAllEntityValues(entityValues.asJava)
-      .build
+    DigestUtils.md5Hex(
+      s"${config.projectName}#${sortedEntities.mkString("#")}:${entityValues.mkString("#")}"
+    )
   }
 
   private lazy val metricSource: Option[RedisSinkMetricSource] = {
