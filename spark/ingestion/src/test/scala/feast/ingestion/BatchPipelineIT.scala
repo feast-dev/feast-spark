@@ -16,30 +16,26 @@
  */
 package feast.ingestion
 
-import java.nio.file.Paths
-import java.sql.Timestamp
-import collection.JavaConverters._
 import com.dimafeng.testcontainers.{ForAllTestContainer, GenericContainer}
 import com.google.protobuf.util.Timestamps
-import feast.proto.types.ValueProto.ValueType
-import org.apache.spark.{SparkConf, SparkEnv}
-import org.joda.time.{DateTime, Seconds}
-import org.scalacheck._
-import org.scalatest._
-import redis.clients.jedis.Jedis
-import feast.ingestion.helpers.RedisStorageHelper._
 import feast.ingestion.helpers.DataHelper._
+import feast.ingestion.helpers.RedisStorageHelper._
 import feast.ingestion.helpers.TestRow
 import feast.ingestion.metrics.StatsDStub
-import feast.ingestion.utils.TypeConversion
-import feast.proto.storage.RedisProto.RedisKeyV2
-import feast.proto.types.ValueProto
+import feast.proto.types.ValueProto.ValueType
 import org.apache.commons.codec.digest.DigestUtils
 import org.apache.spark.sql.Encoder
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
+import org.apache.spark.{SparkConf, SparkEnv}
+import org.joda.time.DateTime
+import org.scalacheck._
+import redis.clients.jedis.Jedis
 
+import java.nio.file.Paths
+import java.sql.Timestamp
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import scala.collection.JavaConverters._
 
 class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
 
@@ -111,10 +107,9 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
       val storedValues     = jedis.hgetAll(encodedEntityKey).asScala.toMap
       storedValues should beStoredRow(
         Map(
-          featureKeyEncoder("feature1") -> r.feature1,
-          featureKeyEncoder("feature2") -> r.feature2,
-          "_ts:test-fs"                 -> r.eventTimestamp,
-          "_ex:test-fs"                 -> new Timestamp(Timestamps.MAX_VALUE.getSeconds * 1000)
+          featureKeyEncoder("feature1")      -> r.feature1,
+          featureKeyEncoder("feature2")      -> r.feature2,
+          murmurHashHexString("_ts:test-fs") -> r.eventTimestamp
         )
       )
       val keyTTL = jedis.ttl(encodedEntityKey).toInt
@@ -158,10 +153,10 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
           new java.sql.Timestamp(r.eventTimestamp.getTime + 1000 * maxAge)
         storedValues should beStoredRow(
           Map(
-            featureKeyEncoder("feature1") -> r.feature1,
-            featureKeyEncoder("feature2") -> r.feature2,
-            "_ts:test-fs"                 -> r.eventTimestamp,
-            "_ex:test-fs"                 -> expectedExpiryTimestamp
+            featureKeyEncoder("feature1")      -> r.feature1,
+            featureKeyEncoder("feature2")      -> r.feature2,
+            murmurHashHexString("_ts:test-fs") -> r.eventTimestamp,
+            "_ex"                              -> expectedExpiryTimestamp
           )
         )
         val keyTTL = jedis.ttl(encodedEntityKey)
@@ -199,10 +194,9 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
             featureKeyEncoder("feature2")            -> r.feature2,
             featureKeyEncoderSecondTable("feature1") -> r.feature1,
             featureKeyEncoderSecondTable("feature2") -> r.feature2,
-            "_ts:test-fs"                            -> r.eventTimestamp,
-            "_ts:test-fs-2"                          -> r.eventTimestamp,
-            "_ex:test-fs"                            -> expectedExpiryTimestamp1,
-            "_ex:test-fs-2"                          -> expectedExpiryTimestamp2
+            murmurHashHexString("_ts:test-fs")       -> r.eventTimestamp,
+            murmurHashHexString("_ts:test-fs-2")     -> r.eventTimestamp,
+            "_ex"                                    -> expectedExpiryTimestamp2
           )
         )
         val keyTTL = jedis.ttl(encodedEntityKey)
@@ -259,21 +253,19 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
             featureKeyEncoder("feature2")            -> r.feature2,
             featureKeyEncoderSecondTable("feature1") -> r.feature1,
             featureKeyEncoderSecondTable("feature2") -> r.feature2,
-            "_ts:test-fs"                            -> r.eventTimestamp,
-            "_ts:test-fs-2"                          -> r.eventTimestamp,
-            "_ex:test-fs"                            -> expectedExpiryTimestamp1,
-            "_ex:test-fs-2"                          -> expectedExpiryTimestamp2
+            murmurHashHexString("_ts:test-fs")       -> r.eventTimestamp,
+            murmurHashHexString("_ts:test-fs-2")     -> r.eventTimestamp,
+            "_ex"                                    -> expectedExpiryTimestamp1
           )
         )
-        val keyTTL      = jedis.ttl(encodedEntityKey)
-        val toleranceMs = 10
+        val keyTTL = jedis.ttl(encodedEntityKey)
         keyTTL should (be <= (expectedExpiryTimestamp1.getTime - ingestionTimeUnix) / 1000 and
           be > (expectedExpiryTimestamp2.getTime - ingestionTimeUnix) / 1000)
 
       })
     }
 
-  "Redis key TTL" should "be updated, when the same feature table is re-ingested, with a smaller max age" in new Scope {
+  "Redis key TTL" should "not be updated, when the same feature table is re-ingested, with a smaller max age" in new Scope {
     val startDate = new DateTime().minusDays(1).withTimeAtStartOfDay()
     val endDate   = new DateTime().withTimeAtStartOfDay()
     val gen       = rowGenerator(startDate, endDate)
@@ -308,13 +300,13 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
       val encodedEntityKey = encodeEntityKey(r, config.featureTable)
       val storedValues     = jedis.hgetAll(encodedEntityKey).asScala.toMap
       val expiryTimestampAfterUpdate =
-        new java.sql.Timestamp(r.eventTimestamp.getTime + 1000 * reducedMaxAge)
+        new java.sql.Timestamp(r.eventTimestamp.getTime + 1000 * maxAge)
       storedValues should beStoredRow(
         Map(
-          featureKeyEncoder("feature1") -> r.feature1,
-          featureKeyEncoder("feature2") -> r.feature2,
-          "_ts:test-fs"                 -> r.eventTimestamp,
-          "_ex:test-fs"                 -> expiryTimestampAfterUpdate
+          featureKeyEncoder("feature1")      -> r.feature1,
+          featureKeyEncoder("feature2")      -> r.feature2,
+          murmurHashHexString("_ts:test-fs") -> r.eventTimestamp,
+          "_ex"                              -> expiryTimestampAfterUpdate
         )
       )
       val keyTTL = jedis.ttl(encodedEntityKey)
@@ -354,10 +346,9 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
       val storedValues     = jedis.hgetAll(encodedEntityKey).asScala.toMap
       storedValues should beStoredRow(
         Map(
-          featureKeyEncoder("feature1") -> r.feature1,
-          featureKeyEncoder("feature2") -> r.feature2,
-          "_ts:test-fs"                 -> r.eventTimestamp,
-          "_ex:test-fs"                 -> new Timestamp(Timestamps.MAX_VALUE.getSeconds * 1000)
+          featureKeyEncoder("feature1")      -> r.feature1,
+          featureKeyEncoder("feature2")      -> r.feature2,
+          murmurHashHexString("_ts:test-fs") -> r.eventTimestamp
         )
       )
       val keyTTL = jedis.ttl(encodedEntityKey).toInt
@@ -395,9 +386,9 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
       val storedValues = jedis.hgetAll(encodeEntityKey(r, config.featureTable)).asScala.toMap
       storedValues should beStoredRow(
         Map(
-          featureKeyEncoder("feature1") -> r.feature1,
-          featureKeyEncoder("feature2") -> r.feature2,
-          "_ts:test-fs"                 -> r.eventTimestamp
+          featureKeyEncoder("feature1")      -> r.feature1,
+          featureKeyEncoder("feature2")      -> r.feature2,
+          murmurHashHexString("_ts:test-fs") -> r.eventTimestamp
         )
       )
     })
@@ -436,9 +427,9 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
       val storedValues = jedis.hgetAll(encodeEntityKey(r, config.featureTable)).asScala.toMap
       storedValues should beStoredRow(
         Map(
-          featureKeyEncoder("feature1") -> r.feature1,
-          featureKeyEncoder("feature2") -> r.feature2,
-          "_ts:test-fs"                 -> r.eventTimestamp
+          featureKeyEncoder("feature1")      -> r.feature1,
+          featureKeyEncoder("feature2")      -> r.feature2,
+          murmurHashHexString("_ts:test-fs") -> r.eventTimestamp
         )
       )
     })
@@ -509,9 +500,9 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
         jedis.hgetAll(encodeEntityKey(r, configWithMapping.featureTable)).asScala.toMap
       storedValues should beStoredRow(
         Map(
-          featureKeyEncoder("new_feature1") -> r.feature1,
-          featureKeyEncoder("feature2")     -> r.feature2,
-          "_ts:test-fs"                     -> r.eventTimestamp
+          featureKeyEncoder("new_feature1")  -> r.feature1,
+          featureKeyEncoder("feature2")      -> r.feature2,
+          murmurHashHexString("_ts:test-fs") -> r.eventTimestamp
         )
       )
     })
@@ -543,9 +534,9 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
         jedis.hgetAll(encodeEntityKey(r, configWithMapping.featureTable)).asScala.toMap
       storedValues should beStoredRow(
         Map(
-          featureKeyEncoder("feature1") -> (r.feature1 + 1),
-          featureKeyEncoder("feature2") -> (r.feature1 + r.feature2 * 2),
-          "_ts:test-fs"                 -> r.eventTimestamp
+          featureKeyEncoder("feature1")      -> (r.feature1 + 1),
+          featureKeyEncoder("feature2")      -> (r.feature1 + r.feature2 * 2),
+          murmurHashHexString("_ts:test-fs") -> r.eventTimestamp
         )
       )
     })
