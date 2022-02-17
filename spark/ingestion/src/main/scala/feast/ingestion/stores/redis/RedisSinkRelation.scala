@@ -16,7 +16,7 @@
  */
 package feast.ingestion.stores.redis
 
-import java.util
+import java.{sql, util}
 import com.google.protobuf.Timestamp
 import com.google.protobuf.util.Timestamps
 import feast.ingestion.utils.TypeConversion
@@ -48,8 +48,6 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
   import RedisSinkRelation._
 
   override def schema: StructType = ???
-
-  val MAX_EXPIRED_TIMESTAMP = new java.sql.Timestamp(Timestamps.MAX_VALUE.getSeconds * 1000)
 
   val persistence: Persistence = new HashTypePersistence(config)
 
@@ -118,8 +116,7 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
                 writePipeline,
                 key.getBytes(),
                 row,
-                expiryTimestampByKey(key),
-                MAX_EXPIRED_TIMESTAMP
+                expiryTimestampByKey(key)
               )
           }
         }
@@ -170,27 +167,29 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
   private def newExpiryTimestamp(
       row: Row,
       value: util.Map[Array[Byte], Array[Byte]]
-  ): java.sql.Timestamp = {
-    val maxExpiryOtherFeatureTables: Long = value.asScala.toMap
+  ): Option[java.sql.Timestamp] = {
+    val currentMaxExpiry: Option[Long] = value.asScala.toMap
       .map { case (key, value) =>
-        (key.map(_.toChar).mkString, value)
+        (wrapByteArray(key), value)
       }
-      .filterKeys(_.startsWith(config.expiryPrefix))
-      .filterKeys(_.split(":").last != config.namespace)
-      .values
-      .map(value => Timestamp.parseFrom(value).getSeconds * 1000)
-      .reduceOption(_ max _)
-      .getOrElse(0)
+      .get(config.expiryPrefix.getBytes())
+      .map(Timestamp.parseFrom(_).getSeconds * 1000)
 
-    val rowExpiry: Long =
+    val rowExpiry: Option[Long] =
       if (config.maxAge > 0)
-        (row
-          .getAs[java.sql.Timestamp](config.timestampColumn)
-          .getTime + config.maxAge * 1000)
-      else MAX_EXPIRED_TIMESTAMP.getTime
+        Some(
+          row
+            .getAs[java.sql.Timestamp](config.timestampColumn)
+            .getTime + config.maxAge * 1000
+        )
+      else None
 
-    val maxExpiry = maxExpiryOtherFeatureTables max rowExpiry
-    new java.sql.Timestamp(maxExpiry)
+    (currentMaxExpiry, rowExpiry) match {
+      case (_, None)            => None
+      case (None, Some(expiry)) => Some(new sql.Timestamp(expiry))
+      case (Some(currentExpiry), Some(newExpiry)) =>
+        Some(new sql.Timestamp(currentExpiry max newExpiry))
+    }
 
   }
 }

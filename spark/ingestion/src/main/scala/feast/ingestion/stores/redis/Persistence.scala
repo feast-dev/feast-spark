@@ -41,8 +41,7 @@ trait Persistence {
       pipeline: PipelineBinaryCommands,
       key: Array[Byte],
       row: Row,
-      expiryTimestamp: Timestamp,
-      maxExpiryTimestamp: Timestamp
+      expiryTimestamp: Option[Timestamp]
   ): Unit
 
   /**

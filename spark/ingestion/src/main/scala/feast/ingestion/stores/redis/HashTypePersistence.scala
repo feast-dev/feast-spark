@@ -39,7 +39,7 @@ class HashTypePersistence(config: SparkRedisConfig) extends Persistence with Ser
 
   private def encodeRow(
       value: Row,
-      maxExpiryTimestamp: java.sql.Timestamp
+      expiryTimestamp: Option[java.sql.Timestamp]
   ): Map[Array[Byte], Array[Byte]] = {
     val fields = value.schema.fields.map(_.name)
     val types  = value.schema.fields.map(f => (f.name, f.dataType)).toMap
@@ -60,25 +60,23 @@ class HashTypePersistence(config: SparkRedisConfig) extends Persistence with Ser
 
     val timestampHash = Seq(
       (
-        timestampHashKey(config.namespace).getBytes,
+        timestampHashKey(config.namespace),
         encodeValue(value.getAs[Timestamp](config.timestampColumn), TimestampType)
       )
     )
 
-    val expiryUnixTimestamp = {
-      if (config.maxAge > 0)
-        value.getAs[java.sql.Timestamp](config.timestampColumn).getTime + config.maxAge * 1000
-      else maxExpiryTimestamp.getTime
+    expiryTimestamp match {
+      case Some(expiry) =>
+        val expiryTimestampHash = Seq(
+          (
+            expiryTimestampHashKey(config.namespace),
+            encodeValue(expiry, TimestampType)
+          )
+        )
+        values ++ timestampHash ++ expiryTimestampHash
+      case None => values ++ timestampHash
     }
-    val expiryTimestamp = new java.sql.Timestamp(expiryUnixTimestamp)
-    val expiryTimestampHash = Seq(
-      (
-        expiryTimestampHashKey(config.namespace).getBytes,
-        encodeValue(expiryTimestamp, TimestampType)
-      )
-    )
 
-    values ++ timestampHash ++ expiryTimestampHash
   }
 
   private def encodeValue(value: Any, `type`: DataType): Array[Byte] = {
@@ -90,12 +88,14 @@ class HashTypePersistence(config: SparkRedisConfig) extends Persistence with Ser
     Hashing.murmur3_32.hashString(fullFeatureReference, StandardCharsets.UTF_8).asBytes()
   }
 
-  private def timestampHashKey(namespace: String): String = {
-    s"${config.timestampPrefix}:${namespace}"
+  private def timestampHashKey(namespace: String): Array[Byte] = {
+    Hashing.murmur3_32
+      .hashString(s"${config.timestampPrefix}:${namespace}", StandardCharsets.UTF_8)
+      .asBytes
   }
 
-  private def expiryTimestampHashKey(namespace: String): String = {
-    s"${config.expiryPrefix}:${namespace}"
+  private def expiryTimestampHashKey(namespace: String): Array[Byte] = {
+    config.expiryPrefix.getBytes()
   }
 
   private def decodeTimestamp(encodedTimestamp: Array[Byte]): java.sql.Timestamp = {
@@ -106,15 +106,16 @@ class HashTypePersistence(config: SparkRedisConfig) extends Persistence with Ser
       pipeline: PipelineBinaryCommands,
       key: Array[Byte],
       row: Row,
-      expiryTimestamp: java.sql.Timestamp,
-      maxExpiryTimestamp: java.sql.Timestamp
+      expiryTimestamp: Option[java.sql.Timestamp]
   ): Unit = {
-    val value = encodeRow(row, maxExpiryTimestamp).asJava
+    val value = encodeRow(row, expiryTimestamp).asJava
     pipeline.hset(key, value)
-    if (expiryTimestamp.equals(maxExpiryTimestamp)) {
-      pipeline.persist(key)
-    } else {
-      pipeline.expireAt(key, expiryTimestamp.getTime / 1000)
+
+    expiryTimestamp match {
+      case Some(expiry) =>
+        pipeline.expireAt(key, expiry.getTime / 1000)
+      case None =>
+        pipeline.persist(key)
     }
   }
 
@@ -130,7 +131,7 @@ class HashTypePersistence(config: SparkRedisConfig) extends Persistence with Ser
   ): Option[java.sql.Timestamp] = {
     value.asScala.toMap
       .map { case (key, value) =>
-        (key.map(_.toChar).mkString, value)
+        (wrapByteArray(key), value)
       }
       .get(timestampHashKey(config.namespace))
       .map(value => decodeTimestamp(value))

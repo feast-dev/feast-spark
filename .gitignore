@@ -189,3 +189,6 @@ sdk/python/docs/html
 .bloop
 .metals
 *.code-workspace
+
+spark/ingestion/src/test/resources/python/libs.tar.gz
+spark/ingestion/src/test/resources/python/udf.pickle

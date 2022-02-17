@@ -146,8 +146,9 @@ class StreamingPipelineIT extends SparkSpec with ForAllTestContainer {
       storedValues should beStoredRow(
         Map(
           featureKeyEncoder("unique_drivers") -> r.getUniqueDrivers,
-          "_ts:driver-fs"                     -> new java.sql.Timestamp(r.getEventTimestamp.getSeconds * 1000),
-          "_ex:driver-fs"                     -> new java.sql.Timestamp(Timestamps.MAX_VALUE.getSeconds * 1000)
+          murmurHashHexString("_ts:driver-fs") -> new java.sql.Timestamp(
+            r.getEventTimestamp.getSeconds * 1000
+          )
         )
       )
       val keyTTL = jedis.ttl(encodedEntityKey).toInt
@@ -178,8 +179,10 @@ class StreamingPipelineIT extends SparkSpec with ForAllTestContainer {
         storedValues should beStoredRow(
           Map(
             featureKeyEncoder("unique_drivers") -> r.getUniqueDrivers,
-            "_ts:driver-fs"                     -> new java.sql.Timestamp(r.getEventTimestamp.getSeconds * 1000),
-            "_ex:driver-fs" -> new java.sql.Timestamp(
+            murmurHashHexString("_ts:driver-fs") -> new java.sql.Timestamp(
+              r.getEventTimestamp.getSeconds * 1000
+            ),
+            "_ex" -> new java.sql.Timestamp(
               (r.getEventTimestamp.getSeconds + maxAge) * 1000
             )
           )
@@ -208,11 +211,9 @@ class StreamingPipelineIT extends SparkSpec with ForAllTestContainer {
           Map(
             featureKeyEncoder("unique_drivers")                   -> r.getUniqueDrivers,
             featureKeyEncoderSecondFeatureTable("unique_drivers") -> r.getUniqueDrivers,
-            "_ts:driver-fs"                                       -> new java.sql.Timestamp(r.getEventTimestamp.getSeconds * 1000),
-            "_ex:driver-fs" -> new java.sql.Timestamp(
-              (r.getEventTimestamp.getSeconds + maxAge) * 1000
-            ),
-            "_ex:driver-fs-2" -> new java.sql.Timestamp(Timestamps.MAX_VALUE.getSeconds * 1000)
+            murmurHashHexString("_ts:driver-fs") -> new java.sql.Timestamp(
+              r.getEventTimestamp.getSeconds * 1000
+            )
           )
         )
         val keyTTL = jedis.ttl(encodedEntityKey).toInt
@@ -432,7 +433,7 @@ class StreamingPipelineIT extends SparkSpec with ForAllTestContainer {
       Map(
         customFeatureKeyEncoder("feature1") -> row.feature1,
         customFeatureKeyEncoder("feature2") -> row.feature2,
-        "_ts:test-fs"                       -> row.eventTimestamp
+        murmurHashHexString("_ts:test-fs")  -> row.eventTimestamp
       )
     )
 
