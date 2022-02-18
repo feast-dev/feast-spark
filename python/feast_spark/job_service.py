@@ -49,6 +49,7 @@ from feast_spark.pyspark.abc import (
     RetrievalJob,
     SparkJob,
     SparkJobStatus,
+    SparkJobType,
     StreamIngestionJob,
 )
 from feast_spark.pyspark.launcher import (
@@ -142,6 +143,13 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
                 return whitelisted_feature_tables
         return None
 
+    @property
+    def _whitelisted_job_types(self) -> Optional[List[str]]:
+        if self.client.config.exists(opt.WHITELISTED_JOB_TYPES):
+            whitelisted_job_types = self.client.config.get(opt.WHITELISTED_JOB_TYPES)
+            return whitelisted_job_types.split(",")
+        return None
+
     def is_whitelisted(self, project: str):
         # Whitelisted projects not specified, allow all projects
         if not self._whitelisted_projects:
@@ -152,6 +160,11 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
         if not self._whitelisted_project_feature_table_pairs:
             return True
         return (project, feature_table) in self._whitelisted_project_feature_table_pairs
+
+    def is_job_type_whitelisted(self, job_type: SparkJobType):
+        if not self._whitelisted_job_types:
+            return True
+        return job_type in self._whitelisted_job_types
 
     def StartOfflineToOnlineIngestionJob(
         self, request: StartOfflineToOnlineIngestionJobRequest, context
