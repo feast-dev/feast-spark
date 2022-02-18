@@ -172,6 +172,9 @@ class ConfigOptions(metaclass=ConfigMeta):
     #: Log path of EMR cluster
     EMR_LOG_LOCATION: Optional[str] = None
 
+    #: Whitelisted Feast Job Types
+    WHITELISTED_JOB_TYPES: Optional[str] = None
+
     #: Whitelisted Feast projects
     WHITELISTED_PROJECTS: Optional[str] = None
 
