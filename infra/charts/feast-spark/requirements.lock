@@ -1,9 +1,9 @@
 dependencies:
 - name: feast-jobservice
   repository: ""
-  version: 0.2.17
+  version: 0.2.18
 - name: prometheus-statsd-exporter
   repository: ""
   version: 0.1.2
-digest: sha256:0c08ee4c7e92149b9ca52a924bfa38647e8c6786c13332cc768a4871de7a6e1e
-generated: "2021-02-08T15:22:35.981948+08:00"
+digest: sha256:955ab1521f47b8267969f19b2bec1ea36947d9c23b76145989a02a14f733cfba
+generated: "2022-02-21T15:07:33.343688512+08:00"
