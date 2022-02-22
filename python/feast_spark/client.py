@@ -459,16 +459,13 @@ class Client:
             )
 
     def get_health_metrics(
-        self,
-        project: str,
-        table_names: List[str],
+        self, project: str, table_names: List[str],
     ) -> Dict[str, List[str]]:
         if not self._use_job_service:
             return get_health_metrics(self, project, table_names)
         else:
             request = GetHealthMetricsRequest(
-                project=cast(str, project),
-                table_names=table_names,
+                project=cast(str, project), table_names=table_names,
             )
             response = self._job_service.GetHealthMetrics(request)
             return {"passed": response.passed, "failed": response.failed}

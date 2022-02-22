@@ -294,8 +294,8 @@ def create_bq_view_of_joined_features_and_entities(
     source: BigQuerySource, entity_source: BigQuerySource, entity_names: List[str]
 ) -> BigQuerySource:
     """
-    Creates BQ view that joins tables from `source` and `entity_source` with join key derived from `entity_names`.
-Returns BigQuerySource with reference to created view. The BQ view will be created in the same BQ dataset as `entity_source`.
+        Creates BQ view that joins tables from `source` and `entity_source` with join key derived from `entity_names`.
+    Returns BigQuerySource with reference to created view. The BQ view will be created in the same BQ dataset as `entity_source`.
     """
     from google.cloud import bigquery
 
@@ -486,9 +486,7 @@ def get_job_by_id(job_id: str, client: "Client") -> SparkJob:
 
 
 def get_health_metrics(
-    client: "Client",
-    project: str,
-    table_names: List[str],
+    client: "Client", project: str, table_names: List[str],
 ) -> Dict[str, List[str]]:
     all_redis_keys = [f"{project}:{table}" for table in table_names]
     metrics = client.metrics_redis.mget(all_redis_keys)
@@ -497,7 +495,9 @@ def get_health_metrics(
     failed_feature_tables = []
 
     for i, name in enumerate(table_names):
-        feature_table = client.feature_store.get_feature_table(project=project, name=name)
+        feature_table = client.feature_store.get_feature_table(
+            project=project, name=name
+        )
         max_age = feature_table.max_age
         # Only perform ingestion health checks for Feature tables with max_age
         if not max_age:
@@ -505,8 +505,12 @@ def get_health_metrics(
             break
 
         # Ensure ingestion times are in epoch timings
-        last_ingestion_time = json.loads(metrics[i])["last_consumed_kafka_timestamp"]["value"]
-        valid_ingestion_time = datetime.timestamp(datetime.now() - timedelta(seconds=max_age))
+        last_ingestion_time = json.loads(metrics[i])["last_consumed_kafka_timestamp"][
+            "value"
+        ]
+        valid_ingestion_time = datetime.timestamp(
+            datetime.now() - timedelta(seconds=max_age)
+        )
 
         # Check if latest ingestion timestamp > cur_time - max_age
         if valid_ingestion_time > last_ingestion_time:

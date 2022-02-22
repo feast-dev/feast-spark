@@ -227,9 +227,7 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
             request.table_name, request.project
         )
         unschedule_offline_to_online_ingestion(
-            client=self.client,
-            project=request.project,
-            feature_table=feature_table,
+            client=self.client, project=request.project, feature_table=feature_table,
         )
         return UnscheduleOfflineToOnlineIngestionJobResponse()
 
