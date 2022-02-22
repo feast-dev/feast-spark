@@ -1,7 +1,8 @@
+import json
 import os
 import tempfile
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 from urllib.parse import urlparse, urlunparse
 
 from feast.config import Config
@@ -482,6 +483,36 @@ def list_jobs(
 def get_job_by_id(job_id: str, client: "Client") -> SparkJob:
     launcher = resolve_launcher(client.config)
     return launcher.get_job_by_id(job_id)
+
+
+def get_health_metrics(
+    client: "Client",
+    project: str,
+    table_names: List[str],
+) -> Dict[str, List[str]]:
+    all_redis_keys = [f"{project}:{table}" for table in table_names]
+    metrics = client.metrics_redis.mget(all_redis_keys)
+
+    valid_feature_tables = []
+    failed_feature_tables = []
+
+    for i, name in enumerate(table_names):
+        feature_table = client.feature_store.get_feature_table(project=project, name=name)
+        max_age = feature_table.max_age
+        # Only perform ingestion health checks for Feature tables with max_age
+        if not max_age:
+            valid_feature_tables.append(name)
+            break
+
+        # Ensure ingestion times are in epoch timings
+        last_ingestion_time = json.loads(metrics[i])["last_consumed_kafka_timestamp"]["value"]
+        valid_ingestion_time = datetime.timestamp(datetime.now() - timedelta(seconds=max_age))
+
+        # Check if latest ingestion timestamp > cur_time - max_age
+        if valid_ingestion_time > last_ingestion_time:
+            failed_feature_tables.append(name)
+
+    return {"passed": valid_feature_tables, "failed": failed_feature_tables}
 
 
 def stage_dataframe(df, event_timestamp_column: str, config: Config) -> FileSource:

@@ -49,6 +49,9 @@ service JobService {
 
     // Get details of a single job
     rpc GetJob (GetJobRequest) returns (GetJobResponse);
+
+    // Get ingestion health metrics for a Feature Table
+    rpc GetHealthMetrics (GetHealthMetricsRequest) returns (GetHealthMetricsResponse);
 }
 
 
@@ -241,3 +244,13 @@ message CancelJobRequest{
 }
 
 message CancelJobResponse {}
+
+message GetHealthMetricsRequest {
+  string project = 1;
+  repeated string table_names = 2;
+}
+
+message GetHealthMetricsResponse {
+  repeated string passed = 1;
+  repeated string failed = 2;
+}

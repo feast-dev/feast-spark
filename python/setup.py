@@ -52,6 +52,7 @@ REQUIRED = [
     "grpcio-tools==1.31.0",
     "mypy-protobuf==2.5",
     "croniter==1.*",
+    "redis==4.1.*",
 ]
 
 # README file from Feast repo root directory
