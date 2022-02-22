@@ -30,6 +30,7 @@ import org.apache.spark.sql.{DataFrame, Row, SQLContext}
 import redis.clients.jedis.Jedis
 
 import scala.collection.JavaConverters._
+import scala.util.{Failure, Success, Try}
 
 /**
   * High-level writer to Redis. Relies on `Persistence` implementation for actual storage layout.
@@ -72,10 +73,12 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
       if (endpoint.password.nonEmpty) {
         jedis.auth(endpoint.password)
       }
-      val clusterEnabled =
-        jedis.configGet("cluster-enabled").asScala.toList.reverse.headOption.contains("yes")
-      val pipelineProvider =
-        if (clusterEnabled) ClusterPipelineProvider(endpoint) else SingleNodePipelineProvider(jedis)
+      val pipelineProvider = Try(jedis.clusterInfo()) match {
+        case Success(_) =>
+          ClusterPipelineProvider(endpoint)
+        case Failure(_) =>
+          SingleNodePipelineProvider(jedis)
+      }
 
       // grouped iterator to only allocate memory for a portion of rows
       partition.grouped(config.iteratorGroupingSize).foreach { batch =>
