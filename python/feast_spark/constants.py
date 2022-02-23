@@ -105,10 +105,10 @@ class ConfigOptions(metaclass=ConfigMeta):
     # SparkApplication resource template for Historical Retrieval Jobs
     SPARK_K8S_HISTORICAL_RETRIEVAL_TEMPLATE_PATH: Optional[str] = ""
 
-    #: Default Redis host
+    #: Default Redis host to Redis Instance which stores Spark Ingestion Job metrics
     SPARK_METRICS_REDIS_HOST: Optional[str] = None
 
-    #: Default Redis port
+    #: Default Redis port to Redis Instance which stores Spark Ingestion Job metrics
     SPARK_METRICS_REDIS_PORT: Optional[str] = None
 
     #: File format of historical retrieval features

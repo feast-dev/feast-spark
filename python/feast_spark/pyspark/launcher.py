@@ -494,7 +494,7 @@ def get_health_metrics(
     valid_feature_tables = []
     failed_feature_tables = []
 
-    for i, name in enumerate(table_names):
+    for metric, name in zip(metrics, table_names):
         feature_table = client.feature_store.get_feature_table(
             project=project, name=name
         )
@@ -502,10 +502,14 @@ def get_health_metrics(
         # Only perform ingestion health checks for Feature tables with max_age
         if not max_age:
             valid_feature_tables.append(name)
-            break
+            continue
+
+        # If there are missing metrics in Redis; None is returned if there is no such key
+        if not metric:
+            failed_feature_tables.append(name)
 
         # Ensure ingestion times are in epoch timings
-        last_ingestion_time = json.loads(metrics[i])["last_consumed_kafka_timestamp"][
+        last_ingestion_time = json.loads(metric)["last_consumed_kafka_timestamp"][
             "value"
         ]
         valid_ingestion_time = datetime.timestamp(
@@ -515,6 +519,8 @@ def get_health_metrics(
         # Check if latest ingestion timestamp > cur_time - max_age
         if valid_ingestion_time > last_ingestion_time:
             failed_feature_tables.append(name)
+        else:
+            valid_feature_tables.append(name)
 
     return {"passed": valid_feature_tables, "failed": failed_feature_tables}
 
