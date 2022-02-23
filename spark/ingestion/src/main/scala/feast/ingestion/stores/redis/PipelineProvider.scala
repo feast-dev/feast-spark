@@ -31,4 +31,9 @@ trait PipelineProvider {
     * @return an interface for executing pipeline commands
     */
   def pipeline(): UnifiedPipeline
+
+  /**
+    * Close client connection
+    */
+  def close(): Unit
 }

@@ -18,7 +18,6 @@ package feast.ingestion.stores.redis
 
 import java.{sql, util}
 import com.google.protobuf.Timestamp
-import com.google.protobuf.util.Timestamps
 import feast.ingestion.utils.TypeConversion
 import org.apache.commons.codec.digest.DigestUtils
 import org.apache.spark.{SparkConf, SparkEnv}
@@ -30,7 +29,7 @@ import org.apache.spark.sql.{DataFrame, Row, SQLContext}
 import redis.clients.jedis.Jedis
 
 import scala.collection.JavaConverters._
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 /**
   * High-level writer to Redis. Relies on `Persistence` implementation for actual storage layout.
@@ -54,6 +53,21 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
 
   val sparkConf: SparkConf = sqlContext.sparkContext.getConf
 
+  def newJedisClient(endpoint: RedisEndpoint): Jedis = {
+    val jedis = new Jedis(endpoint.host, endpoint.port)
+    if (endpoint.password.nonEmpty) {
+      jedis.auth(endpoint.password)
+    }
+    jedis
+  }
+
+  def checkIfInClusterMode(endpoint: RedisEndpoint): Boolean = {
+    val jedis     = newJedisClient(endpoint)
+    val isCluster = Try(jedis.clusterInfo()).isSuccess
+    jedis.close()
+    isCluster
+  }
+
   override def insert(data: DataFrame, overwrite: Boolean): Unit = {
     // repartition for deduplication
     val dataToStore =
@@ -63,21 +77,19 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
           .localCheckpoint()
       else data
 
+    val endpoint = RedisEndpoint(
+      host = sparkConf.get("spark.redis.host"),
+      port = sparkConf.get("spark.redis.port").toInt,
+      password = sparkConf.get("spark.redis.password", "")
+    )
+
+    val isClusterMode = checkIfInClusterMode(endpoint)
+
     dataToStore.foreachPartition { partition: Iterator[Row] =>
-      val endpoint = RedisEndpoint(
-        host = sparkConf.get("spark.redis.host"),
-        port = sparkConf.get("spark.redis.port").toInt,
-        password = sparkConf.get("spark.redis.password", "")
-      )
-      val jedis = new Jedis(endpoint.host, endpoint.port)
-      if (endpoint.password.nonEmpty) {
-        jedis.auth(endpoint.password)
-      }
-      val pipelineProvider = Try(jedis.clusterInfo()) match {
-        case Success(_) =>
-          ClusterPipelineProvider(endpoint)
-        case Failure(_) =>
-          SingleNodePipelineProvider(jedis)
+      val pipelineProvider = if (isClusterMode) {
+        ClusterPipelineProvider(endpoint)
+      } else {
+        SingleNodePipelineProvider(newJedisClient(endpoint))
       }
 
       // grouped iterator to only allocate memory for a portion of rows
@@ -125,6 +137,7 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
         }
         writePipeline.close()
       }
+      pipelineProvider.close()
     }
     dataToStore.unpersist()
   }

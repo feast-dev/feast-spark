@@ -38,4 +38,8 @@ case class ClusterPipelineProvider(endpoint: RedisEndpoint) extends PipelineProv
     */
   override def pipeline(): UnifiedPipeline = new ClusterPipeline(provider)
 
+  /**
+    * Close client connection
+    */
+  override def close(): Unit = {}
 }
