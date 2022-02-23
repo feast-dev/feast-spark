@@ -28,4 +28,8 @@ case class SingleNodePipelineProvider(jedis: Jedis) extends PipelineProvider {
     */
   override def pipeline(): UnifiedPipeline = jedis.pipelined()
 
+  /**
+    * Close client connection
+    */
+  override def close(): Unit = jedis.close()
 }
