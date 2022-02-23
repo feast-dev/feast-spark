@@ -1,7 +1,8 @@
+import json
 import os
 import tempfile
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 from urllib.parse import urlparse, urlunparse
 
 from feast.config import Config
@@ -293,8 +294,8 @@ def create_bq_view_of_joined_features_and_entities(
     source: BigQuerySource, entity_source: BigQuerySource, entity_names: List[str]
 ) -> BigQuerySource:
     """
-    Creates BQ view that joins tables from `source` and `entity_source` with join key derived from `entity_names`.
-Returns BigQuerySource with reference to created view. The BQ view will be created in the same BQ dataset as `entity_source`.
+        Creates BQ view that joins tables from `source` and `entity_source` with join key derived from `entity_names`.
+    Returns BigQuerySource with reference to created view. The BQ view will be created in the same BQ dataset as `entity_source`.
     """
     from google.cloud import bigquery
 
@@ -482,6 +483,47 @@ def list_jobs(
 def get_job_by_id(job_id: str, client: "Client") -> SparkJob:
     launcher = resolve_launcher(client.config)
     return launcher.get_job_by_id(job_id)
+
+
+def get_health_metrics(
+    client: "Client", project: str, table_names: List[str],
+) -> Dict[str, List[str]]:
+    all_redis_keys = [f"{project}:{table}" for table in table_names]
+    metrics = client.metrics_redis.mget(all_redis_keys)
+
+    passed_feature_tables = []
+    failed_feature_tables = []
+
+    for metric, name in zip(metrics, table_names):
+        feature_table = client.feature_store.get_feature_table(
+            project=project, name=name
+        )
+        max_age = feature_table.max_age
+        # Only perform ingestion health checks for Feature tables with max_age
+        if not max_age:
+            passed_feature_tables.append(name)
+            continue
+
+        # If there are missing metrics in Redis; None is returned if there is no such key
+        if not metric:
+            failed_feature_tables.append(name)
+            continue
+
+        # Ensure ingestion times are in epoch timings
+        last_ingestion_time = json.loads(metric)["last_consumed_kafka_timestamp"][
+            "value"
+        ]
+        valid_ingestion_time = datetime.timestamp(
+            datetime.now() - timedelta(seconds=max_age)
+        )
+
+        # Check if latest ingestion timestamp > cur_time - max_age
+        if valid_ingestion_time > last_ingestion_time:
+            failed_feature_tables.append(name)
+        else:
+            passed_feature_tables.append(name)
+
+    return {"passed": passed_feature_tables, "failed": failed_feature_tables}
 
 
 def stage_dataframe(df, event_timestamp_column: str, config: Config) -> FileSource:

@@ -3,9 +3,10 @@ import os
 import uuid
 from datetime import datetime
 from itertools import groupby
-from typing import List, Optional, Union, cast
+from typing import Dict, List, Optional, Union, cast
 
 import pandas as pd
+import redis
 from croniter import croniter
 
 import feast
@@ -19,6 +20,7 @@ from feast.staging.entities import (
     table_reference_from_string,
 )
 from feast_spark.api.JobService_pb2 import (
+    GetHealthMetricsRequest,
     GetHistoricalFeaturesRequest,
     GetJobRequest,
     ListJobsRequest,
@@ -31,6 +33,7 @@ from feast_spark.api.JobService_pb2_grpc import JobServiceStub
 from feast_spark.constants import ConfigOptions as opt
 from feast_spark.pyspark.abc import RetrievalJob, SparkJob
 from feast_spark.pyspark.launcher import (
+    get_health_metrics,
     get_job_by_id,
     list_jobs,
     schedule_offline_to_online_ingestion,
@@ -59,6 +62,14 @@ class Client:
         self._feast = feast_client
         self._job_service_stub: Optional[JobServiceStub] = None
 
+        if self.config.exists(opt.SPARK_METRICS_REDIS_HOST) and self.config.exists(
+            opt.SPARK_METRICS_REDIS_PORT
+        ):
+            self._metrics_redis = redis.Redis(
+                host=self.config.get(opt.SPARK_METRICS_REDIS_HOST),
+                port=self.config.get(opt.SPARK_METRICS_REDIS_PORT),
+            )
+
     @property
     def config(self) -> Config:
         return self._feast._config
@@ -74,6 +85,10 @@ class Client:
     @property
     def _use_job_service(self) -> bool:
         return self.config.exists(opt.JOB_SERVICE_URL)
+
+    @property
+    def metrics_redis(self) -> redis.Redis:
+        return self._metrics_redis
 
     @property
     def _job_service(self):
@@ -222,7 +237,7 @@ class Client:
             )
 
     def get_historical_features_df(
-        self, feature_refs: List[str], entity_source: Union[FileSource, BigQuerySource],
+        self, feature_refs: List[str], entity_source: Union[FileSource, BigQuerySource]
     ):
         """
         Launch a historical feature retrieval job.
@@ -442,3 +457,15 @@ class Client:
             return get_remote_job_from_proto(
                 self._job_service, self._feast._extra_grpc_params, response.job
             )
+
+    def get_health_metrics(
+        self, project: str, table_names: List[str],
+    ) -> Dict[str, List[str]]:
+        if not self._use_job_service:
+            return get_health_metrics(self, project, table_names)
+        else:
+            request = GetHealthMetricsRequest(
+                project=cast(str, project), table_names=table_names,
+            )
+            response = self._job_service.GetHealthMetrics(request)
+            return {"passed": response.passed, "failed": response.failed}

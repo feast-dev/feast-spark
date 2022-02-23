@@ -20,6 +20,7 @@ from feast_spark import Client as Client
 from feast_spark.api import JobService_pb2_grpc
 from feast_spark.api.JobService_pb2 import (
     CancelJobResponse,
+    GetHealthMetricsResponse,
     GetHistoricalFeaturesRequest,
     GetHistoricalFeaturesResponse,
     GetJobResponse,
@@ -53,6 +54,7 @@ from feast_spark.pyspark.abc import (
     StreamIngestionJob,
 )
 from feast_spark.pyspark.launcher import (
+    get_health_metrics,
     get_job_by_id,
     get_stream_to_online_ingestion_params,
     list_jobs,
@@ -356,6 +358,15 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
         """Get details of a single job"""
         job = get_job_by_id(request.job_id, client=self.client)
         return GetJobResponse(job=_job_to_proto(job))
+
+    def GetHealthMetrics(self, request, context):
+        """Return ingestion jobs health metrics"""
+        metrics = get_health_metrics(
+            project=request.project, table_names=request.table_names, client=self.client
+        )
+        return GetHealthMetricsResponse(
+            passed=metrics["passed"], failed=metrics["failed"]
+        )
 
 
 def start_prometheus_serving(port: int = 8080) -> None:
