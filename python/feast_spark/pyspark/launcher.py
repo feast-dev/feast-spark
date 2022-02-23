@@ -491,7 +491,7 @@ def get_health_metrics(
     all_redis_keys = [f"{project}:{table}" for table in table_names]
     metrics = client.metrics_redis.mget(all_redis_keys)
 
-    valid_feature_tables = []
+    passed_feature_tables = []
     failed_feature_tables = []
 
     for metric, name in zip(metrics, table_names):
@@ -501,12 +501,13 @@ def get_health_metrics(
         max_age = feature_table.max_age
         # Only perform ingestion health checks for Feature tables with max_age
         if not max_age:
-            valid_feature_tables.append(name)
+            passed_feature_tables.append(name)
             continue
 
         # If there are missing metrics in Redis; None is returned if there is no such key
         if not metric:
             failed_feature_tables.append(name)
+            continue
 
         # Ensure ingestion times are in epoch timings
         last_ingestion_time = json.loads(metric)["last_consumed_kafka_timestamp"][
@@ -520,9 +521,9 @@ def get_health_metrics(
         if valid_ingestion_time > last_ingestion_time:
             failed_feature_tables.append(name)
         else:
-            valid_feature_tables.append(name)
+            passed_feature_tables.append(name)
 
-    return {"passed": valid_feature_tables, "failed": failed_feature_tables}
+    return {"passed": passed_feature_tables, "failed": failed_feature_tables}
 
 
 def stage_dataframe(df, event_timestamp_column: str, config: Config) -> FileSource:
