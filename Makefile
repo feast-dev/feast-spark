@@ -64,6 +64,9 @@ push-jobservice-docker:
 build-spark-docker:
 	docker build -t $(REGISTRY)/feast-spark:$(VERSION) --build-arg VERSION=$(VERSION) -f infra/docker/spark/Dockerfile .
 
+build-spark-docker-dev:
+	docker build -t $(REGISTRY)/feast-spark:$(VERSION) --build-arg VERSION=$(VERSION) -f infra/docker/spark/dev.Dockerfile .
+
 push-spark-docker:
 	docker push $(REGISTRY)/feast-spark:$(VERSION)
 
