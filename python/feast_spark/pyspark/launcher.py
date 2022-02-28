@@ -514,7 +514,7 @@ def get_health_metrics(
             "value"
         ]
         valid_ingestion_time = datetime.timestamp(
-            datetime.now() - timedelta(seconds=max_age)
+            datetime.now() - timedelta(seconds=max_age.ToSeconds())
         )
 
         # Check if latest ingestion timestamp > cur_time - max_age
