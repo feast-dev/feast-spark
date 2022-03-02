@@ -39,8 +39,6 @@ object BatchPipeline extends BasePipeline {
       sparkSession: SparkSession,
       config: IngestionJobConfig
   ): Option[StreamingQuery] = {
-    java.security.Security.setProperty("networkaddress.cache.ttl", "0");
-    java.security.Security.setProperty("networkaddress.cache.negative.ttl", "0");
     val featureTable = config.featureTable
     val projection =
       BasePipeline.inputProjection(config.source, featureTable.features, featureTable.entities)

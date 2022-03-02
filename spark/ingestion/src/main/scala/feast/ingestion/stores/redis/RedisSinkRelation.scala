@@ -86,6 +86,9 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
     val isClusterMode = checkIfInClusterMode(endpoint)
 
     dataToStore.foreachPartition { partition: Iterator[Row] =>
+      java.security.Security.setProperty("networkaddress.cache.ttl", "3");
+      java.security.Security.setProperty("networkaddress.cache.negative.ttl", "0");
+
       val pipelineProvider = if (isClusterMode) {
         ClusterPipelineProvider(endpoint)
       } else {
