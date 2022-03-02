@@ -166,12 +166,16 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
     def is_job_type_whitelisted(self, job_type: SparkJobType):
         if not self._whitelisted_job_types:
             return True
-        return job_type in self._whitelisted_job_types
+        return job_type.name in self._whitelisted_job_types
 
     def StartOfflineToOnlineIngestionJob(
         self, request: StartOfflineToOnlineIngestionJobRequest, context
     ):
         """Start job to ingest data from offline store into online store"""
+        if not self.is_job_type_whitelisted(SparkJobType.BATCH_INGESTION):
+            raise ValueError(
+                "This job service is not configured to accept batch ingestion"
+            )
 
         job_submission_count.labels(
             "batch_ingestion", request.project, request.table_name
@@ -218,6 +222,10 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
         self, request: ScheduleOfflineToOnlineIngestionJobRequest, context
     ):
         """Schedule job to ingest data from offline store into online store periodically"""
+        if not self.is_job_type_whitelisted(SparkJobType.SCHEDULED_BATCH_INGESTION):
+            raise ValueError(
+                "This job service is not configured to schedule batch ingestion"
+            )
 
         job_schedule_count.labels(request.project, request.table_name).inc()
         feature_table = self.client.feature_store.get_feature_table(
@@ -236,6 +244,10 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
     def UnscheduleOfflineToOnlineIngestionJob(
         self, request: UnscheduleOfflineToOnlineIngestionJobRequest, context
     ):
+        if not self.is_job_type_whitelisted(SparkJobType.SCHEDULED_BATCH_INGESTION):
+            raise ValueError(
+                "This job service is not configured to unschedule ingestion job"
+            )
         feature_table = self.client.feature_store.get_feature_table(
             request.table_name, request.project
         )
@@ -246,6 +258,10 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
 
     def GetHistoricalFeatures(self, request: GetHistoricalFeaturesRequest, context):
         """Produce a training dataset, return a job id that will provide a file reference"""
+        if not self.is_job_type_whitelisted(SparkJobType.HISTORICAL_RETRIEVAL):
+            raise ValueError(
+                "This job service is not configured to accept historical retrieval job"
+            )
 
         job_submission_count.labels("historical_retrieval", request.project, "").inc()
 
@@ -280,6 +296,10 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
         self, request: StartStreamToOnlineIngestionJobRequest, context
     ):
         """Start job to ingest data from stream into online store"""
+        if not self.is_job_type_whitelisted(SparkJobType.STREAM_INGESTION):
+            raise ValueError(
+                "This job service is not configured to start streaming job"
+            )
 
         job_submission_count.labels(
             "streaming", request.project, request.table_name
