@@ -510,7 +510,7 @@ def get_health_metrics(
             continue
 
         # Ensure ingestion times are in epoch timings
-        last_ingestion_time = json.loads(metric)["last_consumed_kafka_timestamp"][
+        last_ingestion_time = json.loads(metric)["last_processed_event_timestamp"][
             "value"
         ]
         valid_ingestion_time = datetime.timestamp(
