@@ -146,6 +146,7 @@ class SparkJobParameters(abc.ABC):
 class RetrievalJobParameters(SparkJobParameters):
     def __init__(
         self,
+        project: str,
         feature_tables: List[Dict],
         feature_tables_sources: List[Dict],
         entity_source: Dict,
@@ -155,6 +156,7 @@ class RetrievalJobParameters(SparkJobParameters):
     ):
         """
         Args:
+            project (str): Client project
             entity_source (Dict): Entity data source configuration.
             feature_tables_sources (List[Dict]): List of feature tables data sources configurations.
             feature_tables (List[Dict]): List of feature table specification.
@@ -261,12 +263,16 @@ class RetrievalJobParameters(SparkJobParameters):
                 }
 
         """
+        self._project = project
         self._feature_tables = feature_tables
         self._feature_tables_sources = feature_tables_sources
         self._entity_source = entity_source
         self._destination = destination
         self._extra_packages = extra_packages if extra_packages else []
         self._checkpoint_path = checkpoint_path
+
+    def get_project(self) -> str:
+        return self._project
 
     def get_name(self) -> str:
         all_feature_tables_names = [ft["name"] for ft in self._feature_tables]
