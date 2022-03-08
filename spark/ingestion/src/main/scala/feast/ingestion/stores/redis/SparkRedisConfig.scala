@@ -21,7 +21,6 @@ case class SparkRedisConfig(
     projectName: String,
     entityColumns: Array[String],
     timestampColumn: String,
-    iteratorGroupingSize: Int = 1000,
     timestampPrefix: String = "_ts",
     repartitionByEntity: Boolean = true,
     maxAge: Long = 0,
