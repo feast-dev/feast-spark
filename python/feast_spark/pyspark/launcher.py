@@ -506,7 +506,7 @@ def get_health_metrics(
 
         # If there are missing metrics in Redis; None is returned if there is no such key
         if not metric:
-            failed_feature_tables.append(name)
+            passed_feature_tables.append(name)
             continue
 
         # Ensure ingestion times are in epoch timings
