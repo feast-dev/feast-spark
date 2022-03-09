@@ -47,6 +47,8 @@ class PandasUDF extends SparkSpec with ForAllTestContainer {
   override def withSparkConfOverrides(conf: SparkConf): SparkConf = conf
     .set("spark.redis.host", container.host)
     .set("spark.redis.port", container.mappedPort(6379).toString)
+    .set("spark.redis.properties.maxJitter", "0")
+    .set("spark.redis.properties.pipelineSize", "250")
 
   trait Scope {
     implicit def testRowEncoder: Encoder[TestRow] = ExpressionEncoder()
