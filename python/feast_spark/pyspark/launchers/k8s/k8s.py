@@ -314,6 +314,7 @@ class KubernetesJobLauncher(JobLauncher):
             azure_credentials=self._get_azure_credentials(),
             arguments=job_params.get_arguments(),
             namespace=self._namespace,
+            extra_labels={LABEL_PROJECT: job_params.get_project()},
         )
 
         job_info = _submit_job(

@@ -233,6 +233,7 @@ def start_historical_feature_retrieval_job(
 
     return launcher.historical_feature_retrieval(
         RetrievalJobParameters(
+            project=project,
             entity_source=_source_to_argument(entity_source, client.config),
             feature_tables_sources=feature_sources,
             feature_tables=[
