@@ -56,6 +56,8 @@ class StreamingPipelineIT extends SparkSpec with ForAllTestContainer {
     .set("spark.redis.host", redisContainer.host)
     .set("spark.redis.port", redisContainer.mappedPort(6379).toString)
     .set("spark.sql.streaming.checkpointLocation", generateTempPath("checkpoint"))
+    .set("spark.redis.properties.maxJitter", "0")
+    .set("spark.redis.properties.pipelineSize", "250")
 
   trait KafkaPublisher {
     val props = new Properties()
@@ -91,7 +93,9 @@ class StreamingPipelineIT extends SparkSpec with ForAllTestContainer {
         features = Seq(
           Field("unique_drivers", ValueType.Enum.INT64)
         )
-      )
+      ),
+      store =
+        RedisConfig("localhost", 6379, properties = RedisWriteProperties(maxJitterSeconds = 0))
     )
 
     def encodeEntityKey(row: TestMessage, featureTable: FeatureTable): Array[Byte] = {

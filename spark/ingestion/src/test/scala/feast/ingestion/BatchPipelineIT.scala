@@ -17,7 +17,6 @@
 package feast.ingestion
 
 import com.dimafeng.testcontainers.{ForAllTestContainer, GenericContainer}
-import com.google.protobuf.util.Timestamps
 import feast.ingestion.helpers.DataHelper._
 import feast.ingestion.helpers.RedisStorageHelper._
 import feast.ingestion.helpers.TestRow
@@ -32,7 +31,6 @@ import org.scalacheck._
 import redis.clients.jedis.Jedis
 
 import java.nio.file.Paths
-import java.sql.Timestamp
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import scala.collection.JavaConverters._
@@ -52,6 +50,8 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
     .set("spark.redis.port", container.mappedPort(6379).toString)
     .set("spark.redis.password", password)
     .set("spark.metrics.conf.*.sink.statsd.port", statsDStub.port.toString)
+    .set("spark.redis.properties.maxJitter", "0")
+    .set("spark.redis.properties.pipelineSize", "250")
 
   trait Scope {
     val jedis = new Jedis("localhost", container.mappedPort(6379))
@@ -84,6 +84,8 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
           Field("feature2", ValueType.Enum.FLOAT)
         )
       ),
+      store =
+        RedisConfig("localhost", 6379, properties = RedisWriteProperties(maxJitterSeconds = 0)),
       startTime = DateTime.parse("2020-08-01"),
       endTime = DateTime.parse("2020-09-01"),
       metrics = Some(StatsDConfig(host = "localhost", port = statsDStub.port))

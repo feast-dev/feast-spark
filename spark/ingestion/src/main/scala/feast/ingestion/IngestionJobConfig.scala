@@ -26,8 +26,15 @@ object Modes extends Enumeration {
 
 abstract class StoreConfig
 
-case class RedisConfig(host: String, port: Int, password: String, ssl: Boolean) extends StoreConfig
-case class BigTableConfig(projectId: String, instanceId: String)                extends StoreConfig
+case class RedisConfig(
+    host: String,
+    port: Int,
+    password: String = "",
+    ssl: Boolean = false,
+    properties: RedisWriteProperties = RedisWriteProperties()
+) extends StoreConfig
+case class RedisWriteProperties(maxJitterSeconds: Int = 3600, pipelineSize: Int = 250)
+case class BigTableConfig(projectId: String, instanceId: String) extends StoreConfig
 case class CassandraConfig(
     connection: CassandraConnection,
     keyspace: String,

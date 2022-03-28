@@ -18,6 +18,7 @@ package feast.ingestion.stores.redis
 
 import java.{sql, util}
 import com.google.protobuf.Timestamp
+import feast.ingestion.RedisWriteProperties
 import feast.ingestion.utils.TypeConversion
 import org.apache.commons.codec.digest.DigestUtils
 import org.apache.spark.{SparkConf, SparkEnv}
@@ -82,6 +83,10 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
       port = sparkConf.get("spark.redis.port").toInt,
       password = sparkConf.get("spark.redis.password", "")
     )
+    val properties = RedisWriteProperties(
+      maxJitterSeconds = sparkConf.get("spark.redis.properties.maxJitter").toInt,
+      pipelineSize = sparkConf.get("spark.redis.properties.pipelineSize").toInt
+    )
 
     val isClusterMode = checkIfInClusterMode(endpoint)
 
@@ -96,7 +101,7 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
       }
 
       // grouped iterator to only allocate memory for a portion of rows
-      partition.grouped(config.iteratorGroupingSize).foreach { batch =>
+      partition.grouped(properties.pipelineSize).foreach { batch =>
         // group by key and keep only latest row per each key
         val rowsWithKey: Map[String, Row] =
           compactRowsToLatestTimestamp(batch.map(row => dataKeyId(row) -> row)).toMap
@@ -112,7 +117,7 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
         val expiryTimestampByKey = keys
           .zip(storedValues)
           .map { case (key, storedValue) =>
-            (key, newExpiryTimestamp(rowsWithKey(key), storedValue))
+            (key, newExpiryTimestamp(rowsWithKey(key), storedValue, properties.maxJitterSeconds))
           }
           .toMap
 
@@ -183,9 +188,14 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
     }
   }
 
+  def applyJitter(expiry: Long, maxJitter: Int): Long = {
+    if (maxJitter > 0) (scala.util.Random.nextInt(maxJitter).toLong * 1000) + expiry else expiry
+  }
+
   private def newExpiryTimestamp(
       row: Row,
-      value: util.Map[Array[Byte], Array[Byte]]
+      value: util.Map[Array[Byte], Array[Byte]],
+      maxJitterSeconds: Int
   ): Option[java.sql.Timestamp] = {
     val currentMaxExpiry: Option[Long] = value.asScala.toMap
       .map { case (key, value) =>
@@ -205,9 +215,9 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
 
     (currentMaxExpiry, rowExpiry) match {
       case (_, None)            => None
-      case (None, Some(expiry)) => Some(new sql.Timestamp(expiry))
+      case (None, Some(expiry)) => Some(new sql.Timestamp(applyJitter(expiry, maxJitterSeconds)))
       case (Some(currentExpiry), Some(newExpiry)) =>
-        Some(new sql.Timestamp(currentExpiry max newExpiry))
+        Some(new sql.Timestamp(currentExpiry max applyJitter(newExpiry, maxJitterSeconds)))
     }
 
   }
