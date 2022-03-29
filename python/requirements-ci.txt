@@ -14,7 +14,6 @@ mypy-protobuf
 avro==1.10.0
 gcsfs
 urllib3>=1.25.4
-google-cloud-dataproc==2.0.2
 pytest==6.0.0
 pytest-lazy-fixture==0.6.3
 pytest-timeout==1.4.2
@@ -24,3 +23,4 @@ PyYAML==5.3.1
 great-expectations==0.13.2
 adlfs==0.5.9
 redis==4.1.*
+Jinja2==3.0.3

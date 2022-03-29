@@ -575,13 +575,13 @@ class StreamIngestionJobParameters(IngestionJobParameters):
         feature_table: Dict,
         source: Dict,
         jar: str,
-        extra_jars: List[str],
-        redis_host: Optional[str],
-        redis_port: Optional[int],
-        redis_password: Optional[str],
-        redis_ssl: Optional[bool],
-        bigtable_project: Optional[str],
-        bigtable_instance: Optional[str],
+        extra_jars: List[str] = None,
+        redis_host: Optional[str] = None,
+        redis_port: Optional[int] = None,
+        redis_password: Optional[str] = None,
+        redis_ssl: Optional[bool] = None,
+        bigtable_project: Optional[str] = None,
+        bigtable_instance: Optional[str] = None,
         cassandra_host: Optional[str] = None,
         cassandra_port: Optional[int] = None,
         statsd_host: Optional[str] = None,
@@ -621,7 +621,7 @@ class StreamIngestionJobParameters(IngestionJobParameters):
         return SparkJobType.STREAM_INGESTION
 
     def get_extra_jar_paths(self) -> List[str]:
-        return self._extra_jars
+        return self._extra_jars if self._extra_jars else []
 
     def get_arguments(self) -> List[str]:
         args = super().get_arguments()
@@ -633,8 +633,15 @@ class StreamIngestionJobParameters(IngestionJobParameters):
         return args
 
     def get_job_hash(self) -> str:
+        sorted_feature_table = self._feature_table.copy()
+        sorted_feature_table["entities"] = sorted(
+            self._feature_table["entities"], key=lambda x: x["name"]
+        )
+        sorted_feature_table["features"] = sorted(
+            self._feature_table["features"], key=lambda x: x["name"]
+        )
         job_json = json.dumps(
-            {"source": self._source, "feature_table": self._feature_table},
+            {"source": self._source, "feature_table": sorted_feature_table},
             sort_keys=True,
         )
         return hashlib.md5(job_json.encode()).hexdigest()
