@@ -615,7 +615,7 @@ class StreamIngestionJobParameters(IngestionJobParameters):
         return SparkJobType.STREAM_INGESTION
 
     def get_extra_jar_paths(self) -> List[str]:
-        return self._extra_jars
+        return self._extra_jars if self._extra_jars else []
 
     def get_arguments(self) -> List[str]:
         args = super().get_arguments()
