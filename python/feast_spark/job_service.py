@@ -425,7 +425,8 @@ class HealthServicerImpl(HealthServicer):
 
 class LoggingInterceptor(grpc.ServerInterceptor):
     def intercept_service(self, continuation, handler_call_details):
-        logger.info(handler_call_details)
+        if handler_call_details.method != "/grpc.health.v1.Health/Check":
+            logger.info(handler_call_details)
         return continuation(handler_call_details)
 
 
