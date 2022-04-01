@@ -40,8 +40,6 @@ object BatchPipeline extends BasePipeline {
       config: IngestionJobConfig
   ): Option[StreamingQuery] = {
     val featureTable = config.featureTable
-    val projection =
-      BasePipeline.inputProjection(config.source, featureTable.features, featureTable.entities)
     val rowValidator = new RowValidator(featureTable, config.source.eventTimestampColumn)
     val metrics      = new IngestionPipelineMetrics
 
@@ -62,16 +60,18 @@ object BatchPipeline extends BasePipeline {
         )
     }
 
+    val projection =
+      BasePipeline.inputProjection(
+        config.source,
+        featureTable.features,
+        featureTable.entities,
+        input.schema
+      )
+
     val projected = if (config.deadLetterPath.nonEmpty) {
       input.select(projection: _*).cache()
     } else {
       input.select(projection: _*)
-    }
-
-    TypeCheck.allTypesMatch(projected.schema, featureTable) match {
-      case Some(error) =>
-        throw new RuntimeException(s"Dataframe columns don't match expected feature types: $error")
-      case _ => ()
     }
 
     implicit val rowEncoder: Encoder[Row] = RowEncoder(projected.schema)

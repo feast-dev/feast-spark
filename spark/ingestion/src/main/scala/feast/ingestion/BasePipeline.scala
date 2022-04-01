@@ -16,13 +16,17 @@
  */
 package feast.ingestion
 
+import feast.ingestion.utils.TypeConversion
+import feast.ingestion.validation.TypeCheck
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.{Column, SparkSession}
-import org.apache.spark.sql.functions.expr
+import org.apache.spark.sql.functions.{col, expr}
 import org.apache.spark.sql.streaming.StreamingQuery
+import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.{Column, SparkSession}
 
 object BasePipeline {
+
   def createSparkSession(jobConfig: IngestionJobConfig): SparkSession = {
     // workaround for issue with arrow & netty
     // see https://github.com/apache/arrow/tree/master/java#java-properties
@@ -110,22 +114,39 @@ object BasePipeline {
   def inputProjection(
       source: Source,
       features: Seq[Field],
-      entities: Seq[Field]
+      entities: Seq[Field],
+      inputSchema: StructType
   ): Array[Column] = {
-    val featureColumns = features
-      .filter(f => !source.fieldMapping.contains(f.name))
-      .map(f => (f.name, f.name)) ++ source.fieldMapping
+    val typeByField =
+      (entities ++ features).map(f => f.name -> f.`type`).toMap
+    val columnDataTypes = inputSchema.fields
+      .map(f => f.name -> f.dataType)
+      .toMap
 
-    val timestampColumn = Seq((source.eventTimestampColumn, source.eventTimestampColumn))
-    val entitiesColumns =
-      entities
-        .filter(e => !source.fieldMapping.contains(e.name))
-        .map(e => (e.name, e.name))
+    val entitiesFeaturesColumns: Seq[(String, String)] = (entities ++ features)
+      .map {
+        case f if source.fieldMapping.contains(f.name) => (f.name, source.fieldMapping(f.name))
+        case f                                         => (f.name, f.name)
+      }
 
-    (featureColumns ++ entitiesColumns ++ timestampColumn).map { case (alias, source) =>
-      expr(source).alias(alias)
-    }.toArray
+    val entitiesFeaturesProjection: Seq[Column] = entitiesFeaturesColumns
+      .map {
+        case (alias, source) if !columnDataTypes.contains(source) =>
+          expr(source).alias(alias)
+        case (alias, source)
+            if TypeCheck.typesMatch(
+              typeByField(alias),
+              columnDataTypes(source)
+            ) =>
+          col(source).alias(alias)
+        case (alias, source) =>
+          col(source).cast(TypeConversion.feastTypeToSqlType(typeByField(alias))).alias(alias)
+      }
+
+    val timestampProjection = Seq(col(source.eventTimestampColumn))
+    (entitiesFeaturesProjection ++ timestampProjection).toArray
   }
+
 }
 
 trait BasePipeline {
