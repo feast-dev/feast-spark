@@ -17,15 +17,34 @@
 package feast.ingestion.utils
 
 import java.sql
-
 import com.google.protobuf.{ByteString, Message, Timestamp}
 import feast.proto.types.ValueProto
+import feast.proto.types.ValueProto.ValueType
 import org.apache.spark.sql.types._
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 object TypeConversion {
+
+  def feastTypeToSqlType(feastType: ValueType.Enum): DataType = {
+    feastType match {
+      case ValueType.Enum.BOOL        => BooleanType
+      case ValueType.Enum.INT32       => IntegerType
+      case ValueType.Enum.INT64       => LongType
+      case ValueType.Enum.FLOAT       => FloatType
+      case ValueType.Enum.DOUBLE      => DoubleType
+      case ValueType.Enum.BYTES       => BinaryType
+      case ValueType.Enum.BOOL_LIST   => ArrayType(BooleanType)
+      case ValueType.Enum.INT32_LIST  => ArrayType(IntegerType)
+      case ValueType.Enum.INT64_LIST  => ArrayType(LongType)
+      case ValueType.Enum.FLOAT_LIST  => ArrayType(FloatType)
+      case ValueType.Enum.DOUBLE_LIST => ArrayType(DoubleType)
+      case ValueType.Enum.BYTES_LIST  => ArrayType(BinaryType)
+      case _                          => throw new IllegalArgumentException(s"unsupported type conversion (${feastType})")
+    }
+  }
+
   def sqlTypeToProtoValue(value: Any, `type`: DataType): Message = {
     (`type` match {
       case IntegerType => ValueProto.Value.newBuilder().setInt32Val(value.asInstanceOf[Int])

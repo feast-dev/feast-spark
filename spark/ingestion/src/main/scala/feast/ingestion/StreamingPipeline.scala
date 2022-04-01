@@ -54,9 +54,7 @@ object StreamingPipeline extends BasePipeline with Serializable {
   ): Option[StreamingQuery] = {
     import sparkSession.implicits._
 
-    val featureTable = config.featureTable
-    val projection =
-      BasePipeline.inputProjection(config.source, featureTable.features, featureTable.entities)
+    val featureTable     = config.featureTable
     val rowValidator     = new RowValidator(featureTable, config.source.eventTimestampColumn)
     val metrics          = new IngestionPipelineMetrics
     val streamingMetrics = new StreamingMetrics
@@ -104,15 +102,16 @@ object StreamingPipeline extends BasePipeline with Serializable {
     val parsed = input
       .withColumn("features", featureStruct)
       .select(metadata :+ col("features.*"): _*)
+    val projection =
+      BasePipeline.inputProjection(
+        config.source,
+        featureTable.features,
+        featureTable.entities,
+        parsed.schema
+      )
 
     val projected = parsed
       .select(projection ++ metadata: _*)
-
-    TypeCheck.allTypesMatch(projected.schema, featureTable) match {
-      case Some(error) =>
-        throw new RuntimeException(s"Dataframe columns don't match expected feature types: $error")
-      case _ => ()
-    }
 
     val sink = projected.writeStream
       .foreachBatch { (batchDF: DataFrame, batchID: Long) =>
