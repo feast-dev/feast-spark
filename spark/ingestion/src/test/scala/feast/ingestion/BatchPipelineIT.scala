@@ -128,6 +128,48 @@ class BatchPipelineIT extends SparkSpec with ForAllTestContainer {
     )
   }
 
+  "Parquet source file" should "be coerced to the correct column types" in new Scope {
+    val gen      = rowGenerator(DateTime.parse("2020-08-01"), DateTime.parse("2020-08-03"))
+    val rows     = generateDistinctRows(gen, 100, groupByEntity)
+    val tempPath = storeAsParquet(sparkSession, rows)
+    val configWithDifferentColumnTypes = config.copy(
+      source = FileSource(tempPath, Map.empty, "eventTimestamp"),
+      featureTable = config.featureTable.copy(
+        features = Seq(
+          Field("feature1", ValueType.Enum.INT64),
+          Field("feature2", ValueType.Enum.DOUBLE)
+        )
+      )
+    )
+
+    BatchPipeline.createPipeline(sparkSession, configWithDifferentColumnTypes)
+
+    val featureKeyEncoder: String => String = encodeFeatureKey(config.featureTable)
+
+    rows.foreach(r => {
+      val encodedEntityKey = encodeEntityKey(r, config.featureTable)
+      val storedValues     = jedis.hgetAll(encodedEntityKey).asScala.toMap
+      storedValues should beStoredRow(
+        Map(
+          featureKeyEncoder("feature1")      -> r.feature1.toLong,
+          featureKeyEncoder("feature2")      -> r.feature2.toDouble,
+          murmurHashHexString("_ts:test-fs") -> r.eventTimestamp
+        )
+      )
+      val keyTTL = jedis.ttl(encodedEntityKey).toInt
+      keyTTL shouldEqual -1
+
+    })
+
+    SparkEnv.get.metricsSystem.report()
+    statsDStub.receivedMetrics should contain.allElementsOf(
+      Map(
+        "driver.ingestion_pipeline.read_from_source_count" -> rows.length,
+        "driver.redis_sink.feature_row_ingested_count"     -> rows.length
+      )
+    )
+  }
+
   "Parquet source file" should "be ingested in redis with expiry time equal to the largest of (event_timestamp + max_age) for" +
     "all feature tables associated with the entity" in new Scope {
       val startDate = new DateTime().minusDays(1).withTimeAtStartOfDay()
