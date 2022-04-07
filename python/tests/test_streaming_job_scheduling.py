@@ -24,8 +24,8 @@ def feast_client():
         options={
             "whitelisted_projects": "default,ride",
             "lock_mgr_redis_host": "localhost",
-            "lock_mgr_redis_port": "0"
-        }
+            "lock_mgr_redis_port": "0",
+        },
     )
     c.list_projects = Mock(return_value=["default", "ride", "invalid_project"])
     c.list_feature_tables = Mock()
@@ -91,6 +91,7 @@ class SimpleStreamingIngestionJob(StreamIngestionJob):
     def get_start_time(self) -> datetime:
         pass
 
+
 @patch("redis.Redis")
 def test_new_job_creation(mock_redis, spark_client, feature_table):
     """ No job existed prior to call """
@@ -121,6 +122,7 @@ def test_no_changes(spark_client, feature_table):
     assert job.get_status() == SparkJobStatus.IN_PROGRESS
     spark_client.start_stream_to_online_ingestion.assert_not_called()
 
+
 @patch("redis.Redis")
 def test_update_existing_job(mock_redis, spark_client, feature_table):
     """ Feature Table spec was updated """
@@ -139,6 +141,7 @@ def test_update_existing_job(mock_redis, spark_client, feature_table):
     assert job.get_status() == SparkJobStatus.COMPLETED
     assert spark_client.start_stream_to_online_ingestion.call_count == 2
 
+
 @patch("redis.Redis")
 def test_not_cancelling_starting_job(mock_redis, spark_client, feature_table):
     """ Feature Table spec was updated but previous version is still starting """
@@ -156,6 +159,7 @@ def test_not_cancelling_starting_job(mock_redis, spark_client, feature_table):
 
     assert job.get_status() == SparkJobStatus.STARTING
     assert spark_client.start_stream_to_online_ingestion.call_count == 2
+
 
 @patch("redis.Redis")
 def test_not_retrying_failed_job(mock_redis, spark_client, feature_table):
@@ -176,6 +180,7 @@ def test_not_retrying_failed_job(mock_redis, spark_client, feature_table):
         feature_table, [], project="ride"
     )
 
+
 @patch("redis.Redis")
 def test_restarting_completed_job(mock_redis, spark_client, feature_table):
     """ Job has succesfully finished on previous try """
@@ -189,6 +194,7 @@ def test_restarting_completed_job(mock_redis, spark_client, feature_table):
     ensure_stream_ingestion_jobs(spark_client, all_projects=True)
 
     assert spark_client.start_stream_to_online_ingestion.call_count == 2
+
 
 @patch("redis.Redis")
 def test_stopping_running_job(mock_redis, spark_client, feature_table):
@@ -208,6 +214,7 @@ def test_stopping_running_job(mock_redis, spark_client, feature_table):
     assert job.get_status() == SparkJobStatus.COMPLETED
     spark_client.start_stream_to_online_ingestion.assert_not_called()
 
+
 @patch("redis.Redis")
 def test_restarting_failed_jobs(mock_redis, feature_table):
     """ If configured - restart failed jobs """
@@ -218,8 +225,8 @@ def test_restarting_failed_jobs(mock_redis, feature_table):
         options={
             "whitelisted_projects": "default,ride",
             "lock_mgr_redis_host": "localhost",
-            "lock_mgr_redis_port": "0"
-        }
+            "lock_mgr_redis_port": "0",
+        },
     )
     feast_client.list_projects = Mock(return_value=["default"])
     feast_client.list_feature_tables = Mock()

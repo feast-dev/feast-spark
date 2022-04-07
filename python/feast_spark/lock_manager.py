@@ -2,10 +2,11 @@
 Classes to manage distributed locks
 """
 import enum
-import time
-import redis
-import secrets
 import logging
+import secrets
+import time
+
+import redis
 from redis.exceptions import ConnectionError
 
 # retries for acquiring lock
@@ -21,8 +22,9 @@ class JobOperation(enum.Enum):
     """
     Enum for job operations
     """
-    START = 'st'
-    CANCEL = 'cn'
+
+    START = "st"
+    CANCEL = "cn"
 
 
 class JobOperationLock:
@@ -35,8 +37,14 @@ class JobOperationLock:
         client.start_stream_to_online_ingestion(feature_table, [], project=project)
     """
 
-    def __init__(self, redis_host: str, redis_port: int, lock_expiry: int,
-                 job_hash: str, operation: JobOperation = JobOperation.START):
+    def __init__(
+        self,
+        redis_host: str,
+        redis_port: int,
+        lock_expiry: int,
+        job_hash: str,
+        operation: JobOperation = JobOperation.START,
+    ):
         """
         Init method, initialized redis key for the lock
         Args:
@@ -69,14 +77,21 @@ class JobOperationLock:
         retry_attempts = 0
         while retry_attempts < LOCK_ACQUIRE_RETRIES:
             try:
-                if self._redis.set(name=self._lock_key, value=self._lock_value, nx=True, ex=self._lock_expiry):
+                if self._redis.set(
+                    name=self._lock_key,
+                    value=self._lock_value,
+                    nx=True,
+                    ex=self._lock_expiry,
+                ):
                     return self._lock_value
                 else:
                     logger.info(f"lock not available: {self._lock_key}")
                     return False
             except ConnectionError:
                 # wait before attempting to retry
-                logger.warning(f"connection error while acquiring lock: {self._lock_key}")
+                logger.warning(
+                    f"connection error while acquiring lock: {self._lock_key}"
+                )
                 time.sleep(LOCK_ACQUIRE_WAIT)
                 retry_attempts += 1
         logger.warning(f"Can't acquire lock, backing off: {self._lock_key}")
@@ -94,5 +109,7 @@ class JobOperationLock:
             if lock_value and lock_value.decode() == self._lock_value:
                 self._redis.delete(self._lock_key)
         except ConnectionError:
-            logger.warning(f"connection error while deleting lock: {self._lock_key}."
-                           f"rely on auto-release after {self._lock_expiry} seconds")
+            logger.warning(
+                f"connection error while deleting lock: {self._lock_key}."
+                f"rely on auto-release after {self._lock_expiry} seconds"
+            )
