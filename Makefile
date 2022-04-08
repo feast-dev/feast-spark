@@ -34,8 +34,8 @@ install-python-ci-dependencies:
 
 # Supports feast-dev repo master branch
 install-python: install-python-ci-dependencies
-	pip install --user --upgrade setuptools wheel grpcio-tools mypy-protobuf
-	cd ${ROOT_DIR}/python; rm -rf dist; python setup.py bdist_wheel; pip install --find-links=dist feast-spark
+	pip install --user --upgrade setuptools wheel
+	cd ${ROOT_DIR}/python; rm -rf dist; python setup.py install
 
 lint-python:
 	cd ${ROOT_DIR}/python ; mypy feast_spark/ tests/
