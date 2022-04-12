@@ -2,7 +2,7 @@ import copy
 import hashlib
 import json
 from datetime import datetime
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -21,7 +21,11 @@ from feast_spark.pyspark.launcher import _feature_table_to_argument, _source_to_
 def feast_client():
     c = FeastClient(
         job_service_pause_between_jobs=0,
-        options={"whitelisted_projects": "default,ride"},
+        options={
+            "whitelisted_projects": "default,ride",
+            "lock_mgr_redis_host": "localhost",
+            "lock_mgr_redis_port": "0",
+        },
     )
     c.list_projects = Mock(return_value=["default", "ride", "invalid_project"])
     c.list_feature_tables = Mock()
@@ -88,7 +92,8 @@ class SimpleStreamingIngestionJob(StreamIngestionJob):
         pass
 
 
-def test_new_job_creation(spark_client, feature_table):
+@patch("redis.Redis")
+def test_new_job_creation(mock_redis, spark_client, feature_table):
     """ No job existed prior to call """
 
     spark_client.feature_store.list_feature_tables.return_value = [feature_table]
@@ -118,7 +123,8 @@ def test_no_changes(spark_client, feature_table):
     spark_client.start_stream_to_online_ingestion.assert_not_called()
 
 
-def test_update_existing_job(spark_client, feature_table):
+@patch("redis.Redis")
+def test_update_existing_job(mock_redis, spark_client, feature_table):
     """ Feature Table spec was updated """
 
     new_ft = copy.deepcopy(feature_table)
@@ -136,7 +142,8 @@ def test_update_existing_job(spark_client, feature_table):
     assert spark_client.start_stream_to_online_ingestion.call_count == 2
 
 
-def test_not_cancelling_starting_job(spark_client, feature_table):
+@patch("redis.Redis")
+def test_not_cancelling_starting_job(mock_redis, spark_client, feature_table):
     """ Feature Table spec was updated but previous version is still starting """
 
     new_ft = copy.deepcopy(feature_table)
@@ -154,7 +161,8 @@ def test_not_cancelling_starting_job(spark_client, feature_table):
     assert spark_client.start_stream_to_online_ingestion.call_count == 2
 
 
-def test_not_retrying_failed_job(spark_client, feature_table):
+@patch("redis.Redis")
+def test_not_retrying_failed_job(mock_redis, spark_client, feature_table):
     """ Job has failed on previous try """
 
     job = SimpleStreamingIngestionJob(
@@ -173,7 +181,8 @@ def test_not_retrying_failed_job(spark_client, feature_table):
     )
 
 
-def test_restarting_completed_job(spark_client, feature_table):
+@patch("redis.Redis")
+def test_restarting_completed_job(mock_redis, spark_client, feature_table):
     """ Job has succesfully finished on previous try """
     job = SimpleStreamingIngestionJob(
         "", "default", feature_table, SparkJobStatus.COMPLETED
@@ -187,7 +196,8 @@ def test_restarting_completed_job(spark_client, feature_table):
     assert spark_client.start_stream_to_online_ingestion.call_count == 2
 
 
-def test_stopping_running_job(spark_client, feature_table):
+@patch("redis.Redis")
+def test_stopping_running_job(mock_redis, spark_client, feature_table):
     """ Streaming source was deleted """
     new_ft = copy.deepcopy(feature_table)
     new_ft.stream_source = None
@@ -205,13 +215,18 @@ def test_stopping_running_job(spark_client, feature_table):
     spark_client.start_stream_to_online_ingestion.assert_not_called()
 
 
-def test_restarting_failed_jobs(feature_table):
+@patch("redis.Redis")
+def test_restarting_failed_jobs(mock_redis, feature_table):
     """ If configured - restart failed jobs """
 
     feast_client = FeastClient(
         job_service_pause_between_jobs=0,
         job_service_retry_failed_jobs=True,
-        options={"whitelisted_projects": "default,ride"},
+        options={
+            "whitelisted_projects": "default,ride",
+            "lock_mgr_redis_host": "localhost",
+            "lock_mgr_redis_port": "0",
+        },
     )
     feast_client.list_projects = Mock(return_value=["default"])
     feast_client.list_feature_tables = Mock()

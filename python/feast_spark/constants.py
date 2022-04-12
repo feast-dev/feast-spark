@@ -111,6 +111,15 @@ class ConfigOptions(metaclass=ConfigMeta):
     #: Default Redis port to Redis Instance which stores Spark Ingestion Job metrics
     SPARK_METRICS_REDIS_PORT: Optional[str] = None
 
+    #: Host to Redis Instance which stores locks for job management
+    LOCK_MGR_REDIS_HOST: Optional[str] = None
+
+    #: Port to Redis Instance which stores locks for job management
+    LOCK_MGR_REDIS_PORT: Optional[str] = None
+
+    #: TTL for locks for job management
+    LOCK_EXPIRY: Optional[str] = "60"
+
     #: File format of historical retrieval features
     HISTORICAL_FEATURE_OUTPUT_FORMAT: str = "parquet"
 

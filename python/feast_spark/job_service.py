@@ -40,6 +40,7 @@ from feast_spark.api.JobService_pb2 import (
     UnscheduleOfflineToOnlineIngestionJobResponse,
 )
 from feast_spark.constants import ConfigOptions as opt
+from feast_spark.lock_manager import JobOperation, JobOperationLock
 from feast_spark.metrics import (
     job_schedule_count,
     job_submission_count,
@@ -548,14 +549,28 @@ def ensure_stream_ingestion_jobs(client: Client, all_projects: bool):
         f"expected_job_hashes = {sorted(list(expected_job_hashes))}"
     )
 
+    lock_config = {
+        "redis_host": client.config.get(opt.LOCK_MGR_REDIS_HOST),
+        "redis_port": client.config.getint(opt.LOCK_MGR_REDIS_PORT),
+        "lock_expiry": client.config.getint(opt.LOCK_EXPIRY),
+    }
+
     for job_hash in job_hashes_to_start:
         # Any job that we wish to start should be among expected table refs map
         project, feature_table = expected_job_hash_to_tables[job_hash]
-        logger.warning(
-            f"Starting a stream ingestion job for project={project}, "
-            f"table_name={feature_table.name} with job_hash={job_hash}"
-        )
-        client.start_stream_to_online_ingestion(feature_table, [], project=project)
+
+        # start the job if lock is available
+        with JobOperationLock(
+            job_hash=job_hash, operation=JobOperation.START, **lock_config
+        ) as lock:
+            if lock:
+                logger.warning(
+                    f"Starting a stream ingestion job for project={project}, "
+                    f"table_name={feature_table.name} with job_hash={job_hash}"
+                )
+                client.start_stream_to_online_ingestion(
+                    feature_table, [], project=project
+                )
 
         # prevent scheduler from peak load
         time.sleep(client.config.getint(opt.JOB_SERVICE_PAUSE_BETWEEN_JOBS))
@@ -572,6 +587,10 @@ def ensure_stream_ingestion_jobs(client: Client, all_projects: bool):
             f"Cancelling a stream ingestion job with job_hash={job_hash} job_id={job.get_id()} status={job.get_status()}"
         )
         try:
-            job.cancel()
+            with JobOperationLock(
+                job_hash=job_hash, operation=JobOperation.CANCEL, **lock_config
+            ) as lock:
+                if lock:
+                    job.cancel()
         except FailedPrecondition as exc:
             logger.error(f"Job canceling failed with exception {exc}")
