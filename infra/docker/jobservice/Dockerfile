@@ -1,4 +1,4 @@
-FROM jupyter/pyspark-notebook:399cbb986c6b
+FROM python:3.8
 
 USER root
 WORKDIR /app
@@ -13,9 +13,7 @@ RUN apt-get update && apt-get -y install make git wget
 # Install Feast SDK
 RUN git init .
 COPY README.md README.md
-RUN make install-python-ci-dependencies
 RUN make install-python
-RUN pip install "s3fs" "boto3" "urllib3>=1.25.4"
 
 #
 # Download grpc_health_probe to run health checks
