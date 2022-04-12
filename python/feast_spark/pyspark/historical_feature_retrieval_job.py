@@ -331,7 +331,7 @@ def _map_column(df: DataFrame, col_mapping: Dict[str, str]):
         else:
             projection[col_name] = expr(col_mapping.get(col_name, col_name))
 
-    return df.select([c.alias(a) for a, c in projection.items()])
+    return df.select([c.alias(str(a)) for a, c in projection.items()])
 
 
 def as_of_join(
@@ -545,7 +545,7 @@ def join_entity_to_feature_tables(
         joined_df = as_of_join(
             joined_df, entity_event_timestamp_column, feature_table_df, feature_table,
         )
-        if SparkContext._active_spark_context._jsc.sc().getCheckpointDir().nonEmpty():
+        if SparkContext._active_spark_context._jsc.sc().getCheckpointDir().nonEmpty(): # type: ignore
             joined_df = joined_df.checkpoint()
 
     return joined_df
@@ -614,7 +614,7 @@ def filter_feature_table_by_time_range(
         )
         .where(col("distance") == col("min_distance"))
     )
-    if SparkContext._active_spark_context._jsc.sc().getCheckpointDir().nonEmpty():
+    if SparkContext._active_spark_context._jsc.sc().getCheckpointDir().nonEmpty(): # type: ignore
         time_range_filtered_df = time_range_filtered_df.checkpoint()
 
     return time_range_filtered_df
