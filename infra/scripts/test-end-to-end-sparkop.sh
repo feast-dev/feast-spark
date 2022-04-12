@@ -63,7 +63,7 @@ kubectl delete pod -n "$NAMESPACE" ci-test-runner 2>/dev/null || true
 kubectl run -n "$NAMESPACE" -i ci-test-runner  \
     --pod-running-timeout=5m \
     --restart=Never \
-    --image="${DOCKER_REPOSITORY}/feast-ci:latest" \
+    --image="python:3.7" \
     --env="FEAST_TELEMETRY=false" \
     --env="DISABLE_FEAST_SERVICE_FIXTURES=1" \
     --env="DISABLE_SERVICE_FIXTURES=1" \

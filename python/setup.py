@@ -53,6 +53,7 @@ REQUIRED = [
     "mypy-protobuf==2.5",
     "croniter==1.*",
     "redis==4.1.*",
+    "prometheus-client==0.14.0"
 ]
 
 # README file from Feast repo root directory

@@ -14,5 +14,5 @@ fi
 
 # 2. Pickle python udf
 cd $CURRENT_PATH
-pip3 install great-expectations==0.13.2 setuptools pyspark==3.0.1
+pip3 install great-expectations==0.13.2 setuptools pyspark==3.0.1 Jinja2==3.0.3 pyarrow==2.0.0
 python3 udf.py $DESTINATION/udf.pickle
