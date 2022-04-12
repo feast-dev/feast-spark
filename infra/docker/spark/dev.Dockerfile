@@ -1,4 +1,4 @@
-FROM gcr.io/kf-feast/feast-spark-base:3.0.3 as runtime
+FROM gcr.io/kf-feast/feast-spark-base:v3.0.3 as runtime
 
 ARG VERSION=dev
 
