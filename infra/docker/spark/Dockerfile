@@ -36,10 +36,10 @@ RUN echo 'spark.executor.extraJavaOptions="-Dio.netty.tryReflectionSetAccessible
 RUN echo 'spark.executor.extraJavaOptions="-Dcom.google.cloud.spark.bigquery.repackaged.io.netty.tryReflectionSetAccessible=true"' >> $SPARK_HOME/conf/spark-defaults.conf
 
 # python dependencies
-RUN pip3 install -U pip wheel
-RUN pip3 install pandas pyarrow==2.0.0 'numpy<1.20.0'
+RUN pip3 install pandas==1.3.5 great-expectations==0.13.2 pyarrow==2.0.0 Jinja2==3.0.3 datadog==0.44.0 'numpy<1.20.0'
 
 # For logging to /dev/termination-log
 RUN mkdir -p /dev
+
 
 ENTRYPOINT [ "/opt/entrypoint.sh" ]
