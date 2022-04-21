@@ -52,7 +52,9 @@ def test_validation_with_ge(
     expectations = ge_ds.get_expectation_suite()
 
     udf = create_validation_udf("testUDF", expectations, feature_table)
-    apply_validation(feast_client, feature_table, udf, validation_window_secs=1)
+    apply_validation(
+        feast_client, feature_table, udf, validation_window_secs=1, include_py_libs=""
+    )
 
     job = start_job(feast_spark_client, feature_table, pytestconfig)
 
@@ -123,7 +125,9 @@ def test_validation_reports_metrics(
     expectations = ge_ds.get_expectation_suite()
 
     udf = create_validation_udf("testUDF", expectations, feature_table)
-    apply_validation(feast_client, feature_table, udf, validation_window_secs=10)
+    apply_validation(
+        feast_client, feature_table, udf, validation_window_secs=10, include_py_libs=""
+    )
 
     job = start_job(feast_spark_client, feature_table, pytestconfig)
 
