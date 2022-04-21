@@ -101,7 +101,7 @@
         <dependency>
             <groupId>com.google.cloud.bigtable</groupId>
             <artifactId>bigtable-hbase-2.x-hadoop</artifactId>
-            <version>1.19.0</version>
+            <version>1.26.3</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.apache.hadoop</groupId>
@@ -186,7 +186,7 @@
         <dependency>
             <groupId>com.datastax.spark</groupId>
             <artifactId>spark-cassandra-connector_${scala.version}</artifactId>
-            <version>3.0.0</version>
+            <version>3.1.0</version>
         </dependency>
 
         <dependency>
@@ -204,7 +204,7 @@
         <dependency>
             <groupId>org.json4s</groupId>
             <artifactId>json4s-ext_${scala.version}</artifactId>
-            <version>3.7.0-M6</version>
+            <version>3.7.0-M5</version>
         </dependency>
 
         <dependency>

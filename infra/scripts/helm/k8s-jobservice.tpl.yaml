@@ -26,7 +26,7 @@ feast-jobservice:
           "fs.gs.project.id": "kf-feast"
           "google.cloud.auth.service.account.enable": "true"
           "google.cloud.auth.service.account.json.keyfile": "/mnt/secrets/credentials.json"
-        sparkVersion: "3.0.2"
+        sparkVersion: "3.1.3"
         timeToLiveSeconds: 3600
         pythonVersion: "3"
         restartPolicy:

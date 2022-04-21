@@ -53,6 +53,8 @@ REQUIRED = [
     "mypy-protobuf==2.5",
     "croniter==1.*",
     "redis==4.1.*",
+    "pyarrow==2.0.0",
+    "pandas==1.0.5",
     "prometheus-client==0.14.0"
 ]
 
