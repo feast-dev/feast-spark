@@ -154,7 +154,7 @@ class BigTableSinkRelation(
   }
 
   private def tableName: String = {
-    val entities = config.entityColumns.mkString("__")
+    val entities = config.entityColumns.sorted.mkString("__")
     StringUtils.trimAndHash(s"${config.projectName}__${entities}", maxTableNameLength)
   }
 
