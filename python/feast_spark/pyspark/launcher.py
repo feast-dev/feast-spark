@@ -220,16 +220,9 @@ def start_historical_feature_retrieval_job(
 ) -> RetrievalJob:
     launcher = resolve_launcher(client.config)
     feature_sources = [
-        _source_to_argument(
-            replace_bq_table_with_joined_view(feature_table, entity_source),
-            client.config,
-        )
+        _source_to_argument(feature_table.batch_source, client.config,)
         for feature_table in feature_tables
     ]
-
-    extra_packages = []
-    if output_format == "tfrecord":
-        extra_packages.append("com.linkedin.sparktfrecord:spark-tfrecord_2.12:0.3.0")
 
     return launcher.historical_feature_retrieval(
         RetrievalJobParameters(
@@ -243,38 +236,8 @@ def start_historical_feature_retrieval_job(
                 for feature_table in feature_tables
             ],
             destination={"format": output_format, "path": output_path},
-            extra_packages=extra_packages,
             checkpoint_path=client.config.get(opt.CHECKPOINT_PATH),
         )
-    )
-
-
-def replace_bq_table_with_joined_view(
-    feature_table: FeatureTable, entity_source: Union[FileSource, BigQuerySource],
-) -> Union[FileSource, BigQuerySource]:
-    """
-    Applies optimization to historical retrieval. Instead of pulling all data from Batch Source,
-    with this optimization we join feature values & entities on Data Warehouse side (improving data locality).
-    Several conditions should be met to enable this optimization:
-    * entities are staged to BigQuery
-    * feature values are in in BigQuery
-    * Entity columns are not mapped (ToDo: fix this limitation)
-    :return: replacement for feature source
-    """
-    if not isinstance(feature_table.batch_source, BigQuerySource):
-        return feature_table.batch_source
-
-    if not isinstance(entity_source, BigQuerySource):
-        return feature_table.batch_source
-
-    if any(
-        entity in feature_table.batch_source.field_mapping
-        for entity in feature_table.entities
-    ):
-        return feature_table.batch_source
-
-    return create_bq_view_of_joined_features_and_entities(
-        feature_table.batch_source, entity_source, feature_table.entities,
     )
 
 
@@ -288,52 +251,6 @@ def table_reference_from_string(table_ref: str):
     dataset, table_id = dataset_and_table.split(".")
     return bigquery.TableReference(
         bigquery.DatasetReference(project, dataset), table_id
-    )
-
-
-def create_bq_view_of_joined_features_and_entities(
-    source: BigQuerySource, entity_source: BigQuerySource, entity_names: List[str]
-) -> BigQuerySource:
-    """
-        Creates BQ view that joins tables from `source` and `entity_source` with join key derived from `entity_names`.
-    Returns BigQuerySource with reference to created view. The BQ view will be created in the same BQ dataset as `entity_source`.
-    """
-    from google.cloud import bigquery
-
-    bq_client = bigquery.Client()
-
-    source_ref = table_reference_from_string(source.bigquery_options.table_ref)
-    entities_ref = table_reference_from_string(entity_source.bigquery_options.table_ref)
-
-    destination_ref = bigquery.TableReference(
-        bigquery.DatasetReference(entities_ref.project, entities_ref.dataset_id),
-        f"_view_{source_ref.table_id}_{datetime.now():%Y%m%d%H%M%s}",
-    )
-
-    view = bigquery.Table(destination_ref)
-
-    join_template = """
-    SELECT source.* FROM
-    `{entities.project}.{entities.dataset_id}.{entities.table_id}` entities
-    JOIN
-    `{source.project}.{source.dataset_id}.{source.table_id}` source
-    ON
-    ({entity_key})"""
-
-    view.view_query = join_template.format(
-        entities=entities_ref,
-        source=source_ref,
-        entity_key=" AND ".join([f"source.{e} = entities.{e}" for e in entity_names]),
-    )
-    view.expires = datetime.now() + timedelta(days=1)
-    bq_client.create_table(view)
-
-    return BigQuerySource(
-        event_timestamp_column=source.event_timestamp_column,
-        created_timestamp_column=source.created_timestamp_column,
-        table_ref=f"{view.project}:{view.dataset_id}.{view.table_id}",
-        field_mapping=source.field_mapping,
-        date_partition_column=source.date_partition_column,
     )
 
 
