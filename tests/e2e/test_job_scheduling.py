@@ -1,7 +1,6 @@
 import hashlib
 import uuid
 
-import pytest as pytest
 from kubernetes import client, config
 
 from feast import Client, Entity, Feature, FeatureTable, FileSource, ValueType
@@ -9,7 +8,6 @@ from feast.data_format import ParquetFormat
 from feast_spark import Client as SparkClient
 
 
-@pytest.mark.env("k8s")
 def test_schedule_batch_ingestion_jobs(
     pytestconfig, feast_client: Client, feast_spark_client: SparkClient
 ):

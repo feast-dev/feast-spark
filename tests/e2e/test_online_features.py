@@ -2,13 +2,11 @@ import json
 import os
 import time
 import uuid
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Union
 
 import numpy as np
 import pandas as pd
-import pytest
-from google.cloud import bigquery
 
 from feast import (
     BigQuerySource,
@@ -23,7 +21,7 @@ from feast import (
 from feast.data_format import AvroFormat, ParquetFormat
 from feast.wait import wait_retry_backoff
 from feast_spark import Client as SparkClient
-from feast_spark.pyspark.abc import SparkJobStatus
+from feast_spark.pyspark.abc import SparkJob, SparkJobStatus
 from tests.e2e.utils.kafka import check_consumer_exist, ingest_and_retrieve
 
 
@@ -58,45 +56,6 @@ def test_offline_ingestion(
 
     original = generate_data()
     feast_client.ingest(feature_table, original)  # write to batch (offline) storage
-
-    ingest_and_verify(feast_client, feast_spark_client, feature_table, original)
-
-
-@pytest.mark.env("gcloud")
-def test_offline_ingestion_from_bq_view(
-    pytestconfig, bq_dataset, feast_client: Client, feast_spark_client: SparkClient
-):
-    original = generate_data()
-    bq_project = pytestconfig.getoption("bq_project")
-
-    bq_client = bigquery.Client(project=bq_project)
-    source_ref = bigquery.TableReference(
-        bigquery.DatasetReference(bq_project, bq_dataset),
-        f"ingestion_source_{datetime.now():%Y%m%d%H%M%s}",
-    )
-    bq_client.load_table_from_dataframe(original, source_ref).result()
-
-    view_ref = bigquery.TableReference(
-        bigquery.DatasetReference(bq_project, bq_dataset),
-        f"ingestion_view_{datetime.now():%Y%m%d%H%M%s}",
-    )
-    view = bigquery.Table(view_ref)
-    view.view_query = f"select * from `{source_ref.project}.{source_ref.dataset_id}.{source_ref.table_id}`"
-    bq_client.create_table(view)
-
-    entity = Entity(name="s2id", description="S2id", value_type=ValueType.INT64)
-    feature_table = FeatureTable(
-        name="bq_ingestion",
-        entities=["s2id"],
-        features=[Feature("unique_drivers", ValueType.INT64)],
-        batch_source=BigQuerySource(
-            event_timestamp_column="event_timestamp",
-            table_ref=f"{view_ref.project}:{view_ref.dataset_id}.{view_ref.table_id}",
-        ),
-    )
-
-    feast_client.apply(entity)
-    feast_client.apply(feature_table)
 
     ingest_and_verify(feast_client, feast_spark_client, feature_table, original)
 
@@ -137,7 +96,7 @@ def test_streaming_ingestion(
         job = feast_spark_client.start_stream_to_online_ingestion(feature_table)
         assert job.get_feature_table() == feature_table.name
         wait_retry_backoff(
-            lambda: (None, job.get_status() == SparkJobStatus.IN_PROGRESS), 180
+            lambda: (None, job.get_status() == SparkJobStatus.IN_PROGRESS), 300
         )
     else:
         job = None
@@ -172,6 +131,12 @@ def test_streaming_ingestion(
     )
 
 
+def wait_for_job_to_complete(job: SparkJob):
+    wait_retry_backoff(
+        lambda: (None, job.get_status() == SparkJobStatus.COMPLETED), 180
+    )
+
+
 def ingest_and_verify(
     feast_client: Client,
     feast_spark_client: SparkClient,
@@ -185,9 +150,7 @@ def ingest_and_verify(
     )
     assert job.get_feature_table() == feature_table.name
 
-    wait_retry_backoff(
-        lambda: (None, job.get_status() == SparkJobStatus.COMPLETED), 180
-    )
+    wait_for_job_to_complete(job)
 
     features = feast_client.get_online_features(
         [f"{feature_table.name}:unique_drivers"],
@@ -231,9 +194,7 @@ def test_list_jobs_long_table_name(
         data_sample.event_timestamp.max().to_pydatetime() + timedelta(seconds=1),
     )
 
-    wait_retry_backoff(
-        lambda: (None, job.get_status() == SparkJobStatus.COMPLETED), 180
-    )
+    wait_for_job_to_complete(job)
     all_job_ids = [
         job.get_id()
         for job in feast_spark_client.list_jobs(

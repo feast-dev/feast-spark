@@ -11,7 +11,6 @@ from pandas._testing import assert_frame_equal
 from pyarrow import parquet
 
 from feast import Client, Entity, Feature, FeatureTable, ValueType
-from feast.constants import ConfigOptions as opt
 from feast.data_source import BigQuerySource, FileSource
 from feast_spark import Client as SparkClient
 from feast_spark.pyspark.abc import SparkJobStatus
@@ -87,17 +86,9 @@ def generate_data():
     return transactions_df, customer_df
 
 
-def _get_azure_creds(feast_client: Client):
-    return (
-        feast_client._config.get(opt.AZURE_BLOB_ACCOUNT_NAME, None),
-        feast_client._config.get(opt.AZURE_BLOB_ACCOUNT_ACCESS_KEY, None),
-    )
-
-
 def test_historical_features(
     feast_client: Client,
     feast_spark_client: SparkClient,
-    tfrecord_feast_client: Client,
     batch_source: Union[BigQuerySource, FileSource],
 ):
     customer_entity = Entity(
@@ -134,12 +125,7 @@ def test_historical_features(
 
     output_dir = job.get_output_file_uri()
 
-    # will both be None if not using Azure blob storage
-    account_name, account_key = _get_azure_creds(feast_client)
-
-    joined_df = read_parquet(
-        output_dir, azure_account_name=account_name, azure_account_key=account_key
-    )
+    joined_df = read_parquet(output_dir)
 
     expected_joined_df = pd.DataFrame(
         {

@@ -65,6 +65,4 @@ kubectl run -n "$NAMESPACE" -i ci-test-runner  \
     --restart=Never \
     --image="python:3.8" \
     --env="FEAST_TELEMETRY=false" \
-    --env="DISABLE_FEAST_SERVICE_FIXTURES=1" \
-    --env="DISABLE_SERVICE_FIXTURES=1" \
     -- bash -c "$CMD"

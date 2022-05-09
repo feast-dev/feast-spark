@@ -10,7 +10,6 @@ from feast import Client
 from feast.wait import wait_retry_backoff
 from feast_spark import Client as SparkClient
 from feast_spark.contrib.validation.ge import apply_validation, create_validation_udf
-from tests.e2e.fixtures.statsd_stub import StatsDServer
 from tests.e2e.utils.common import avro_schema, create_schema, start_job, stop_job
 from tests.e2e.utils.kafka import check_consumer_exist, ingest_and_retrieve
 
@@ -103,11 +102,7 @@ def test_validation_with_ge(
 
 @pytest.mark.env("local")
 def test_validation_reports_metrics(
-    feast_client: Client,
-    feast_spark_client: SparkClient,
-    kafka_server,
-    statsd_server: StatsDServer,
-    pytestconfig,
+    feast_client: Client, feast_spark_client: SparkClient, kafka_server, pytestconfig,
 ):
     kafka_broker = f"{kafka_server[0]}:{kafka_server[1]}"
     topic_name = f"avro-{uuid.uuid4()}"
@@ -138,14 +133,6 @@ def test_validation_reports_metrics(
     test_data = generate_test_data()
     ge_ds = PandasDataset(test_data)
     validation_result = ge_ds.validate(expectations, result_format="COMPLETE")
-    unexpected_counts = {
-        "expect_column_values_to_be_between_num_0_100": validation_result.results[
-            0
-        ].result["unexpected_count"],
-        "expect_column_values_to_be_in_set_set": validation_result.results[1].result[
-            "unexpected_count"
-        ],
-    }
     invalid_idx = list(
         {
             idx
@@ -169,23 +156,3 @@ def test_validation_reports_metrics(
         )
     finally:
         stop_job(job, feast_spark_client, feature_table)
-
-    expected_metrics = [
-        (
-            f"feast_feature_validation_check_failed#check:{check_name},"
-            f"feature_table:{feature_table.name},project:{feast_client.project}",
-            value,
-        )
-        for check_name, value in unexpected_counts.items()
-    ]
-    wait_retry_backoff(
-        lambda: (
-            None,
-            all(statsd_server.metrics.get(m) == v for m, v in expected_metrics),
-        ),
-        timeout_secs=30,
-        timeout_msg="Expected metrics were not received: "
-        + str(expected_metrics)
-        + "\n"
-        "Actual received metrics" + str(statsd_server.metrics),
-    )
