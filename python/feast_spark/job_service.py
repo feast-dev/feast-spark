@@ -41,17 +41,12 @@ from feast_spark.api.JobService_pb2 import (
 )
 from feast_spark.constants import ConfigOptions as opt
 from feast_spark.lock_manager import JobOperation, JobOperationLock
-from feast_spark.metrics import (
-    job_schedule_count,
-    job_submission_count,
-    job_whitelist_failure_count,
-)
+from feast_spark.metrics import job_schedule_count, job_submission_count
 from feast_spark.pyspark.abc import (
     BatchIngestionJob,
     RetrievalJob,
     SparkJob,
     SparkJobStatus,
-    SparkJobType,
     StreamIngestionJob,
 )
 from feast_spark.pyspark.launcher import (
@@ -114,7 +109,6 @@ def _job_to_proto(spark_job: SparkJob) -> JobProto:
 class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
     def __init__(self, client: Client):
         self.client = client
-        self._whitelisted_project_feature_table_pairs_cached: List[Tuple[str, str]] = []
 
     @property
     def _whitelisted_projects(self) -> Optional[List[str]]:
@@ -123,80 +117,19 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
             return whitelisted_projects.split(",")
         return None
 
-    @property
-    def _whitelisted_project_feature_table_pairs(
-        self,
-    ) -> Optional[List[Tuple[str, str]]]:
-        if self._whitelisted_project_feature_table_pairs_cached:
-            return self._whitelisted_project_feature_table_pairs_cached
-
-        if self.client.config.exists(opt.WHITELISTED_FEATURE_TABLES_PATH):
-            _whitelisted_feature_tables = self.client.config.get(
-                opt.WHITELISTED_FEATURE_TABLES_PATH
-            )
-            with open(str(_whitelisted_feature_tables), "r") as whitelist:
-                whitelist.seek(0)
-                whitelisted_feature_tables = [
-                    (line.strip().split(":")[0], line.strip().split(":")[-1])
-                    for line in whitelist.readlines()
-                ]
-                self._whitelisted_project_feature_table_pairs_cached = (
-                    whitelisted_feature_tables
-                )
-                return whitelisted_feature_tables
-        return None
-
-    @property
-    def _whitelisted_job_types(self) -> Optional[List[str]]:
-        if self.client.config.exists(opt.WHITELISTED_JOB_TYPES):
-            whitelisted_job_types = self.client.config.get(opt.WHITELISTED_JOB_TYPES)
-            return whitelisted_job_types.split(",")
-        return None
-
     def is_whitelisted(self, project: str):
         # Whitelisted projects not specified, allow all projects
         if not self._whitelisted_projects:
             return True
         return project in self._whitelisted_projects
 
-    def is_feature_table_whitelisted(self, project: str, feature_table: str):
-        if not self._whitelisted_project_feature_table_pairs:
-            return True
-        return (project, feature_table) in self._whitelisted_project_feature_table_pairs
-
-    def is_job_type_whitelisted(self, job_type: SparkJobType):
-        if not self._whitelisted_job_types:
-            return True
-        return job_type.name in self._whitelisted_job_types
-
     def StartOfflineToOnlineIngestionJob(
         self, request: StartOfflineToOnlineIngestionJobRequest, context
     ):
         """Start job to ingest data from offline store into online store"""
-        if not self.is_job_type_whitelisted(SparkJobType.BATCH_INGESTION):
-            raise ValueError(
-                "This job service is not configured to accept batch ingestion"
-            )
-
         job_submission_count.labels(
             "batch_ingestion", request.project, request.table_name
         ).inc()
-
-        if not self.is_whitelisted(request.project):
-            job_whitelist_failure_count.labels(
-                request.project, request.table_name
-            ).inc()
-            raise ValueError(
-                f"Project {request.project} is not whitelisted. Please contact your Feast administrator to whitelist it."
-            )
-
-        if not self.is_feature_table_whitelisted(request.project, request.table_name):
-            job_whitelist_failure_count.labels(
-                request.project, request.table_name
-            ).inc()
-            raise ValueError(
-                f"Project {request.project}:{request.table_name} is not whitelisted. Please contact your Feast administrator to whitelist it."
-            )
 
         feature_table = self.client.feature_store.get_feature_table(
             request.table_name, request.project
@@ -223,11 +156,6 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
         self, request: ScheduleOfflineToOnlineIngestionJobRequest, context
     ):
         """Schedule job to ingest data from offline store into online store periodically"""
-        if not self.is_job_type_whitelisted(SparkJobType.SCHEDULED_BATCH_INGESTION):
-            raise ValueError(
-                "This job service is not configured to schedule batch ingestion"
-            )
-
         job_schedule_count.labels(request.project, request.table_name).inc()
         feature_table = self.client.feature_store.get_feature_table(
             request.table_name, request.project
@@ -245,10 +173,6 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
     def UnscheduleOfflineToOnlineIngestionJob(
         self, request: UnscheduleOfflineToOnlineIngestionJobRequest, context
     ):
-        if not self.is_job_type_whitelisted(SparkJobType.SCHEDULED_BATCH_INGESTION):
-            raise ValueError(
-                "This job service is not configured to unschedule ingestion job"
-            )
         feature_table = self.client.feature_store.get_feature_table(
             request.table_name, request.project
         )
@@ -259,17 +183,7 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
 
     def GetHistoricalFeatures(self, request: GetHistoricalFeaturesRequest, context):
         """Produce a training dataset, return a job id that will provide a file reference"""
-        if not self.is_job_type_whitelisted(SparkJobType.HISTORICAL_RETRIEVAL):
-            raise ValueError(
-                "This job service is not configured to accept historical retrieval job"
-            )
-
         job_submission_count.labels("historical_retrieval", request.project, "").inc()
-
-        if not self.is_whitelisted(request.project):
-            raise ValueError(
-                f"Project {request.project} is not whitelisted. Please contact your Feast administrator to whitelist it."
-            )
 
         job = start_historical_feature_retrieval_job(
             client=self.client,
@@ -297,11 +211,6 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
         self, request: StartStreamToOnlineIngestionJobRequest, context
     ):
         """Start job to ingest data from stream into online store"""
-        if not self.is_job_type_whitelisted(SparkJobType.STREAM_INGESTION):
-            raise ValueError(
-                "This job service is not configured to start streaming job"
-            )
-
         job_submission_count.labels(
             "streaming", request.project, request.table_name
         ).inc()
@@ -355,11 +264,6 @@ class JobServiceServicer(JobService_pb2_grpc.JobServiceServicer):
 
     def ListJobs(self, request, context):
         """List all types of jobs"""
-
-        if not self.is_whitelisted(request.project):
-            raise ValueError(
-                f"Project {request.project} is not whitelisted. Please contact your Feast administrator to whitelist it."
-            )
 
         jobs = list_jobs(
             include_terminated=request.include_terminated,
