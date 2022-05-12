@@ -40,7 +40,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
 
-      {{- if or .Values.secrets .Values.sparkOperator.enabled .Values.configMaps .Values.whitelist.enabled }}
+      {{- if or .Values.secrets .Values.sparkOperator.enabled .Values.configMaps }}
       volumes:
       {{- end }}
       {{- range $secret := .Values.secrets }}
@@ -58,18 +58,13 @@ spec:
         configMap:
           name: {{ template "feast-jobservice.fullname" . }}-spark-template
       {{- end }}
-      {{- if .Values.whitelist.enabled }}
-      - name: {{ template "feast-jobservice.fullname" . }}-whitelist
-        configMap:
-          name: {{ template "feast-jobservice.fullname" . }}-whitelist
-      {{- end }}
 
       containers:
       - name: {{ .Chart.Name }}
         image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
 
-        {{- if or .Values.secrets .Values.sparkOperator.enabled .Values.configMaps .Values.whitelist.enabled }}
+        {{- if or .Values.secrets .Values.sparkOperator.enabled .Values.configMaps }}
         volumeMounts:
         {{- end }}
         {{- range $secret := .Values.secrets }}
@@ -86,10 +81,6 @@ spec:
         - name: {{ template "feast-jobservice.fullname" . }}-spark-template
           mountPath: "/etc/configs"
         {{- end }}
-        {{- if .Values.whitelist.enabled }}
-        - name: {{ template "feast-jobservice.fullname" . }}-whitelist
-          mountPath: "/etc/whitelist"
-        {{- end }}
 
         env:
         {{- if .Values.sparkOperator.enabled }}
@@ -101,10 +92,6 @@ spec:
           value: /etc/configs/streamJobTemplate.yaml
         - name: FEAST_SPARK_K8S_HISTORICAL_RETRIEVAL_TEMPLATE_PATH
           value: /etc/configs/historicalJobTemplate.yaml
-        {{- end }}
-        {{- if .Values.whitelist.enabled }}
-        - name: FEAST_WHITELISTED_FEATURE_TABLES_PATH
-          value: /etc/whitelist/whitelist.txt
         {{- end }}
         {{- range $key, $value := .Values.envOverrides }}
         - name: {{ printf "%s" $key | replace "." "_" | upper | quote }}
