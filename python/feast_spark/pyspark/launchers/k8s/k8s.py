@@ -197,15 +197,11 @@ class KubernetesJobLauncher(JobLauncher):
         stream_ingestion_resource_template_path: Optional[str],
         historical_retrieval_resource_template_path: Optional[str],
         staging_client: AbstractStagingClient,
-        azure_account_name: str,
-        azure_account_key: str,
     ):
         self._namespace = namespace
         self._api = _get_api(incluster=incluster)
         self._staging_location = staging_location
         self._staging_client = staging_client
-        self._azure_account_name = azure_account_name
-        self._azure_account_key = azure_account_key
 
         generic_template = _load_resource_template(
             generic_resource_template_path
@@ -260,20 +256,6 @@ class KubernetesJobLauncher(JobLauncher):
             # We should never get here
             raise ValueError(f"Unknown job type {job_info.job_type}")
 
-    def _get_azure_credentials(self):
-        uri = urlparse(self._staging_location)
-        if uri.scheme != "wasbs":
-            return {}
-        account_name = self._azure_account_name
-        account_key = self._azure_account_key
-        if account_name is None or account_key is None:
-            raise Exception(
-                "Using Azure blob storage requires Azure blob account name and access key to be set in config"
-            )
-        return {
-            f"spark.hadoop.fs.azure.account.key.{account_name}.blob.core.windows.net": f"{account_key}"
-        }
-
     def historical_feature_retrieval(
         self, job_params: RetrievalJobParameters
     ) -> RetrievalJob:
@@ -311,7 +293,6 @@ class KubernetesJobLauncher(JobLauncher):
             packages=[],
             jars=[],
             extra_metadata={METADATA_OUTPUT_URI: job_params.get_destination_path()},
-            azure_credentials=self._get_azure_credentials(),
             arguments=job_params.get_arguments(),
             namespace=self._namespace,
             extra_labels={LABEL_PROJECT: job_params.get_project()},
@@ -372,7 +353,6 @@ class KubernetesJobLauncher(JobLauncher):
             packages=[],
             jars=[],
             extra_metadata={},
-            azure_credentials=self._get_azure_credentials(),
             arguments=ingestion_job_params.get_arguments(),
             namespace=self._namespace,
             extra_labels={
@@ -424,7 +404,6 @@ class KubernetesJobLauncher(JobLauncher):
             packages=[],
             jars=[],
             extra_metadata={},
-            azure_credentials=self._get_azure_credentials(),
             arguments=ingestion_job_params.get_arguments(),
             namespace=self._namespace,
             extra_labels={
@@ -485,7 +464,6 @@ class KubernetesJobLauncher(JobLauncher):
             packages=[],
             jars=extra_jar_paths,
             extra_metadata={METADATA_JOBHASH: job_hash},
-            azure_credentials=self._get_azure_credentials(),
             arguments=ingestion_job_params.get_arguments(),
             namespace=self._namespace,
             extra_labels={

@@ -25,20 +25,8 @@ class ConfigOptions(metaclass=ConfigMeta):
     #: Port for which Prometheus metric server will be running on
     JOB_SERVICE_PROMETHEUS_METRIC_PORT: int = 8080
 
-    #: Default timeout when running batch ingestion
-    BATCH_INGESTION_PRODUCTION_TIMEOUT: str = "120"
-
-    #: Time to wait for historical feature requests before timing out.
-    BATCH_FEATURE_REQUEST_WAIT_TIME_SECONDS: str = "600"
-
     #: Endpoint URL for S3 storage_client
     S3_ENDPOINT_URL: Optional[str] = None
-
-    #: Account name for Azure blob storage_client
-    AZURE_BLOB_ACCOUNT_NAME: Optional[str] = None
-
-    #: Account access key for Azure blob storage_client
-    AZURE_BLOB_ACCOUNT_ACCESS_KEY: Optional[str] = None
 
     #: Spark Job launcher. The choice of storage is connected to the choice of SPARK_LAUNCHER.
     #:

@@ -122,7 +122,6 @@ def _prepare_job_resource(
     packages: List[str],
     jars: List[str],
     extra_metadata: Dict[str, str],
-    azure_credentials: Dict[str, str],
     arguments: List[str],
     namespace: str,
     extra_labels: Dict[str, str] = None,
@@ -145,7 +144,6 @@ def _prepare_job_resource(
     _add_keys(job, ("spec",), dict(arguments=arguments))
 
     _add_keys(job, ("spec", "sparkConf"), extra_metadata)
-    _add_keys(job, ("spec", "sparkConf"), azure_credentials)
 
     if len(packages) > 1:
         _append_items(job, ("spec", "deps", "packages"), packages)
@@ -165,7 +163,6 @@ def _prepare_scheduled_job_resource(
     packages: List[str],
     jars: List[str],
     extra_metadata: Dict[str, str],
-    azure_credentials: Dict[str, str],
     arguments: List[str],
     namespace: str,
     extra_labels: Dict[str, str] = None,
@@ -192,7 +189,6 @@ def _prepare_scheduled_job_resource(
         packages=packages,
         jars=jars,
         extra_metadata=extra_metadata,
-        azure_credentials=azure_credentials,
         arguments=arguments,
         namespace=namespace,
         extra_labels=extra_labels,
