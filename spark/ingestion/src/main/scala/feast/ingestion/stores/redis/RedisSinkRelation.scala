@@ -54,6 +54,19 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
 
   val sparkConf: SparkConf = sqlContext.sparkContext.getConf
 
+  lazy val endpoint: RedisEndpoint = RedisEndpoint(
+    host = sparkConf.get("spark.redis.host"),
+    port = sparkConf.get("spark.redis.port").toInt,
+    password = sparkConf.get("spark.redis.password", "")
+  )
+
+  lazy val properties: RedisWriteProperties = RedisWriteProperties(
+    maxJitterSeconds = sparkConf.get("spark.redis.properties.maxJitter").toInt,
+    pipelineSize = sparkConf.get("spark.redis.properties.pipelineSize").toInt
+  )
+
+  lazy val isClusterMode: Boolean = checkIfInClusterMode(endpoint)
+
   def newJedisClient(endpoint: RedisEndpoint): Jedis = {
     val jedis = new Jedis(endpoint.host, endpoint.port)
     if (endpoint.password.nonEmpty) {
@@ -77,18 +90,6 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
           .repartition(data.rdd.getNumPartitions, config.entityColumns.map(col): _*)
           .localCheckpoint()
       else data
-
-    val endpoint = RedisEndpoint(
-      host = sparkConf.get("spark.redis.host"),
-      port = sparkConf.get("spark.redis.port").toInt,
-      password = sparkConf.get("spark.redis.password", "")
-    )
-    val properties = RedisWriteProperties(
-      maxJitterSeconds = sparkConf.get("spark.redis.properties.maxJitter").toInt,
-      pipelineSize = sparkConf.get("spark.redis.properties.pipelineSize").toInt
-    )
-
-    val isClusterMode = checkIfInClusterMode(endpoint)
 
     dataToStore.foreachPartition { partition: Iterator[Row] =>
       java.security.Security.setProperty("networkaddress.cache.ttl", "3");
