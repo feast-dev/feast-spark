@@ -109,13 +109,13 @@ class BigTableSinkRelation(
 
     val featureColumns = featureFields.map(f => data(f.name))
 
-    val entityColumns   = config.entityColumns.map(c => data(c).cast(StringType))
-    val schema          = serializer.convertSchema(StructType(featureFields))
-    val schemaReference = serializer.schemaReference(schema)
+    val sortedEntityColumns = config.entityColumns.sorted.map(c => data(c).cast(StringType))
+    val schema              = serializer.convertSchema(StructType(featureFields))
+    val schemaReference     = serializer.schemaReference(schema)
 
     data
       .select(
-        joinEntityKey(struct(entityColumns: _*)).alias("key"),
+        joinEntityKey(struct(sortedEntityColumns: _*)).alias("key"),
         serializer.serializeData(schema)(struct(featureColumns: _*)).alias("value"),
         col(config.timestampColumn).alias("ts")
       )
