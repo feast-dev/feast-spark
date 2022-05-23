@@ -74,6 +74,10 @@ def _truncate_label(label: str) -> str:
     return label[:63]
 
 
+class JobNotFoundException(Exception):
+    pass
+
+
 class KubernetesJobMixin:
     def __init__(self, api: CustomObjectsApi, namespace: str, job_id: str):
         self._api = api
@@ -85,17 +89,20 @@ class KubernetesJobMixin:
 
     def get_error_message(self) -> str:
         job = _get_job_by_id(self._api, self._namespace, self._job_id)
-        assert job is not None
+        if job is None:
+            raise JobNotFoundException()
         return job.job_error_message
 
     def get_status(self) -> SparkJobStatus:
         job = _get_job_by_id(self._api, self._namespace, self._job_id)
-        assert job is not None
+        if job is None:
+            raise JobNotFoundException
         return job.state
 
     def get_start_time(self) -> datetime:
         job = _get_job_by_id(self._api, self._namespace, self._job_id)
-        assert job is not None
+        if job is None:
+            raise JobNotFoundException
         return job.start_time
 
     def cancel(self):
