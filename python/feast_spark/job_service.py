@@ -60,6 +60,7 @@ from feast_spark.pyspark.launcher import (
     start_stream_to_online_ingestion,
     unschedule_offline_to_online_ingestion,
 )
+from feast_spark.pyspark.launchers.k8s.k8s import JobNotFoundException
 from feast_spark.third_party.grpc.health.v1.HealthService_pb2 import (
     HealthCheckResponse,
     ServingStatus,
@@ -437,9 +438,16 @@ def ensure_stream_ingestion_jobs(client: Client, all_projects: bool):
             opt.JOB_SERVICE_RETRY_FAILED_JOBS
         )
     ):
+        status = None
+        try:
+            status = job.get_status()
+        except JobNotFoundException:
+            logger.warning(f"{job.get_id()} was already removed")
+
         if (
             isinstance(job, StreamIngestionJob)
-            and job.get_status() != SparkJobStatus.COMPLETED
+            and status is not None
+            and status != SparkJobStatus.COMPLETED
         ):
             jobs_by_hash[job.get_hash()] = job
 
