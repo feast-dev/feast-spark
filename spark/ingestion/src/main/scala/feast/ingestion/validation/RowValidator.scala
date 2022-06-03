@@ -40,17 +40,17 @@ class RowValidator(featureTable: FeatureTable, timestampColumn: String) extends 
 
     (minValue, maxValue) match {
       case (Some(min), Some(max)) => col(expectation.kwargs("column")).between(min, max)
-      case (Some(min), None) => col(expectation.kwargs("column")).>=(min)
-      case (None, Some(max)) => col(expectation.kwargs("column")).<=(max)
-      case _ => lit(true)
+      case (Some(min), None)      => col(expectation.kwargs("column")).>=(min)
+      case (None, Some(max))      => col(expectation.kwargs("column")).<=(max)
+      case _                      => lit(true)
     }
   }
 
   def validate(expectation: Expectation): Column = {
     expectation.expectationType match {
       case "expect_column_values_to_not_be_null" => col(expectation.kwargs("column")).isNotNull
-      case "expect_column_values_to_be_between" => expectColumnValuesToBeBetween(expectation)
-      case _ => lit(true)
+      case "expect_column_values_to_be_between"  => expectColumnValuesToBeBetween(expectation)
+      case _                                     => lit(true)
     }
   }
 
@@ -60,7 +60,8 @@ class RowValidator(featureTable: FeatureTable, timestampColumn: String) extends 
 
     validationSpec match {
       case Some(value) if value.expectations.isEmpty => lit(true)
-      case Some(value) => value.expectations.map(expectation => validate(expectation)).reduce(_.&&(_))
+      case Some(value) =>
+        value.expectations.map(expectation => validate(expectation)).reduce(_.&&(_))
       case None => lit(true)
     }
   }

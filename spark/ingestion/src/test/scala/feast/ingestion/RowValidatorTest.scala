@@ -1,3 +1,19 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright 2018-2022 The Feast Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package feast.ingestion
 
 import com.example.protos.VehicleType
@@ -6,7 +22,6 @@ import feast.proto.types.ValueProto.ValueType
 import org.apache.spark.sql.{SparkSession, _}
 import org.apache.spark.sql.types._
 import org.joda.time.DateTime
-
 
 class RowValidatorTest extends UnitSpec {
 
@@ -22,7 +37,9 @@ class RowValidatorTest extends UnitSpec {
     features = Seq(
       Field("unique_drivers", ValueType.Enum.INT64)
     ),
-    labels = Map("_validation" -> "{\"expectations\": [{\"expectation_type\": \"expect_column_values_to_not_be_null\", \"kwargs\": { \"column\": \"unique_drivers\"}}, {\"expectation_type\": \"expect_column_values_to_be_between\", \"kwargs\": { \"column\": \"unique_drivers\", \"min_value\": 2, \"max_value\": 20}}]}")
+    labels = Map(
+      "_validation" -> "{\"expectations\": [{\"expectation_type\": \"expect_column_values_to_not_be_null\", \"kwargs\": { \"column\": \"unique_drivers\"}}, {\"expectation_type\": \"expect_column_values_to_be_between\", \"kwargs\": { \"column\": \"unique_drivers\", \"min_value\": 2, \"max_value\": 20}}]}"
+    )
   )
 
   val rowValidator = new RowValidator(featureTable, "timestamp")
@@ -94,7 +111,6 @@ class RowValidatorTest extends UnitSpec {
       Row(4, VehicleType.Enum.CAR.name(), 7, DateTime.now().toString()),
       // feature value outside of expected range in validation config
       Row(5, VehicleType.Enum.CAR.name(), -1, DateTime.now().toString())
-
     )
 
     val df = spark.createDataFrame(
@@ -166,7 +182,10 @@ class RowValidatorTest extends UnitSpec {
         Field("unique_drivers", ValueType.Enum.INT64)
       ),
       // expectations not present in _validation json
-      labels = Map("_validation" -> "{\"name\": \"testUDF\", \"pickled_code_path\": \"gs://feast-dataproc-staging-batch/test-staging/b0f4ffa4-a3bf-440a-9d50-2dd1ae5d0431/36a316ce-3797-4202-830b-adab40902ceb/dataproc/udfs/validation_ge/testUDF.pickle\", \"include_archive_path\": \"https://storage.googleapis.com/feast-jobs/spark/validation/pylibs-ge-%(platform)s.tar.gz\"}", "_streaming_trigger_secs" -> "1")
+      labels = Map(
+        "_validation"             -> "{\"name\": \"testUDF\", \"pickled_code_path\": \"gs://feast-dataproc-staging-batch/test-staging/b0f4ffa4-a3bf-440a-9d50-2dd1ae5d0431/36a316ce-3797-4202-830b-adab40902ceb/dataproc/udfs/validation_ge/testUDF.pickle\", \"include_archive_path\": \"https://storage.googleapis.com/feast-jobs/spark/validation/pylibs-ge-%(platform)s.tar.gz\"}",
+        "_streaming_trigger_secs" -> "1"
+      )
     )
 
     val rowValidator = new RowValidator(featureTable, "timestamp")
@@ -207,7 +226,9 @@ class RowValidatorTest extends UnitSpec {
         Field("average_rating", ValueType.Enum.FLOAT)
       ),
       // only min_value present in expect_column_values_to_be_between check
-      labels = Map("_validation" -> "{\"expectations\": [{\"expectation_type\": \"expect_column_values_to_be_between\", \"kwargs\": { \"column\": \"average_rating\", \"min_value\": 4}}]}")
+      labels = Map(
+        "_validation" -> "{\"expectations\": [{\"expectation_type\": \"expect_column_values_to_be_between\", \"kwargs\": { \"column\": \"average_rating\", \"min_value\": 4}}]}"
+      )
     )
 
     val rowValidator = new RowValidator(featureTable, "timestamp")
@@ -257,7 +278,9 @@ class RowValidatorTest extends UnitSpec {
         Field("average_rating", ValueType.Enum.FLOAT)
       ),
       // only max_value present in expect_column_values_to_be_between check
-      labels = Map("_validation" -> "{\"expectations\": [{\"expectation_type\": \"expect_column_values_to_be_between\", \"kwargs\": { \"column\": \"unique_drivers\", \"max_value\": 25}}]}")
+      labels = Map(
+        "_validation" -> "{\"expectations\": [{\"expectation_type\": \"expect_column_values_to_be_between\", \"kwargs\": { \"column\": \"unique_drivers\", \"max_value\": 25}}]}"
+      )
     )
 
     val rowValidator = new RowValidator(featureTable, "timestamp")
@@ -307,7 +330,9 @@ class RowValidatorTest extends UnitSpec {
         Field("unique_drivers", ValueType.Enum.INT64)
       ),
       // both min_value and max_value are absent in expect_column_values_to_be_between check
-      labels = Map("_validation" -> "{\"expectations\": [{\"expectation_type\": \"expect_column_values_to_be_between\", \"kwargs\": { \"column\": \"unique_drivers\"}}]}")
+      labels = Map(
+        "_validation" -> "{\"expectations\": [{\"expectation_type\": \"expect_column_values_to_be_between\", \"kwargs\": { \"column\": \"unique_drivers\"}}]}"
+      )
     )
 
     val rowValidator = new RowValidator(featureTable, "timestamp")
@@ -334,7 +359,6 @@ class RowValidatorTest extends UnitSpec {
     val rowsAfterValidation = df.withColumn("_isValid", rowValidator.validationChecks)
     rowsAfterValidation.select("_isValid").collect().toList shouldBe expectedIsValidColumn
   }
-
 
   "allChecks" should "filter out records where any check fails" in {
     val data = Seq(
