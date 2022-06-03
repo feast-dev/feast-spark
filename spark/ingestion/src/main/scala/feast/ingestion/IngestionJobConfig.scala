@@ -120,6 +120,15 @@ case class ValidationConfig(
     includeArchivePath: String
 )
 
+case class ValidationSpec(
+    expectations: List[Expectation]
+)
+
+case class Expectation(
+    expectationType: String,
+    kwargs: Map[String, String]
+)
+
 case class IngestionJobConfig(
     mode: Modes = Modes.Offline,
     featureTable: FeatureTable = null,
