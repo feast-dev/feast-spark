@@ -19,13 +19,11 @@ package feast.ingestion
 import com.example.protos.VehicleType
 import feast.ingestion.validation.RowValidator
 import feast.proto.types.ValueProto.ValueType
-import org.apache.spark.sql.{SparkSession, _}
+import org.apache.spark.sql._
 import org.apache.spark.sql.types._
 import org.joda.time.DateTime
 
-class RowValidatorTest extends UnitSpec {
-
-  val spark: SparkSession = SparkSession.builder().master("local[1]").getOrCreate()
+class RowValidatorTest extends SparkSpec {
 
   val featureTable: FeatureTable = FeatureTable(
     name = "driver-fs",
@@ -60,8 +58,8 @@ class RowValidatorTest extends UnitSpec {
       Row(4, VehicleType.Enum.CAR.name(), 8, null)
     )
 
-    val df = spark.createDataFrame(
-      spark.sparkContext.parallelize(data),
+    val df = sparkSession.createDataFrame(
+      sparkSession.sparkContext.parallelize(data),
       StructType(schema)
     )
 
@@ -85,8 +83,8 @@ class RowValidatorTest extends UnitSpec {
       Row(4, null, 2, DateTime.now().toString())
     )
 
-    val df = spark.createDataFrame(
-      spark.sparkContext.parallelize(data),
+    val df = sparkSession.createDataFrame(
+      sparkSession.sparkContext.parallelize(data),
       StructType(schema)
     )
 
@@ -113,8 +111,8 @@ class RowValidatorTest extends UnitSpec {
       Row(5, VehicleType.Enum.CAR.name(), -1, DateTime.now().toString())
     )
 
-    val df = spark.createDataFrame(
-      spark.sparkContext.parallelize(data),
+    val df = sparkSession.createDataFrame(
+      sparkSession.sparkContext.parallelize(data),
       StructType(schema)
     )
 
@@ -154,8 +152,8 @@ class RowValidatorTest extends UnitSpec {
       Row(4, VehicleType.Enum.CAR.name(), 7, DateTime.now().toString())
     )
 
-    val df = spark.createDataFrame(
-      spark.sparkContext.parallelize(data),
+    val df = sparkSession.createDataFrame(
+      sparkSession.sparkContext.parallelize(data),
       StructType(schema)
     )
 
@@ -197,8 +195,8 @@ class RowValidatorTest extends UnitSpec {
       Row(4, VehicleType.Enum.CAR.name(), 7, DateTime.now().toString())
     )
 
-    val df = spark.createDataFrame(
-      spark.sparkContext.parallelize(data),
+    val df = sparkSession.createDataFrame(
+      sparkSession.sparkContext.parallelize(data),
       StructType(schema)
     )
 
@@ -249,8 +247,8 @@ class RowValidatorTest extends UnitSpec {
       StructField("timestamp", StringType, nullable = true)
     )
 
-    val df = spark.createDataFrame(
-      spark.sparkContext.parallelize(data),
+    val df = sparkSession.createDataFrame(
+      sparkSession.sparkContext.parallelize(data),
       StructType(schema)
     )
 
@@ -302,8 +300,8 @@ class RowValidatorTest extends UnitSpec {
       StructField("timestamp", StringType, nullable = true)
     )
 
-    val df = spark.createDataFrame(
-      spark.sparkContext.parallelize(data),
+    val df = sparkSession.createDataFrame(
+      sparkSession.sparkContext.parallelize(data),
       StructType(schema)
     )
 
@@ -344,8 +342,8 @@ class RowValidatorTest extends UnitSpec {
       Row(4, VehicleType.Enum.CAR.name(), 0, DateTime.now().toString())
     )
 
-    val df = spark.createDataFrame(
-      spark.sparkContext.parallelize(data),
+    val df = sparkSession.createDataFrame(
+      sparkSession.sparkContext.parallelize(data),
       StructType(schema)
     )
 
@@ -379,8 +377,8 @@ class RowValidatorTest extends UnitSpec {
       Row(7, VehicleType.Enum.BIKE.name(), 87, null)
     )
 
-    val df = spark.createDataFrame(
-      spark.sparkContext.parallelize(data),
+    val df = sparkSession.createDataFrame(
+      sparkSession.sparkContext.parallelize(data),
       StructType(schema)
     )
 
