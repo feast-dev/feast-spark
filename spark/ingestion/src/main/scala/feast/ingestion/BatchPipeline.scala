@@ -40,8 +40,9 @@ object BatchPipeline extends BasePipeline {
       config: IngestionJobConfig
   ): Option[StreamingQuery] = {
     val featureTable = config.featureTable
-    val rowValidator = new RowValidator(featureTable, config.source.eventTimestampColumn)
-    val metrics      = new IngestionPipelineMetrics
+    val rowValidator =
+      new RowValidator(featureTable, config.source.eventTimestampColumn, config.expectationSpec)
+    val metrics = new IngestionPipelineMetrics
 
     val input = config.source match {
       case source: BQSource =>

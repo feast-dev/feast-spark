@@ -16,14 +16,15 @@
  */
 package feast.ingestion.validation
 
-import feast.ingestion.{FeatureTable, ValidationSpec, Expectation}
+import feast.ingestion.{FeatureTable, ExpectationSpec, Expectation}
 import org.apache.spark.sql.Column
 import org.apache.spark.sql.functions.{col, lit}
-import org.json4s.jackson.JsonMethods.{parse => parseJSON}
-import org.json4s._
 
-class RowValidator(featureTable: FeatureTable, timestampColumn: String) extends Serializable {
-  implicit val formats: Formats = DefaultFormats
+class RowValidator(
+    featureTable: FeatureTable,
+    timestampColumn: String,
+    expectationSpec: Option[ExpectationSpec]
+) extends Serializable {
 
   def allEntitiesPresent: Column =
     featureTable.entities.map(e => col(e.name).isNotNull).reduce(_.&&(_))
@@ -55,10 +56,8 @@ class RowValidator(featureTable: FeatureTable, timestampColumn: String) extends 
   }
 
   def validationChecks: Column = {
-    val validationSpec: Option[ValidationSpec] =
-      featureTable.labels.get("_validation").map(parseJSON(_).camelizeKeys.extract[ValidationSpec])
 
-    validationSpec match {
+    expectationSpec match {
       case Some(value) if value.expectations.isEmpty => lit(true)
       case Some(value) =>
         value.expectations.map(expectation => validate(expectation)).reduce(_.&&(_))

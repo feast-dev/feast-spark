@@ -120,7 +120,7 @@ case class ValidationConfig(
     includeArchivePath: String
 )
 
-case class ValidationSpec(
+case class ExpectationSpec(
     expectations: List[Expectation]
 )
 
@@ -141,6 +141,7 @@ case class IngestionJobConfig(
     stencilURL: Option[String] = None,
     streamingTriggeringSecs: Int = 0,
     validationConfig: Option[ValidationConfig] = None,
+    expectationSpec: Option[ExpectationSpec] = None,
     doNotIngestInvalidRows: Boolean = false,
     checkpointPath: Option[String] = None
 )
