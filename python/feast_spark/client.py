@@ -1,24 +1,21 @@
 import configparser
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from itertools import groupby
 from typing import Dict, List, Optional, Union, cast
 
 import pandas as pd
 import redis
 from croniter import croniter
+from google.cloud import bigquery
 
 import feast
 from feast.config import Config
 from feast.constants import ConfigOptions as feast_opt
 from feast.data_source import BigQuerySource, FileSource
 from feast.grpc.grpc import create_grpc_channel
-from feast.staging.entities import (
-    stage_entities_to_bq,
-    stage_entities_to_fs,
-    table_reference_from_string,
-)
+from feast.staging.entities import stage_entities_to_fs, table_reference_from_string
 from feast_spark.api.JobService_pb2 import (
     GetHealthMetricsRequest,
     GetHistoricalFeaturesRequest,
@@ -49,6 +46,44 @@ from feast_spark.remote_job import (
     RemoteStreamIngestionJob,
     get_remote_job_from_proto,
 )
+
+
+def stage_entities_to_bq_with_partition(
+    entity_source: pd.DataFrame, project: str, dataset: str
+) -> BigQuerySource:
+    """
+    Stores given (entity) dataframe as new table in BQ. Name of the table generated based on current time.
+    Table will expire in 1 day.
+    Returns BigQuerySource with reference to created table.
+    """
+
+    bq_client: bigquery.Client = bigquery.Client()
+    destination = bigquery.TableReference(
+        bigquery.DatasetReference(project, dataset),
+        f"_entities_{datetime.now():%Y%m%d%H%M%s}",
+    )
+
+    # prevent casting ns -> ms exception inside pyarrow
+    entity_source["event_timestamp"] = entity_source["event_timestamp"].dt.floor("ms")
+
+    load_job_config = bigquery.LoadJobConfig(
+        time_partitioning=bigquery.TimePartitioning(
+            type_=bigquery.TimePartitioningType.DAY, field="event_timestamp",
+        )
+    )
+    load_job: bigquery.LoadJob = bq_client.load_table_from_dataframe(
+        entity_source, destination, job_config=load_job_config,
+    )
+    load_job.result()  # wait until complete
+
+    dest_table: bigquery.Table = bq_client.get_table(destination)
+    dest_table.expires = datetime.now() + timedelta(days=1)
+    bq_client.update_table(dest_table, fields=["expires"])
+
+    return BigQuerySource(
+        event_timestamp_column="event_timestamp",
+        table_ref=f"{destination.project}:{destination.dataset_id}.{destination.table_id}",
+    )
 
 
 class Client:
@@ -197,7 +232,7 @@ class Client:
                     staging_bq_project = source_ref.project
                     staging_bq_dataset = source_ref.dataset_id
 
-                entity_source = stage_entities_to_bq(
+                entity_source = stage_entities_to_bq_with_partition(
                     entity_source, staging_bq_project, staging_bq_dataset
                 )
             else:
