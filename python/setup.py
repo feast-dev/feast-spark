@@ -39,7 +39,7 @@ AUTHOR = "Feast"
 REQUIRES_PYTHON = ">=3.6.0"
 
 REQUIRED = [
-    "feast==0.9.5.2",
+    "feast>=0.9.8,<0.10.0",
     "Click==7.*",
     "google-api-core==1.22.4",
     "google-cloud-bigquery==1.18.*",
@@ -54,7 +54,7 @@ REQUIRED = [
     "croniter==1.*",
     "redis==4.1.*",
     "pyarrow==2.0.0",
-    "pandas==1.0.5",
+    "pandas>=1.0.5",
     "prometheus-client==0.14.0"
 ]
 
@@ -153,7 +153,7 @@ setup(
     ],
     entry_points={"console_scripts": ["feast-spark=feast_spark.cli:cli"]},
     use_scm_version={"root": "../", "relative_to": __file__, "tag_regex": TAG_REGEX},
-    setup_requires=["setuptools_scm", "grpcio-tools==1.31.0", "google-auth==1.21.1", "feast==0.9.5.2", "mypy-protobuf==2.5"],
+    setup_requires=["setuptools_scm", "grpcio-tools==1.31.0", "google-auth==1.21.1", "feast>=0.9.8,<0.10.0", "mypy-protobuf==2.5"],
     cmdclass={
         "build_proto": BuildProtoCommand,
         "build_py": BuildCommand,
