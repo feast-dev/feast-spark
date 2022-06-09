@@ -81,12 +81,9 @@ class BuildProtoCommand(Command):
     description = "Builds the proto files into python files."
 
     def initialize_options(self):
-        import feast
-
         self.protoc = ["python", "-m", "grpc_tools.protoc"]  # find_executable("protoc")
         self.proto_folder = os.path.join(repo_root, "protos")
         self.this_package = os.path.dirname(__file__) or os.getcwd()
-        self.feast_protos = os.path.join(os.path.dirname(feast.__file__), 'protos')
         self.sub_folders = ["api"]
 
     def finalize_options(self):
@@ -97,7 +94,6 @@ class BuildProtoCommand(Command):
 
         subprocess.check_call(self.protoc + [
                                '-I', self.proto_folder,
-                               '-I', self.feast_protos,
                                '--python_out', self.this_package,
                                '--grpc_python_out', self.this_package,
                                '--mypy_out', self.this_package] + proto_files)
@@ -153,7 +149,7 @@ setup(
     ],
     entry_points={"console_scripts": ["feast-spark=feast_spark.cli:cli"]},
     use_scm_version={"root": "../", "relative_to": __file__, "tag_regex": TAG_REGEX},
-    setup_requires=["setuptools_scm", "grpcio-tools==1.31.0", "google-auth==1.21.1", "feast>=0.9.8,<0.10.0", "mypy-protobuf==2.5"],
+    setup_requires=["setuptools_scm", "grpcio-tools==1.31.0", "google-auth==1.21.1", "mypy-protobuf==2.5"],
     cmdclass={
         "build_proto": BuildProtoCommand,
         "build_py": BuildCommand,
