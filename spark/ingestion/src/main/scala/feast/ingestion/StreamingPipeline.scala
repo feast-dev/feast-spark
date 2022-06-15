@@ -54,8 +54,9 @@ object StreamingPipeline extends BasePipeline with Serializable {
   ): Option[StreamingQuery] = {
     import sparkSession.implicits._
 
-    val featureTable     = config.featureTable
-    val rowValidator     = new RowValidator(featureTable, config.source.eventTimestampColumn)
+    val featureTable = config.featureTable
+    val rowValidator =
+      new RowValidator(featureTable, config.source.eventTimestampColumn, config.expectationSpec)
     val metrics          = new IngestionPipelineMetrics
     val streamingMetrics = new StreamingMetrics
 
