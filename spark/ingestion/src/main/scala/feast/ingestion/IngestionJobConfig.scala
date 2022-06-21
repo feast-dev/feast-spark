@@ -17,6 +17,7 @@
 package feast.ingestion
 
 import feast.ingestion.Modes.Modes
+import feast.ingestion.validation.Expectation
 import org.joda.time.DateTime
 
 object Modes extends Enumeration {
@@ -122,11 +123,6 @@ case class ValidationConfig(
 
 case class ExpectationSpec(
     expectations: List[Expectation]
-)
-
-case class Expectation(
-    expectationType: String,
-    kwargs: Map[String, String]
 )
 
 case class IngestionJobConfig(
