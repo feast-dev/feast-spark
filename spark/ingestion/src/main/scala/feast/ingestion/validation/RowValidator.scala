@@ -16,7 +16,7 @@
  */
 package feast.ingestion.validation
 
-import feast.ingestion.{FeatureTable, ExpectationSpec, Expectation}
+import feast.ingestion.{FeatureTable, ExpectationSpec}
 import org.apache.spark.sql.Column
 import org.apache.spark.sql.functions.{col, lit}
 
@@ -35,32 +35,12 @@ class RowValidator(
   def timestampPresent: Column =
     col(timestampColumn).isNotNull
 
-  def expectColumnValuesToBeBetween(expectation: Expectation): Column = {
-    val minValue: Option[String] = expectation.kwargs.get("minValue")
-    val maxValue: Option[String] = expectation.kwargs.get("maxValue")
-
-    (minValue, maxValue) match {
-      case (Some(min), Some(max)) => col(expectation.kwargs("column")).between(min, max)
-      case (Some(min), None)      => col(expectation.kwargs("column")).>=(min)
-      case (None, Some(max))      => col(expectation.kwargs("column")).<=(max)
-      case _                      => lit(true)
-    }
-  }
-
-  def validate(expectation: Expectation): Column = {
-    expectation.expectationType match {
-      case "expect_column_values_to_not_be_null" => col(expectation.kwargs("column")).isNotNull
-      case "expect_column_values_to_be_between"  => expectColumnValuesToBeBetween(expectation)
-      case _                                     => lit(true)
-    }
-  }
-
   def validationChecks: Column = {
 
     expectationSpec match {
       case Some(value) if value.expectations.isEmpty => lit(true)
       case Some(value) =>
-        value.expectations.map(expectation => validate(expectation)).reduce(_.&&(_))
+        value.expectations.map(_.validate).reduce(_.&&(_))
       case None => lit(true)
     }
   }
