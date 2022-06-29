@@ -67,12 +67,6 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
 
   lazy val isClusterMode: Boolean = checkIfInClusterMode(endpoint)
 
-  lazy val pipelineProvider: PipelineProvider = if (isClusterMode) {
-    ClusterPipelineProvider(endpoint)
-  } else {
-    SingleNodePipelineProvider(newJedisClient(endpoint))
-  }
-
   def newJedisClient(endpoint: RedisEndpoint): Jedis = {
     val jedis = new Jedis(endpoint.host, endpoint.port)
     if (endpoint.password.nonEmpty) {
@@ -100,6 +94,12 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
     dataToStore.foreachPartition { partition: Iterator[Row] =>
       java.security.Security.setProperty("networkaddress.cache.ttl", "3");
       java.security.Security.setProperty("networkaddress.cache.negative.ttl", "0");
+
+      val pipelineProvider = if (isClusterMode) {
+        ClusterPipelineProvider(endpoint)
+      } else {
+        SingleNodePipelineProvider(newJedisClient(endpoint))
+      }
 
       // grouped iterator to only allocate memory for a portion of rows
       partition.grouped(properties.pipelineSize).foreach { batch =>
@@ -146,6 +146,7 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
         }
         writePipeline.close()
       }
+      pipelineProvider.close()
     }
     dataToStore.unpersist()
   }
