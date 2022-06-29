@@ -489,7 +489,12 @@ def ensure_stream_ingestion_jobs(client: Client, all_projects: bool):
 
     for job_hash in job_hashes_to_cancel:
         job = jobs_by_hash[job_hash]
-        if job.get_status() != SparkJobStatus.IN_PROGRESS:
+        job_status = None
+        try:
+            job_status = job.get_status()
+        except JobNotFoundException:
+            pass
+        if job_status != SparkJobStatus.IN_PROGRESS:
             logger.warning(
                 f"Can't cancel job with job_hash={job_hash} job_id={job.get_id()} status={job.get_status()}"
             )
