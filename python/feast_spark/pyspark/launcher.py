@@ -288,6 +288,7 @@ def start_offline_to_online_ingestion(
             ),
             deadletter_path=client.config.get(opt.DEADLETTER_PATH),
             stencil_url=client.config.get(opt.STENCIL_URL),
+            stencil_token=client.config.get(opt.STENCIL_TOKEN),
         )
     )
 
@@ -329,6 +330,7 @@ def schedule_offline_to_online_ingestion(
             ),
             deadletter_path=client.config.get(opt.DEADLETTER_PATH),
             stencil_url=client.config.get(opt.STENCIL_URL),
+            stencil_token=client.config.get(opt.STENCIL_TOKEN),
         )
     )
 
@@ -363,6 +365,7 @@ def get_stream_to_online_ingestion_params(
         deadletter_path=client.config.get(opt.DEADLETTER_PATH),
         checkpoint_path=client.config.get(opt.CHECKPOINT_PATH),
         stencil_url=client.config.get(opt.STENCIL_URL),
+        stencil_token=client.config.get(opt.STENCIL_TOKEN),
         drop_invalid_rows=client.config.get(opt.INGESTION_DROP_INVALID_ROWS),
         triggering_interval=client.config.getint(
             opt.SPARK_STREAMING_TRIGGERING_INTERVAL, default=None

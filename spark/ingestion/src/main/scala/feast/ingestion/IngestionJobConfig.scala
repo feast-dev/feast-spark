@@ -135,6 +135,7 @@ case class IngestionJobConfig(
     metrics: Option[MetricConfig] = None,
     deadLetterPath: Option[String] = None,
     stencilURL: Option[String] = None,
+    stencilToken: Option[String] = None,
     streamingTriggeringSecs: Int = 0,
     validationConfig: Option[ValidationConfig] = None,
     expectationSpec: Option[ExpectationSpec] = None,

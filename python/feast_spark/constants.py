@@ -156,8 +156,11 @@ class ConfigOptions(metaclass=ConfigMeta):
     CHECKPOINT_PATH: str = ""
 
     #: ProtoRegistry Address (currently only Stencil Server is supported as registry)
-    #: https://github.com/gojekfarm/stencil
+    #: https://github.com/odpf/stencil
     STENCIL_URL: str = ""
+
+    #: Bearer token used for authentication with Stencil Server
+    STENCIL_TOKEN: str = ""
 
     #: If set to true rows that do not pass custom validation (see feast.contrib.validation)
     #: won't be saved to Online Storage

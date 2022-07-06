@@ -52,9 +52,9 @@
         </dependency>
 
         <dependency>
-            <groupId>com.gojek</groupId>
+            <groupId>io.odpf</groupId>
             <artifactId>stencil</artifactId>
-            <version>4.2.0</version>
+            <version>0.2.1</version>
         </dependency>
 
         <dependency>

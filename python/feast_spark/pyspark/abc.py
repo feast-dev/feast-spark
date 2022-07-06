@@ -358,6 +358,7 @@ class IngestionJobParameters(SparkJobParameters):
         statsd_port: Optional[int] = None,
         deadletter_path: Optional[str] = None,
         stencil_url: Optional[str] = None,
+        stencil_token: Optional[str] = None,
         drop_invalid_rows: bool = False,
     ):
         self._feature_table = feature_table
@@ -375,6 +376,7 @@ class IngestionJobParameters(SparkJobParameters):
         self._statsd_port = statsd_port
         self._deadletter_path = deadletter_path
         self._stencil_url = stencil_url
+        self._stencil_token = stencil_token
         self._drop_invalid_rows = drop_invalid_rows
 
     def _get_redis_config(self):
@@ -443,6 +445,9 @@ class IngestionJobParameters(SparkJobParameters):
         if self._stencil_url:
             args.extend(["--stencil-url", self._stencil_url])
 
+        if self._stencil_token:
+            args.extend(["--stencil-token", self._stencil_token])
+
         if self._drop_invalid_rows:
             args.extend(["--drop-invalid"])
 
@@ -469,6 +474,7 @@ class BatchIngestionJobParameters(IngestionJobParameters):
         statsd_port: Optional[int] = None,
         deadletter_path: Optional[str] = None,
         stencil_url: Optional[str] = None,
+        stencil_token: Optional[str] = None,
     ):
         super().__init__(
             feature_table,
@@ -486,6 +492,7 @@ class BatchIngestionJobParameters(IngestionJobParameters):
             statsd_port,
             deadletter_path,
             stencil_url,
+            stencil_token,
         )
         self._start = start
         self._end = end
@@ -530,6 +537,7 @@ class ScheduledBatchIngestionJobParameters(IngestionJobParameters):
         statsd_port: Optional[int] = None,
         deadletter_path: Optional[str] = None,
         stencil_url: Optional[str] = None,
+        stencil_token: Optional[str] = None,
     ):
         super().__init__(
             feature_table,
@@ -547,6 +555,7 @@ class ScheduledBatchIngestionJobParameters(IngestionJobParameters):
             statsd_port,
             deadletter_path,
             stencil_url,
+            stencil_token,
         )
         self._ingestion_timespan = ingestion_timespan
         self._cron_schedule = cron_schedule
@@ -589,6 +598,7 @@ class StreamIngestionJobParameters(IngestionJobParameters):
         deadletter_path: Optional[str] = None,
         checkpoint_path: Optional[str] = None,
         stencil_url: Optional[str] = None,
+        stencil_token: Optional[str] = None,
         drop_invalid_rows: bool = False,
         triggering_interval: Optional[int] = None,
     ):
@@ -608,6 +618,7 @@ class StreamIngestionJobParameters(IngestionJobParameters):
             statsd_port,
             deadletter_path,
             stencil_url,
+            stencil_token,
             drop_invalid_rows,
         )
         self._extra_jars = extra_jars
