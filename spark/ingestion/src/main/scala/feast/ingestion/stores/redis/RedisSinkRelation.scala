@@ -65,23 +65,6 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
     pipelineSize = sparkConf.get("spark.redis.properties.pipelineSize").toInt
   )
 
-  lazy val isClusterMode: Boolean = checkIfInClusterMode(endpoint)
-
-  def newJedisClient(endpoint: RedisEndpoint): Jedis = {
-    val jedis = new Jedis(endpoint.host, endpoint.port)
-    if (endpoint.password.nonEmpty) {
-      jedis.auth(endpoint.password)
-    }
-    jedis
-  }
-
-  def checkIfInClusterMode(endpoint: RedisEndpoint): Boolean = {
-    val jedis     = newJedisClient(endpoint)
-    val isCluster = Try(jedis.clusterInfo()).isSuccess
-    jedis.close()
-    isCluster
-  }
-
   override def insert(data: DataFrame, overwrite: Boolean): Unit = {
     // repartition for deduplication
     val dataToStore =
@@ -95,11 +78,7 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
       java.security.Security.setProperty("networkaddress.cache.ttl", "3");
       java.security.Security.setProperty("networkaddress.cache.negative.ttl", "0");
 
-      val pipelineProvider = if (isClusterMode) {
-        ClusterPipelineProvider(endpoint)
-      } else {
-        SingleNodePipelineProvider(newJedisClient(endpoint))
-      }
+      val pipelineProvider = PipelineProviderFactory.provider(endpoint)
 
       // grouped iterator to only allocate memory for a portion of rows
       partition.grouped(properties.pipelineSize).foreach { batch =>
@@ -107,11 +86,11 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
         val rowsWithKey: Map[String, Row] =
           compactRowsToLatestTimestamp(batch.map(row => dataKeyId(row) -> row)).toMap
 
-        val keys         = rowsWithKey.keysIterator.toList
-        val readPipeline = pipelineProvider.pipeline()
-        val readResponses =
-          keys.map(key => persistence.get(readPipeline, key.getBytes()))
-        readPipeline.close()
+        val keys = rowsWithKey.keysIterator.toList
+        val readResponses = pipelineProvider.withPipeline(pipeline => {
+          keys.map(key => persistence.get(pipeline, key.getBytes()))
+        })
+
         val storedValues   = readResponses.map(_.get())
         val timestamps     = storedValues.map(persistence.storedTimestamp)
         val timestampByKey = keys.zip(timestamps).toMap
@@ -122,31 +101,30 @@ class RedisSinkRelation(override val sqlContext: SQLContext, config: SparkRedisC
           }
           .toMap
 
-        val writePipeline = pipelineProvider.pipeline()
-        rowsWithKey.foreach { case (key, row) =>
-          timestampByKey(key) match {
-            case Some(t) if (t.after(row.getAs[java.sql.Timestamp](config.timestampColumn))) =>
-              ()
-            case _ =>
-              if (metricSource.nonEmpty) {
-                val lag = System.currentTimeMillis() - row
-                  .getAs[java.sql.Timestamp](config.timestampColumn)
-                  .getTime
+        pipelineProvider.withPipeline(pipeline => {
+          rowsWithKey.foreach { case (key, row) =>
+            timestampByKey(key) match {
+              case Some(t) if (t.after(row.getAs[java.sql.Timestamp](config.timestampColumn))) =>
+                ()
+              case _ =>
+                if (metricSource.nonEmpty) {
+                  val lag = System.currentTimeMillis() - row
+                    .getAs[java.sql.Timestamp](config.timestampColumn)
+                    .getTime
 
-                metricSource.get.METRIC_TOTAL_ROWS_INSERTED.inc()
-                metricSource.get.METRIC_ROWS_LAG.update(lag)
-              }
-              persistence.save(
-                writePipeline,
-                key.getBytes(),
-                row,
-                expiryTimestampByKey(key)
-              )
+                  metricSource.get.METRIC_TOTAL_ROWS_INSERTED.inc()
+                  metricSource.get.METRIC_ROWS_LAG.update(lag)
+                }
+                persistence.save(
+                  pipeline,
+                  key.getBytes(),
+                  row,
+                  expiryTimestampByKey(key)
+                )
+            }
           }
-        }
-        writePipeline.close()
+        })
       }
-      pipelineProvider.close()
     }
     dataToStore.unpersist()
   }

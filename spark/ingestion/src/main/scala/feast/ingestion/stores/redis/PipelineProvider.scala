@@ -16,6 +16,7 @@
  */
 package feast.ingestion.stores.redis
 
+import redis.clients.jedis.Response
 import redis.clients.jedis.commands.PipelineBinaryCommands
 
 import java.io.Closeable
@@ -25,12 +26,7 @@ import java.io.Closeable
   */
 trait PipelineProvider {
 
-  type UnifiedPipeline = PipelineBinaryCommands with Closeable
-
-  /**
-    * @return an interface for executing pipeline commands
-    */
-  def pipeline(): UnifiedPipeline
+  def withPipeline[T](ops: PipelineBinaryCommands => T): T
 
   /**
     * Close client connection
