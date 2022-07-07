@@ -102,6 +102,12 @@ object BasePipeline {
       case None => ()
     }
 
+    jobConfig.stencilToken match {
+      case Some(token: String) =>
+        conf.set("feast.ingestion.registry.proto.token", token)
+      case None => ()
+    }
+
     SparkSession
       .builder()
       .config(conf)

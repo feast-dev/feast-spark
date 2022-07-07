@@ -33,6 +33,6 @@ object ProtoRegistryFactory {
   private def protoRegistry(name: String, properties: Map[String, String]): ProtoRegistry =
     name match {
       case "local"   => new LocalProtoRegistry
-      case "stencil" => new StencilProtoRegistry(properties("url"))
+      case "stencil" => new StencilProtoRegistry(properties("url"), properties.get("token"))
     }
 }
