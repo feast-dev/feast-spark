@@ -16,20 +16,32 @@
  */
 package feast.ingestion.stores.redis
 
-import redis.clients.jedis.Jedis
+import redis.clients.jedis.commands.PipelineBinaryCommands
+import redis.clients.jedis.{JedisPool, Response}
 
 /**
   * Provide pipeline for single node Redis.
   */
-case class SingleNodePipelineProvider(jedis: Jedis) extends PipelineProvider {
+case class SingleNodePipelineProvider(endpoint: RedisEndpoint) extends PipelineProvider {
+
+  val jedisPool = new JedisPool(endpoint.host, endpoint.port)
 
   /**
-    * @return a single node redis pipeline
+    * @return execute command within a pipeline and return the result
     */
-  override def pipeline(): UnifiedPipeline = jedis.pipelined()
+  override def withPipeline[T](ops: PipelineBinaryCommands => T): T = {
+    val jedis = jedisPool.getResource
+    if (endpoint.password.nonEmpty) {
+      jedis.auth(endpoint.password)
+    }
+    val response = ops(jedis.pipelined())
+    jedis.close()
+    response
+  }
 
   /**
     * Close client connection
     */
-  override def close(): Unit = jedis.close()
+  override def close(): Unit = jedisPool.close()
+
 }

@@ -16,7 +16,8 @@
  */
 package feast.ingestion.stores.redis
 
-import redis.clients.jedis.{ClusterPipeline, DefaultJedisClientConfig, HostAndPort}
+import redis.clients.jedis.commands.PipelineBinaryCommands
+import redis.clients.jedis.{ClusterPipeline, DefaultJedisClientConfig, HostAndPort, Response}
 import redis.clients.jedis.providers.ClusterConnectionProvider
 
 import scala.collection.JavaConverters._
@@ -34,9 +35,14 @@ case class ClusterPipelineProvider(endpoint: RedisEndpoint) extends PipelineProv
   val provider = new ClusterConnectionProvider(nodes, DEFAULT_CLIENT_CONFIG)
 
   /**
-    * @return a cluster pipeline
+    * @return execute commands within a pipeline and return the result
     */
-  override def pipeline(): UnifiedPipeline = new ClusterPipeline(provider)
+  override def withPipeline[T](ops: PipelineBinaryCommands => T): T = {
+    val pipeline = new ClusterPipeline(provider)
+    val response = ops(pipeline)
+    pipeline.close()
+    response
+  }
 
   /**
     * Close client connection
