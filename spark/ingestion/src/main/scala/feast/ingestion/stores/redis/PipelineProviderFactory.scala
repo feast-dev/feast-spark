@@ -51,8 +51,9 @@ object PipelineProviderFactory {
   def newProvider(endpoint: RedisEndpoint): PipelineProvider = {
     if (checkIfInClusterMode(endpoint)) {
       clusterPipelineProvider(endpoint)
+    } else {
+      singleNodePipelineProvider(endpoint)
     }
-    singleNodePipelineProvider(endpoint)
   }
 
   def provider(endpoint: RedisEndpoint): PipelineProvider = {
