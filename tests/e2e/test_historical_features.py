@@ -79,7 +79,6 @@ def generate_data():
 def test_historical_features(
     feast_client: Client,
     feast_spark_client: SparkClient,
-    tfrecord_feast_client: Client,
     batch_source: Union[BigQuerySource, FileSource],
 ):
     customer_entity = Entity(

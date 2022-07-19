@@ -1,22 +1,13 @@
-from datetime import datetime
-
-import numpy as np
-import pandas as pd
 import pytest
-import pytz
-from google.api_core.exceptions import NotFound
-from google.cloud import bigquery
 from google.protobuf.duration_pb2 import Duration
-from pandas.testing import assert_frame_equal
 
 from feast.client import Client
 from feast.data_format import ParquetFormat, ProtoFormat
-from feast.data_source import BigQuerySource, FileSource, KafkaSource
+from feast.data_source import FileSource, KafkaSource
 from feast.entity import Entity
 from feast.feature import Feature
 from feast.feature_table import FeatureTable
 from feast.value_type import ValueType
-from feast.wait import wait_retry_backoff
 
 
 @pytest.fixture
@@ -75,19 +66,6 @@ def basic_featuretable():
         batch_source=batch_source,
         stream_source=stream_source,
         labels={"key1": "val1", "key2": "val2"},
-    )
-
-
-@pytest.fixture
-def bq_dataframe():
-    N_ROWS = 100
-    time_offset = datetime.utcnow().replace(tzinfo=pytz.utc)
-    return pd.DataFrame(
-        {
-            "datetime": [time_offset] * N_ROWS,
-            "dev_feature_float": [np.float(row) for row in range(N_ROWS)],
-            "dev_feature_string": ["feat_" + str(row) for row in range(N_ROWS)],
-        }
     )
 
 
@@ -205,66 +183,3 @@ def test_get_list_alltypes(
         ft for ft in feast_client.list_feature_tables() if ft.name == "alltypes"
     ][0]
     assert actual_list_feature_table == alltypes_featuretable
-
-
-@pytest.mark.env("gcloud")
-def test_ingest_into_bq(
-    feast_client: Client,
-    customer_entity: Entity,
-    driver_entity: Entity,
-    bq_dataframe: pd.DataFrame,
-    bq_dataset: str,
-    pytestconfig,
-):
-    bq_project = pytestconfig.getoption("bq_project")
-    bq_table_id = f"bq_staging_{datetime.now():%Y%m%d%H%M%s}"
-    ft = FeatureTable(
-        name="basic_featuretable",
-        entities=["driver_id", "customer_id"],
-        features=[
-            Feature(name="dev_feature_float", dtype=ValueType.FLOAT),
-            Feature(name="dev_feature_string", dtype=ValueType.STRING),
-        ],
-        max_age=Duration(seconds=3600),
-        batch_source=BigQuerySource(
-            table_ref=f"{bq_project}:{bq_dataset}.{bq_table_id}",
-            event_timestamp_column="datetime",
-            created_timestamp_column="timestamp",
-        ),
-    )
-
-    # ApplyEntity
-    feast_client.apply(customer_entity)
-    feast_client.apply(driver_entity)
-
-    # ApplyFeatureTable
-    feast_client.apply(ft)
-    feast_client.ingest(ft, bq_dataframe, timeout=120)
-
-    bq_client = bigquery.Client(project=bq_project)
-
-    # Poll BQ for table until the table has been created
-    def try_get_table():
-        try:
-            table = bq_client.get_table(
-                bigquery.TableReference(
-                    bigquery.DatasetReference(bq_project, bq_dataset), bq_table_id
-                )
-            )
-        except NotFound:
-            return None, False
-        else:
-            return table, True
-
-    wait_retry_backoff(
-        retry_fn=try_get_table,
-        timeout_secs=30,
-        timeout_msg="Timed out trying to get bigquery table",
-    )
-
-    query_string = f"SELECT * FROM `{bq_project}.{bq_dataset}.{bq_table_id}`"
-
-    job = bq_client.query(query_string)
-    query_df = job.to_dataframe()
-
-    assert_frame_equal(query_df, bq_dataframe)
